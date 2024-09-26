@@ -3,6 +3,8 @@
 #include "compiler_error.h"
 #include <stdio.h>
 
+error_code error = 0;
+
 static const char *error_msg[] = {
 	GREEN("SUCCESS")" -  Preklad probehl uspesne",
 	RED("ERR_LEXICAL")" - Chyba v programu v ramci lexikalní analyzy (chybna struktura aktualniho lexemu)",

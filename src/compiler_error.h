@@ -3,7 +3,7 @@
 #ifndef COMPILER_ERROR_H
 #define COMPILER_ERROR_H
 
-typedef enum ERROR_CODE {
+typedef enum error_code {
 	SUCCESS = 0, /* Preklad probehl uspesne */
 	ERR_LEXICAL = 1, /* Chyba v programu v rámci lexikální analýzy (chybná struktura aktuálního lexému) */
 	ERR_SYNTAX = 2, /* Chyba v programu v rámci syntaktické analýzy (chybná syntaxe programu, chybějící hlavička, atp.) */
@@ -22,6 +22,9 @@ typedef enum ERROR_CODE {
 #define RED(msg) "\033[0;31m" msg "\033[0;37m"
 #define GREEN(msg) "\033[0;32m" msg "\033[0;37m" 
 
+extern error_code error;
+
+/* prints information about error */
 void print_error(error_code err);
 
 #endif 
