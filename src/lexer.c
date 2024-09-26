@@ -2,6 +2,7 @@
  * Název projektu: Implementace překladače imperativního jazyka IFJ24.
  * 
  * @author xpazurm00, Marek Pazúr
+ * @author xtomasp00, Patrik Tomaško
  * 
  * @file lexer.c
  */
@@ -24,7 +25,11 @@ int init_scanner(void) {
 
 token_t* get_token(void) {
 	//todo, testing	
-	printf("token\n");
+
+	p_state state = STATE_START;
+
+	if(!state)
+		printf("token\n");
 
 	char c = 0;
 
