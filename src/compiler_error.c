@@ -1,9 +1,15 @@
-/* compiler_error.c */
+/** 
+ * Název projektu: Implementace překladače imperativního jazyka IFJ24.
+ * 
+ * @author xpazurm00, Marek Pazúr
+ * 
+ * @file compiler_error.c
+ */
 
 #include "compiler_error.h"
 #include <stdio.h>
 
-error_code error = 0;
+unsigned int error = 0;
 
 static const char *error_msg[] = {
 	GREEN("SUCCESS")" -  Preklad probehl uspesne",
@@ -20,7 +26,7 @@ static const char *error_msg[] = {
 	RED("ERR_COMPILER_INTERNAL") " - Interni chyba prekladace (chyba alokace pameti, ...)"
 };
 
-void print_error(error_code err) {
+void print_error(unsigned int err) {
 
 	unsigned int size = sizeof(error_msg) / sizeof(char *); 
 

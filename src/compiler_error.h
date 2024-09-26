@@ -1,5 +1,10 @@
-/* compiler_error.h */
-
+/** 
+ * Název projektu: Implementace překladače imperativního jazyka IFJ24.
+ * 
+ * @author xpazurm00, Marek Pazúr
+ * 
+ * @file compiler_error.h
+ */
 #ifndef COMPILER_ERROR_H
 #define COMPILER_ERROR_H
 
@@ -21,10 +26,11 @@ typedef enum error_code {
 #define RED_BOLD(msg) "\033[1;31m" msg "\033[0;37m"
 #define RED(msg) "\033[0;31m" msg "\033[0;37m"
 #define GREEN(msg) "\033[0;32m" msg "\033[0;37m" 
+#define WHITE_BOLD(msg) "\033[1;37m" msg "\033[0;37m"
 
-extern error_code error;
+extern unsigned int error;
 
 /* prints information about error */
-void print_error(error_code err);
+void print_error(unsigned int err);
 
 #endif 
