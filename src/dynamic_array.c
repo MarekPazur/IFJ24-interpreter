@@ -6,6 +6,7 @@
  * @file dynamic_array.h
  */
 
+#include "stdio.h"
 #include "stdlib.h"
 #include "dynamic_array.h"
 
@@ -49,7 +50,7 @@ char d_array_get(dynamic_array* array, int index){
     }else{
         fprintf(stderr, "Error: tried to get a value of an element an a dynamic array on the index %d but that index does not exist", index);
     }
-    return;
+    return '\0';
 }
 
 void d_array_remove(dynamic_array* array, int index){
