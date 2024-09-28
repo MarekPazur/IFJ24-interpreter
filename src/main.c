@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include "compiler_error.h"
 #include "lexer.h"
+#include "dynamic_array.h"
 
 int main(void) {
 	//TODO
@@ -18,13 +19,8 @@ int main(void) {
 	//symtable
 	//semantic analyser
 	//code generator
-
-	printf("Hello world!\n");
-
 	if(init_scanner())
 		return error;
-
-	get_token();
-
+	//get_token();
 	return 0;
 }
