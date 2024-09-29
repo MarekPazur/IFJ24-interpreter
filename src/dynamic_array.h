@@ -6,8 +6,11 @@
  * @file dynamic_array.h
  */
 
+#ifndef DYNAMIC_ARRAY_H
+#define DYNAMIC_ARRAY_H
+
 typedef struct{
-    int* array;
+    char* array;
     int length;
     int capacity;
 } dynamic_array;
@@ -23,3 +26,5 @@ char d_array_get(dynamic_array* array, int index);
 void d_array_remove(dynamic_array* array, int index);
 
 void d_array_free(dynamic_array* array);
+
+#endif
