@@ -10,8 +10,13 @@
 #ifndef LEXER_H
 #define LEXER_H
 
+#include "dynamic_array.h"
+
 //@TODO finish and maybe rework
 typedef enum token_id {
+	TOKEN_DEFAULT,
+	TOKEN_ERROR,
+
 	/* Variable or function identifier */
 	TOKEN_IDENTIFIER,		// sequence of alphanumerical characters + '_'
 
@@ -31,19 +36,18 @@ typedef enum token_id {
 	TOKEN_KW_WHILE,			// while
 
 	/* Brackets  */
-	TOKEN_ROUND_LEFT, 		// (
-	TOKEN_ROUND_RIGHT,		// )
-	TOKEN_CURLY_LEFT, 		// {
-	TOKEN_CURLY_RIGHT,		// }
-	TOKEN_SQUARE_LEFT,		// [
-	TOKEN_SQUARE_RIGHT,		// ]
+	TOKEN_BRACKET_ROUND_LEFT, 		// (
+	TOKEN_BRACKET_ROUND_RIGHT,		// )
+	TOKEN_BRACKET_CURLY_LEFT, 		// {
+	TOKEN_BRACKET_CURLY_RIGHT,		// }
+	TOKEN_BRACKET_SQUARE_LEFT,		// [
+	TOKEN_BRACKET_SQUARE_RIGHT,		// ]
 
 	/* Binary operators */
 	TOKEN_ADDITION,			// +
 	TOKEN_SUBSTRACTION,		// -
 	TOKEN_MULTIPLICATION,	// *
-	TOKEN_DIVISION_I32, 	// / int division
-	TOKEN_DIVISION_F64,		// / double division
+	TOKEN_DIVISION, 	// / int division
 	
 	TOKEN_EQUAL,			// ==
 	TOKEN_NOT_EQUAL,		// !=
@@ -72,33 +76,39 @@ typedef enum token_id {
 	TOKEN_PIPE,				// |
 	TOKEN_OPTIONAL_TYPE,	// ?
 	TOKEN_SLICE 			// []
-
 } token_id;
 
 /* Set of states for FSM */
-typedef enum p_state {
-	STATE_START = 0,
-	STATE_B = 1
-} p_state;
+typedef enum fsm_state {
+	STATE_START,			// Default state (0)
+	//STATE_COMMENT_DIV,		// Possible SL/ML comment or division operator
+	//STATE_KW_IDENT,			// Possible keyword or identifier, can only start with alphabet character 'Aa - Zz' or underscore '_' 
+	//STATE_WHITESPACE,		// Whitespace character
+	//STATE_EOF,				// End of file
+
+} fsm_state;
 
 /* Structure containing data about tokens */
 typedef struct token {
-	token_id id;
+	token_id id;			// ID of current token
+	dynamic_array lexeme;	// Dyn. array containing sequence of alphanumerical + '_' characters  (lexeme)
 } token_t;
 
 /* Structure containing data about current configuration of the scanner */
 typedef struct scanner {
-	// todo
-	unsigned int row, col;
-	size_t head_pos;
-	token_t current_token;
+	fsm_state p_state;		// Present state of FSM
+	unsigned int row, col;	// Current row and column in the given file
+	size_t head_pos;		// Position of reading head
+	token_t current_token;	// Most recent token
 } scanner_t;
 
 /* Initialization of scanner*/
-int init_scanner(void);
+void init_scanner(void);
 
 /* Final state machine, fetches token for syntax analyser */
-token_t* get_token(void);
+token_t get_token(void);
+
+int is_keyword(char *lexeme);
 
 void print_token(token_t token);
 

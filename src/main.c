@@ -16,11 +16,25 @@ int main(void) {
 	//TODO
 	//lexical analyser
 	//syntax analyser - rekurzivni sestup?
-	//symtable
+	//symtable - vyvazeny binarni strom?
 	//semantic analyser
 	//code generator
-	if(init_scanner())
-		return error;
-	//get_token();
-	return 0;
+
+	/* Init. of scanner struct */
+	init_scanner();
+
+	if(error)
+		print_error(error);
+
+	token_t test;
+
+	while((test = get_token()).id != TOKEN_EOF) {
+			print_token(test);
+			d_array_free(&test.lexeme);
+		}
+
+	if(error)
+		print_error(error);
+
+	return error;
 }
