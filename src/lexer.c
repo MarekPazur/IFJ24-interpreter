@@ -6,16 +6,20 @@
  * 
  * @file lexer.c
  */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include <string.h>
 
 #include "lexer.h"
 #include "compiler_error.h"
 
+#define NOF_KEY_WORDS 13
+
 scanner_t scanner = {0};
+
+const char *keywords[] = {"const", "else", "fn", "if", "i32", "f64", "null", "pub", "return", "u8", "var", "void", "while"};
 
 void init_scanner(void) { 
 	scanner.p_state = STATE_START;
@@ -24,31 +28,49 @@ void init_scanner(void) {
 	scanner.head_pos = 0;
 }
 
+/**
+ * @brief This function determines wether the character could be a part of an identifier
+ *
+ * @param c character to be examined
+ *
+ * @return returns true if the sign could be a part of the identifier, false otherwise
+ */
+bool is_identifier(char c){
+    if(isalpha(c) || c == '_'){
+        return true;
+    }
+    return false;
+}
+
 token_t get_token(void) {
+	token_t token; /* New token is created every function call */
+	token.id = TOKEN_DEFAULT; /* Default placeholder */
+	d_array_init(&token.lexeme, 16); /* Each token has its own array of chars (string), necessary for keyword/identifier tokens */
 
-	token_t token;
-	token.id = TOKEN_DEFAULT;
-	d_array_init(&token.lexeme, 16);
+	scanner.p_state = STATE_START; 
 
-	scanner.p_state = STATE_START;
-
-	char c = 0;
+	int c = 0;
 
 	while(true) {
 
 		c = getc(stdin);
 
-		if(c == '\n') {
+		if(c == '\n') { /* row&column calculation */
 			++scanner.row;
 			scanner.col = 0;
 		}
-
 		++scanner.col;
 		++scanner.head_pos;
 
 		switch(scanner.p_state) {
 			case STATE_START:
 				/* Simple states */
+                if(is_identifier(c)){
+                    d_array_append(&token.lexeme, c);
+                    token.id = TOKEN_IDENTIFIER;
+                    scanner.p_state = STATE_KW_IDENT;
+                }
+
 				if(c == EOF) {
 					token.id = TOKEN_EOF;
 					return token;
@@ -99,7 +121,7 @@ token_t get_token(void) {
 					return token;
 				}				
 
-				/* Problematic states */
+				/* Complex states */
 				if(c == '/') { // Division op. or comment
 					scanner.p_state = STATE_COMMENT_DIV;
 				}	
@@ -198,16 +220,33 @@ token_t get_token(void) {
 					ungetc(c,stdin);
 					return token;
 				}
-				break;	
+				break;
+
+            case STATE_KW_IDENT:
+                if(is_identifier(c) || isdigit(c)) {
+                    d_array_append(&token.lexeme, c);
+                } else {
+                    //scanner.p_state = STATE_START;
+                    ungetc(c, stdin);
+                    d_array_append(&token.lexeme,'\0');
+
+                    for(int i = 0; i < NOF_KEY_WORDS; i++){
+                        if(!strcmp(token.lexeme.array, keywords[i])){
+                            token.id = i + 3; // 3 is the offset of the tokens enum to the keywords
+                        }
+                    }
+
+                    d_array_remove(&token.lexeme, token.lexeme.length-1);
+                    return token;
+                }
+                break;
 
 			default:
 				token.id = TOKEN_ERROR;
 				return token;
 				break;
 		}
-
 	}
-
 	return token;
 }
 
