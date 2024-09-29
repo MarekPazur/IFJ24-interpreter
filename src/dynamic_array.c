@@ -2,8 +2,9 @@
  * Název projektu: Implementace překladače imperativního jazyka IFJ24.
  *
  * @author xtomasp00, Patrik Tomaško
- *
- * @file dynamic_array.h
+ * @author xpazurm00, Marek Pazúr
+ * 
+ * @file dynamic_array.c
  */
 
 #include "stdio.h"

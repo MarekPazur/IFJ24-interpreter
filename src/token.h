@@ -1,3 +1,11 @@
+/** 
+ * Název projektu: Implementace překladače imperativního jazyka IFJ24.
+ * 
+ * @author xpazurm00, Marek Pazúr
+ * 
+ * @file token.h
+ */
+
 #ifndef TOKEN_H
 #define TOKEN_H
 
