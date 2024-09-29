@@ -15,10 +15,13 @@
 /* Set of states for FSM */
 typedef enum fsm_state {
 	STATE_START,			// Default state (0)
-	//STATE_COMMENT_DIV,		// Possible SL/ML comment or division operator
+	STATE_COMMENT_DIV,		// Possible SL/ML comment or division operator
 	//STATE_KW_IDENT,			// Possible keyword or identifier, can only start with alphabet character 'Aa - Zz' or underscore '_' 
 	//STATE_WHITESPACE,		// Whitespace character
-	//STATE_EOF,				// End of file
+	STATE_EQUAL_ASSIGN,
+	STATE_NOT_EQUAL,
+	STATE_LESS_LEQ,
+	STATE_GREATER_GREQ
 
 } fsm_state;
 
@@ -37,6 +40,8 @@ void init_scanner(void);
 token_t get_token(void);
 
 int is_keyword(char *lexeme);
+
+void ignore_comment();
 
 void print_token(token_t token);
 

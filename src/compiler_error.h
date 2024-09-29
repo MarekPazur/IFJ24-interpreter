@@ -33,4 +33,6 @@ extern unsigned int error;
 /* prints information about error */
 void print_error(unsigned int err);
 
+void set_error(unsigned int error);
+
 #endif 

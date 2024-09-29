@@ -30,8 +30,7 @@ token_t get_token(void) {
 	token.id = TOKEN_DEFAULT;
 	d_array_init(&token.lexeme, 16);
 
-	//print_token(token);
-	//print_error(error);
+	scanner.p_state = STATE_START;
 
 	char c = 0;
 
@@ -50,7 +49,6 @@ token_t get_token(void) {
 		switch(scanner.p_state) {
 			case STATE_START:
 				/* Simple states */
-
 				if(c == EOF) {
 					token.id = TOKEN_EOF;
 					return token;
@@ -101,9 +99,106 @@ token_t get_token(void) {
 					return token;
 				}				
 
+				/* Problematic states */
+				if(c == '/') { // Division op. or comment
+					scanner.p_state = STATE_COMMENT_DIV;
+				}	
+
+				if(c == '=') { // = or ==
+					scanner.p_state = STATE_EQUAL_ASSIGN;
+				}
+
+				if(c == '!') { // Can be only !=
+					scanner.p_state = STATE_NOT_EQUAL;
+				}
+
+				if(c == '<') { // < or <=
+					scanner.p_state = STATE_LESS_LEQ;
+				}
+
+				if(c == '>') { // > or <=
+					scanner.p_state = STATE_GREATER_GREQ;
+				}
+
 				break;
 
+			case STATE_COMMENT_DIV:
+				// Single line comment
+				if(c == '/'){
+					ignore_comment();
+					scanner.p_state = STATE_START;
+				} 
 
+				else { // division operator
+					token.id = TOKEN_DIVISION;
+
+					//scanner.p_state = STATE_START;
+
+					ungetc(c,stdin);	// Necessary to put loaded char back to stream
+
+					return token;
+				}
+				break;
+
+			case STATE_EQUAL_ASSIGN:
+				if(c == '=') {
+					token.id = TOKEN_EQUAL;
+					//scanner.p_state = STATE_START;
+					return token;
+				}
+				else {
+					token.id = TOKEN_ASSIGNMENT;
+					//scanner.p_state = STATE_START;
+					ungetc(c,stdin);
+					return token;
+				}
+				break;	
+
+			case STATE_NOT_EQUAL:
+
+				if(c == '=') {
+					token.id = TOKEN_NOT_EQUAL;
+					//scanner.p_state = STATE_START;
+					return token;
+				} else { // Standalone '!' is not any lexeme
+					token.id = TOKEN_ERROR;
+					//scanner.p_state = STATE_START;
+
+					error = ERR_LEXICAL;
+					ungetc(c, stdin);
+					return token;
+				}
+
+				break;
+
+			case STATE_LESS_LEQ:
+				if(c == '=') {
+					token.id = TOKEN_LESS_EQUAL;
+					//scanner.p_state = STATE_START;
+					return token;
+				}
+				else {
+					token.id = TOKEN_LESS;
+					//scanner.p_state = STATE_START;
+					ungetc(c,stdin);
+					return token;
+				}
+
+				break;
+
+			case STATE_GREATER_GREQ:
+				if(c == '=') {
+					token.id = TOKEN_GREATER_EQUAL;
+					//scanner.p_state = STATE_START;
+					return token;
+				}
+				else {
+					token.id = TOKEN_GREATER;
+					//scanner.p_state = STATE_START;
+					ungetc(c,stdin);
+					return token;
+				}
+				break;	
 
 			default:
 				token.id = TOKEN_ERROR;
@@ -114,6 +209,15 @@ token_t get_token(void) {
 	}
 
 	return token;
+}
+
+void ignore_comment() {
+	char c;
+
+	while((c = getc(stdin)) != '\n' && c != EOF);
+
+	if(c == EOF) // Necessary to return EOF, since it is standalone token
+		ungetc(c,stdin);
 }
 
 void print_token(token_t token) {
