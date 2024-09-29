@@ -24,6 +24,20 @@ void init_scanner(void) {
 	scanner.head_pos = 0;
 }
 
+/**
+ * @brief This function determines wether the character could be a part of an identifier
+ *
+ * @param c character to be examined
+ *
+ * @return returns true if the sign could be a part of the identifier, false otherwise
+ */
+bool is_identifier(char c){
+    if(isalnum(c) || c == '_'){
+        return true;
+    }
+    return false;
+}
+
 token_t get_token(void) {
 
 	token_t token;
@@ -33,7 +47,7 @@ token_t get_token(void) {
 	//print_token(token);
 	//print_error(error);
 
-	char c = 0;
+	int c = 0;
 
 	while(true) {
 
@@ -50,7 +64,11 @@ token_t get_token(void) {
 		switch(scanner.p_state) {
 			case STATE_START:
 				/* Simple states */
-
+                if(is_identifier(c)){
+                    d_array_append(&token.lexeme, c);
+                    token.id = TOKEN_IDENTIFIER;
+                    scanner.p_state = STATE_KW_IDENT;
+                }
 				if(c == EOF) {
 					token.id = TOKEN_EOF;
 					return token;
@@ -102,13 +120,20 @@ token_t get_token(void) {
 				}				
 
 				break;
-
-
+            case STATE_KW_IDENT:
+                if(is_identifier(c)){
+                    d_array_append(&token.lexeme, c);
+                }else{
+                    scanner.p_state = STATE_START;
+                    ungetc(c, stdin);
+                    d_array_print(&token.lexeme);
+                    return token;
+                }
+                break;
 
 			default:
 				token.id = TOKEN_ERROR;
 				return token;
-				break;
 		}
 
 	}

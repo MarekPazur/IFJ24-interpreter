@@ -11,12 +11,13 @@
 #define LEXER_H
 
 #include "token.h"
+#include <stdbool.h>
 
 /* Set of states for FSM */
 typedef enum fsm_state {
 	STATE_START,			// Default state (0)
 	//STATE_COMMENT_DIV,		// Possible SL/ML comment or division operator
-	//STATE_KW_IDENT,			// Possible keyword or identifier, can only start with alphabet character 'Aa - Zz' or underscore '_' 
+	STATE_KW_IDENT,			// Possible keyword or identifier, can only start with alphabet character 'Aa - Zz' or underscore '_'
 	//STATE_WHITESPACE,		// Whitespace character
 	//STATE_EOF,				// End of file
 
@@ -39,5 +40,7 @@ token_t get_token(void);
 int is_keyword(char *lexeme);
 
 void print_token(token_t token);
+
+bool is_identifier(char c);
 
 #endif
