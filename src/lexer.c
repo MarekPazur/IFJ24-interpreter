@@ -116,7 +116,7 @@ token_t get_token(void) {
 					scanner.p_state = STATE_LESS_LEQ;
 				}
 
-				if(c == '>') { // > or <=
+				if(c == '>') { // > or >=
 					scanner.p_state = STATE_GREATER_GREQ;
 				}
 
