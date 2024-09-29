@@ -1,4 +1,13 @@
-//gradually complete tokens from list
+/** 
+ * Název projektu: Implementace překladače imperativního jazyka IFJ24.
+ * 
+ * @author xglosro00, Robert Glos
+ * @author xukropj00, Jan Ukropec
+ * 
+ * @file main.c
+ */
+
+/* gradually complete tokens from list
 typedef enum token_id {
 	/* Variable or function identifier */
 	TOKEN_IDENTIFIER,		// sequence of alphanumerical characters + '_'
@@ -63,3 +72,4 @@ typedef enum token_id {
 
 } token_id;
 
+*/
