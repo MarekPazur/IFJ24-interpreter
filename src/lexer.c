@@ -7,15 +7,20 @@
  * @file lexer.c
  */
 
+#define NOF_KEY_WORDS 13
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include <string.h>
 
 #include "lexer.h"
 #include "compiler_error.h"
 
 scanner_t scanner = {0};
+
+const char *keywords[] = {"const", "else", "fn", "if", "i32", "f64", "null", "pub", "return", "u8", "var", "void", "while"};
 
 void init_scanner(void) { 
 	scanner.p_state = STATE_START;
@@ -32,7 +37,7 @@ void init_scanner(void) {
  * @return returns true if the sign could be a part of the identifier, false otherwise
  */
 bool is_identifier(char c){
-    if(isalnum(c) || c == '_'){
+    if(isalpha(c) || c == '_'){
         return true;
     }
     return false;
@@ -121,12 +126,18 @@ token_t get_token(void) {
 
 				break;
             case STATE_KW_IDENT:
-                if(is_identifier(c)){
+                if(is_identifier(c) || isdigit(c)){
                     d_array_append(&token.lexeme, c);
                 }else{
                     scanner.p_state = STATE_START;
                     ungetc(c, stdin);
-                    d_array_print(&token.lexeme);
+                    d_array_append(&token.lexeme,'\0');
+                    for(int i = 0; i < NOF_KEY_WORDS; i++){
+                        if(!strcmp(token.lexeme.array, keywords[i])){
+                            token.id = i + 3; //3 is the offset of the enum of the tokens to the keywords
+                        }
+                    }
+                    d_array_remove(&token.lexeme, token.lexeme.length-1);
                     return token;
                 }
                 break;
