@@ -28,20 +28,6 @@ void init_scanner(void) {
 	scanner.head_pos = 0;
 }
 
-/**
- * @brief This function determines wether the character could be a part of an identifier
- *
- * @param c character to be examined
- *
- * @return returns true if the sign could be a part of the identifier, false otherwise
- */
-bool is_identifier(char c){
-    if(isalpha(c) || c == '_'){
-        return true;
-    }
-    return false;
-}
-
 token_t get_token(void) {
 	token_t token; /* New token is created every function call */
 	token.id = TOKEN_DEFAULT; /* Default placeholder */
@@ -65,82 +51,100 @@ token_t get_token(void) {
 		switch(scanner.p_state) {
 			case STATE_START:
 				/* Simple states */
-                if(is_identifier(c)){
-                    d_array_append(&token.lexeme, c);
-                    token.id = TOKEN_IDENTIFIER;
-                    scanner.p_state = STATE_KW_IDENT;
-                }
 
-				if(c == EOF) {
+				if(isspace(c)) {
+					scanner.p_state = STATE_START;
+				}
+
+				else if(c == EOF) {
 					token.id = TOKEN_EOF;
 					return token;
 				}
 
-				if(c == '(') {
+				else if(c == '(') {
 					token.id = TOKEN_BRACKET_ROUND_LEFT;
 					return token;
 				}
 
-				if(c == ')') {
+				else if(c == ')') {
 					token.id = TOKEN_BRACKET_ROUND_RIGHT;
 					return token;
 				}
 
-				if(c == '{') {
+				else if(c == '{') {
 					token.id = TOKEN_BRACKET_CURLY_LEFT;
 					return token;
 				}
 
-				if(c == '}') {
+				else if(c == '}') {
 					token.id = TOKEN_BRACKET_CURLY_RIGHT;
 					return token;
 				}				
 
-				if(c == '+') {
+				else if(c == '+') {
 					token.id = TOKEN_ADDITION;
 					return token;
 				}
 
-				if(c == '-') {
+				else if(c == '-') {
 					token.id = TOKEN_SUBSTRACTION;
 					return token;
 				}
 
-				if(c == '*') {
+				else if(c == '*') {
 					token.id = TOKEN_MULTIPLICATION;
 					return token;
 				}
 
-				if(c == ':') {
+				else if(c == ':') {
 					token.id = TOKEN_COLON;
 					return token;
 				}
 
-				if(c == ';') {
+				else if(c == ';') {
 					token.id = TOKEN_SEMICOLON;
 					return token;
 				}				
 
 				/* Complex states */
-				if(c == '/') { // Division op. or comment
+				else if(c == '/') { // Division op. or comment
 					scanner.p_state = STATE_COMMENT_DIV;
 				}	
 
-				if(c == '=') { // = or ==
+				else if(c == '=') { // = or ==
 					scanner.p_state = STATE_EQUAL_ASSIGN;
 				}
 
-				if(c == '!') { // Can be only !=
+				else if(c == '!') { // Can be only !=
 					scanner.p_state = STATE_NOT_EQUAL;
 				}
 
-				if(c == '<') { // < or <=
+				else if(c == '<') { // < or <=
 					scanner.p_state = STATE_LESS_LEQ;
 				}
 
-				if(c == '>') { // > or >=
+				else if(c == '>') { // > or >=
 					scanner.p_state = STATE_GREATER_GREQ;
 				}
+
+				/* Literals */
+				else if(isdigit(c)) {
+					d_array_append(&token.lexeme, c);
+					scanner.p_state = STATE_DIGIT;
+				}
+
+				/* Identifiers or keywords */
+				else if(is_identifier(c)){
+                    d_array_append(&token.lexeme, c);
+                    token.id = TOKEN_IDENTIFIER;
+                    scanner.p_state = STATE_KW_IDENT;
+                }
+
+                else {
+                	//token.id = TOKEN_ERROR;
+                	//error = ERR_LEXICAL;
+                	//return token;
+                }
 
 				break;
 
@@ -241,6 +245,107 @@ token_t get_token(void) {
                 }
                 break;
 
+            case STATE_DIGIT:
+            	if(isdigit(c)) {
+            		d_array_append(&token.lexeme, c);
+            	}
+            	else if(c == '.') {
+            		d_array_append(&token.lexeme, c);
+            		scanner.p_state = STATE_FLOATING_POINT;
+            	}
+            	else if(c == 'e') {
+            		d_array_append(&token.lexeme, c);
+            		scanner.p_state = STATE_EXPONENT;
+            	}
+            	else if(is_identifier(c)) {
+            		token.id = TOKEN_ERROR;
+
+            		char c;
+
+            		// Skip all possible identifier characters
+            		while(is_identifier(c = getc(stdin)) || isdigit(c));
+
+            		error = ERR_LEXICAL;
+            		fprintf(stderr, RED_BOLD("error")": invalid suffix on integer constant\n");
+            		return token;
+            	}
+            	else {
+            		token.id = TOKEN_LITERAL_I32;
+            		ungetc(c,stdin);
+            		return token;
+            	}
+            	break;
+
+            case STATE_FLOATING_POINT:
+            	if(isdigit(c)) {
+            		d_array_append(&token.lexeme, c);
+            		scanner.p_state = STATE_DECIMAL_PART;
+            	}
+            	else if(c == 'e' || c == 'E') {
+            		d_array_append(&token.lexeme, c);
+            		scanner.p_state = STATE_EXPONENT;
+            	} else {
+            		token.id = TOKEN_ERROR;
+            		error = ERR_LEXICAL;
+            		fprintf(stderr, RED_BOLD("error")": invalid decimal base\n");
+            		ungetc(c,stdin);
+            		return token;
+            	}
+            	break;
+
+            case STATE_DECIMAL_PART:
+            	if(isdigit(c)) {
+            		d_array_append(&token.lexeme, c);
+            	} else if(c == 'e' || c == 'E') {
+            		d_array_append(&token.lexeme, c);
+            		scanner.p_state = STATE_EXPONENT;
+            	}
+            	else {
+            		token.id = TOKEN_LITERAL_F64;
+            		ungetc(c,stdin);
+            		return token;
+            	}
+            	break;
+
+            case STATE_EXPONENT:
+            	if(isdigit(c)) {
+            		d_array_append(&token.lexeme, c);
+            		scanner.p_state = STATE_EXPONENT_FINAL;
+            	} else if(c == '+' || c == '-') {
+            		d_array_append(&token.lexeme, c);
+            		scanner.p_state = STATE_EXPONENT_POSITIVE_NEGATIVE;
+            	} else {
+            		token.id = TOKEN_ERROR;
+            		error = ERR_LEXICAL;
+            		fprintf(stderr, RED_BOLD("error")": invalid decimal base\n");
+            		ungetc(c,stdin);
+            		return token;
+            	}
+            	break;
+
+            case STATE_EXPONENT_POSITIVE_NEGATIVE:
+            	if(isdigit(c)) {
+            		d_array_append(&token.lexeme, c);
+            		scanner.p_state = STATE_EXPONENT_FINAL;
+            	} else {
+            		token.id = TOKEN_ERROR;
+            		error = ERR_LEXICAL;
+            		fprintf(stderr, RED_BOLD("error")": invalid decimal base\n");
+            		ungetc(c,stdin);
+            		return token;
+            	}
+            	break;	
+
+            case STATE_EXPONENT_FINAL:
+            	if(isdigit(c)) {
+            		d_array_append(&token.lexeme, c);
+            	} else {
+            		token.id = TOKEN_LITERAL_F64;
+            		ungetc(c,stdin);
+            		return token;
+            	}
+            	break;	
+
 			default:
 				token.id = TOKEN_ERROR;
 				return token;
@@ -257,6 +362,20 @@ void ignore_comment() {
 
 	if(c == EOF) // Necessary to return EOF, since it is standalone token
 		ungetc(c,stdin);
+}
+
+/**
+ * @brief This function determines wether the character could be a part of an identifier
+ *
+ * @param c character to be examined
+ *
+ * @return returns true if the sign could be a part of the identifier, false otherwise
+ */
+bool is_identifier(char c){
+    if(isalpha(c) || c == '_'){
+        return true;
+    }
+    return false;
 }
 
 void print_token(token_t token) {

@@ -13,11 +13,11 @@
 
 //@TODO finish and maybe rework
 typedef enum token_id {
-	TOKEN_DEFAULT,
-	TOKEN_ERROR,
+	TOKEN_DEFAULT,			// Default state
+	TOKEN_ERROR,			// Invalid token
 
 	/* Variable or function identifier */
-	TOKEN_IDENTIFIER,		// sequence of alphanumerical characters + '_'
+	TOKEN_IDENTIFIER,		// Sequence of alphanumerical characters + '_', must begin with <Aa-Zz> or '_'
 
 	/* Keywords */
 	TOKEN_KW_CONST,			// const
@@ -66,7 +66,7 @@ typedef enum token_id {
 	TOKEN_EOL,				// EOL \n
 	TOKEN_EOF,				// EOF -1
 	TOKEN_NAMESPACE,		// 'ifj.'
-	TOKEN_PROLOG,			// '@' 
+	TOKEN_PROLOG,			// '@import' 
 	TOKEN_BACKSLASH,		// '\'
 	TOKEN_COLON,			// :
 	TOKEN_SEMICOLON,		// ;
@@ -79,8 +79,12 @@ typedef enum token_id {
 
 /* Structure containing data about tokens */
 typedef struct token {
-	token_id id;			// ID of current token
-	dynamic_array lexeme;	// Dyn. array containing sequence of alphanumerical + '_' characters  (lexeme)
+	token_id id;			// ID of current token (token type)
+	dynamic_array lexeme;	// Dyn. array type containing sequence of alphanumerical + '_' characters  (lexeme)
+	union {					// Union type containing value of integer or decimal number
+		int i32;
+		double f64;
+	} value;
 } token_t;
 
 #endif 
