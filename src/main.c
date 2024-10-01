@@ -35,6 +35,11 @@ int main(void) {
 			d_array_free(&test.lexeme);
 		}
 
+	if(test.id == TOKEN_ERROR) {
+			print_token(test);
+			d_array_free(&test.lexeme);
+		}
+
 	if(error)
 		print_error(error);
 

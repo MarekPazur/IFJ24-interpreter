@@ -413,7 +413,7 @@ token_t get_token(void) {
                     return token;
                 }
                 break;
-                
+
             case STATE_STRING_START:
                 if (c == '"') {
                     return token;
@@ -449,6 +449,7 @@ token_t get_token(void) {
                     d_array_append(&token.lexeme, c);
                 } else {
                     token.id = TOKEN_ERROR;
+                    error = ERR_LEXICAL;
                     return token;
                 }
                 break;
