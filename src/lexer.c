@@ -16,16 +16,24 @@
 #include "compiler_error.h"
 
 #define NOF_KEY_WORDS 13
+#define BACKSLASH_SIGNS 5
 
 scanner_t scanner = {0};
 
 const char *keywords[] = {"const", "else", "fn", "if", "i32", "f64", "null", "pub", "return", "u8", "var", "void", "while"};
+
+char special_chars[] = {'"', 'n', 'r', 't', '\\'};
+char special_chars_backslash[] = {'\"', '\n', '\r', '\t', '\\'};
 
 void init_scanner(void) { 
 	scanner.p_state = STATE_START;
 	scanner.row = 1;
 	scanner.col = 0;
 	scanner.head_pos = 0;
+}
+
+bool valid_hex(char a){
+    return (a >= '0' && a <= '9') || (a >= 'A' && a <= 'F') || (a >= 'a' && a <= 'f');
 }
 
 token_t get_token(void) {
@@ -49,408 +57,451 @@ token_t get_token(void) {
 		++scanner.head_pos;
 
 		switch(scanner.p_state) {
-			case STATE_START:
-				/* Simple states */
+            case STATE_START:
+                /* Simple states */
 
-				if(isspace(c)) {
-					scanner.p_state = STATE_START;
-				}
+                if (isspace(c)) {
+                    scanner.p_state = STATE_START;
+                } else if (c == '"') {
+                    token.id = TOKEN_LITERAL_STRING;
+                    scanner.p_state = STATE_STRING_START;
+                } else if (c == '\\') {
+                    c = getc(stdin);
+                    if (c == '\\') {
+                        token.id = TOKEN_LITERAL_STRING;
+                        scanner.p_state = STATE_MULTILINE_STRING_START;
+                    }
 
-				else if(c == EOF) {
-					token.id = TOKEN_EOF;
-					return token;
-				}
+                } else if (c == EOF) {
+                    token.id = TOKEN_EOF;
+                    return token;
+                } else if (c == '(') {
+                    token.id = TOKEN_BRACKET_ROUND_LEFT;
+                    return token;
+                } else if (c == ')') {
+                    token.id = TOKEN_BRACKET_ROUND_RIGHT;
+                    return token;
+                } else if (c == '{') {
+                    token.id = TOKEN_BRACKET_CURLY_LEFT;
+                    return token;
+                } else if (c == '}') {
+                    token.id = TOKEN_BRACKET_CURLY_RIGHT;
+                    return token;
+                } else if (c == '[') {
+                    token.id = TOKEN_BRACKET_SQUARE_LEFT;
+                    return token;
+                } else if (c == ']') {
+                    token.id = TOKEN_BRACKET_SQUARE_RIGHT;
+                    return token;
+                } else if (c == '+') {
+                    token.id = TOKEN_ADDITION;
+                    return token;
+                } else if (c == '-') {
+                    token.id = TOKEN_SUBSTRACTION;
+                    return token;
+                } else if (c == '*') {
+                    token.id = TOKEN_MULTIPLICATION;
+                    return token;
+                } else if (c == '.') {
+                    token.id = TOKEN_ACCESS_OPERATOR;
+                    return token;
+                } else if (c == '?') {
+                    token.id = TOKEN_OPTIONAL_TYPE_NULL;
+                    return token;
+                } else if (c == ':') {
+                    token.id = TOKEN_COLON;
+                    return token;
+                } else if (c == '|') {
+                    token.id = TOKEN_PIPE;
+                    return token;
+                } else if (c == ',') {
+                    token.id = TOKEN_COMMA;
+                    return token;
+                } else if (c == ';') {
+                    token.id = TOKEN_SEMICOLON;
+                    return token;
+                }
 
-				else if(c == '(') {
-					token.id = TOKEN_BRACKET_ROUND_LEFT;
-					return token;
-				}
+                    /* Complex states */
+                else if (c == '/') { // Division op. or comment
+                    scanner.p_state = STATE_COMMENT_DIV;
+                } else if (c == '=') { // = or ==
+                    scanner.p_state = STATE_EQUAL_ASSIGN;
+                } else if (c == '!') { // Can be only !=
+                    scanner.p_state = STATE_NOT_EQUAL;
+                } else if (c == '<') { // < or <=
+                    scanner.p_state = STATE_LESS_LEQ;
+                } else if (c == '>') { // > or >=
+                    scanner.p_state = STATE_GREATER_GREQ;
+                } else if (c == '0') {
+                    d_array_append(&token.lexeme, c);
+                    scanner.p_state = STATE_DIGIT_ZERO;
+                }
 
-				else if(c == ')') {
-					token.id = TOKEN_BRACKET_ROUND_RIGHT;
-					return token;
-				}
+                    /* Literals */
+                else if (isdigit(c)) {
+                    d_array_append(&token.lexeme, c);
+                    scanner.p_state = STATE_DIGIT;
+                }
 
-				else if(c == '{') {
-					token.id = TOKEN_BRACKET_CURLY_LEFT;
-					return token;
-				}
-
-				else if(c == '}') {
-					token.id = TOKEN_BRACKET_CURLY_RIGHT;
-					return token;
-				}
-
-				else if(c == '[') {
-					token.id = TOKEN_BRACKET_SQUARE_LEFT;
-					return token;
-				}
-
-				else if(c == ']') {
-					token.id = TOKEN_BRACKET_SQUARE_RIGHT;
-					return token;
-				}
-
-				else if(c == '+') {
-					token.id = TOKEN_ADDITION;
-					return token;
-				}
-
-				else if(c == '-') {
-					token.id = TOKEN_SUBSTRACTION;
-					return token;
-				}
-
-				else if(c == '*') {
-					token.id = TOKEN_MULTIPLICATION;
-					return token;
-				}
-
-				else if(c == '.') {
-					token.id = TOKEN_ACCESS_OPERATOR;
-					return token;
-				}
-
-				else if(c == '?') {
-					token.id = TOKEN_OPTIONAL_TYPE_NULL;
-					return token;
-				}
-
-				else if(c == ':') {
-					token.id = TOKEN_COLON;
-					return token;
-				}
-
-				else if(c == '|') {
-					token.id = TOKEN_PIPE;
-					return token;
-				}
-
-				else if(c == ',') {
-					token.id = TOKEN_COMMA;
-					return token;
-				}
-
-				else if(c == ';') {
-					token.id = TOKEN_SEMICOLON;
-					return token;
-				}				
-
-				/* Complex states */
-				else if(c == '/') { // Division op. or comment
-					scanner.p_state = STATE_COMMENT_DIV;
-				}	
-
-				else if(c == '=') { // = or ==
-					scanner.p_state = STATE_EQUAL_ASSIGN;
-				}
-
-				else if(c == '!') { // Can be only !=
-					scanner.p_state = STATE_NOT_EQUAL;
-				}
-
-				else if(c == '<') { // < or <=
-					scanner.p_state = STATE_LESS_LEQ;
-				}
-
-				else if(c == '>') { // > or >=
-					scanner.p_state = STATE_GREATER_GREQ;
-				}
-
-				else if(c == '0') {
-					d_array_append(&token.lexeme, c);
-					scanner.p_state = STATE_DIGIT_ZERO;
-				}
-
-				/* Literals */
-				else if(isdigit(c)) {
-					d_array_append(&token.lexeme, c);
-					scanner.p_state = STATE_DIGIT;
-				}
-
-				/* Identifiers or keywords */
-				else if(c == '@') {
-					d_array_append(&token.lexeme, c);
-					scanner.p_state = STATE_PROLOG;
-				}
-
-				else if(c == '_') {
-					d_array_append(&token.lexeme, c);
-					scanner.p_state = STATE_UNDERSCORE;
-				}
-
-				else if(is_identifier(c)){
+                    /* Identifiers or keywords */
+                else if (c == '@') {
+                    d_array_append(&token.lexeme, c);
+                    scanner.p_state = STATE_PROLOG;
+                } else if (c == '_') {
+                    d_array_append(&token.lexeme, c);
+                    scanner.p_state = STATE_UNDERSCORE;
+                } else if (is_identifier(c)) {
                     d_array_append(&token.lexeme, c);
                     token.id = TOKEN_IDENTIFIER;
                     scanner.p_state = STATE_KW_IDENT;
-                }
-
-                else {
-                	//token.id = TOKEN_ERROR;
-                	//error = ERR_LEXICAL;
-                	//return token;
-                }
-
-				break;
-
-			/* Comment */
-			case STATE_COMMENT_DIV:
-				// Single line comment
-				if(c == '/'){
-					ignore_comment();
-					scanner.p_state = STATE_START;
-				} 
-
-				else { // division operator
-					token.id = TOKEN_DIVISION;
-
-					//scanner.p_state = STATE_START;
-
-					ungetc(c,stdin);	// Necessary to put loaded char back to stream
-
-					return token;
-				}
-				break;
-
-			/* Operators */
-			case STATE_EQUAL_ASSIGN:
-				if(c == '=') {
-					token.id = TOKEN_EQUAL;
-					//scanner.p_state = STATE_START;
-					return token;
-				}
-				else {
-					token.id = TOKEN_ASSIGNMENT;
-					//scanner.p_state = STATE_START;
-					ungetc(c,stdin);
-					return token;
-				}
-				break;	
-
-			case STATE_NOT_EQUAL:
-
-				if(c == '=') {
-					token.id = TOKEN_NOT_EQUAL;
-					//scanner.p_state = STATE_START;
-					return token;
-				} else { // Standalone '!' is not any lexeme
-					token.id = TOKEN_ERROR;
-					//scanner.p_state = STATE_START;
-
-					error = ERR_LEXICAL;
-					ungetc(c, stdin);
-					return token;
-				}
-
-				break;
-
-			case STATE_LESS_LEQ:
-				if(c == '=') {
-					token.id = TOKEN_LESS_EQUAL;
-					//scanner.p_state = STATE_START;
-					return token;
-				}
-				else {
-					token.id = TOKEN_LESS;
-					//scanner.p_state = STATE_START;
-					ungetc(c,stdin);
-					return token;
-				}
-
-				break;
-
-			case STATE_GREATER_GREQ:
-				if(c == '=') {
-					token.id = TOKEN_GREATER_EQUAL;
-					//scanner.p_state = STATE_START;
-					return token;
-				}
-				else {
-					token.id = TOKEN_GREATER;
-					//scanner.p_state = STATE_START;
-					ungetc(c,stdin);
-					return token;
-				}
-				break;
-
-			/* Special */
-            case STATE_UNDERSCORE:
-            	if(isalnum(c) || c == '_') {
-            		d_array_append(&token.lexeme, c);
-            		token.id = TOKEN_IDENTIFIER;
-            		scanner.p_state = STATE_KW_IDENT;
-            	} else {
-            		token.id = TOKEN_DISCARD_RESULT;
-            		ungetc(c, stdin);
-            		return token;
-            	}
-            	break;
-
-            /* Identifier or keyword */
-            case STATE_KW_IDENT:
-                if(is_identifier(c) || isdigit(c)) {
-                    d_array_append(&token.lexeme, c);
                 } else {
+                    //token.id = TOKEN_ERROR;
+                    //error = ERR_LEXICAL;
+                    //return token;
+                }
+
+                break;
+
+                /* Comment */
+            case STATE_COMMENT_DIV:
+                // Single line comment
+                if (c == '/') {
+                    ignore_comment();
+                    scanner.p_state = STATE_START;
+                } else { // division operator
+                    token.id = TOKEN_DIVISION;
+
                     //scanner.p_state = STATE_START;
-                    ungetc(c, stdin);
-                    d_array_append(&token.lexeme,'\0');
 
-                    for(int i = 0; i < NOF_KEY_WORDS; i++){
-                        if(!strcmp(token.lexeme.array, keywords[i])){
-                            token.id = i + 3; // 3 is the offset of the tokens enum to the keywords
-                        }
-                    }
+                    ungetc(c, stdin);    // Necessary to put loaded char back to stream
 
-                    d_array_remove(&token.lexeme, token.lexeme.length-1);
                     return token;
                 }
                 break;
 
-            /* Digits - integer or double */
+                /* Operators */
+            case STATE_EQUAL_ASSIGN:
+                if (c == '=') {
+                    token.id = TOKEN_EQUAL;
+                    //scanner.p_state = STATE_START;
+                    return token;
+                } else {
+                    token.id = TOKEN_ASSIGNMENT;
+                    //scanner.p_state = STATE_START;
+                    ungetc(c, stdin);
+                    return token;
+                }
+                break;
+
+            case STATE_NOT_EQUAL:
+
+                if (c == '=') {
+                    token.id = TOKEN_NOT_EQUAL;
+                    //scanner.p_state = STATE_START;
+                    return token;
+                } else { // Standalone '!' is not any lexeme
+                    token.id = TOKEN_ERROR;
+                    //scanner.p_state = STATE_START;
+
+                    error = ERR_LEXICAL;
+                    ungetc(c, stdin);
+                    return token;
+                }
+
+                break;
+
+            case STATE_LESS_LEQ:
+                if (c == '=') {
+                    token.id = TOKEN_LESS_EQUAL;
+                    //scanner.p_state = STATE_START;
+                    return token;
+                } else {
+                    token.id = TOKEN_LESS;
+                    //scanner.p_state = STATE_START;
+                    ungetc(c, stdin);
+                    return token;
+                }
+
+                break;
+
+            case STATE_GREATER_GREQ:
+                if (c == '=') {
+                    token.id = TOKEN_GREATER_EQUAL;
+                    //scanner.p_state = STATE_START;
+                    return token;
+                } else {
+                    token.id = TOKEN_GREATER;
+                    //scanner.p_state = STATE_START;
+                    ungetc(c, stdin);
+                    return token;
+                }
+                break;
+
+                /* Special */
+            case STATE_UNDERSCORE:
+                if (isalnum(c) || c == '_') {
+                    d_array_append(&token.lexeme, c);
+                    token.id = TOKEN_IDENTIFIER;
+                    scanner.p_state = STATE_KW_IDENT;
+                } else {
+                    token.id = TOKEN_DISCARD_RESULT;
+                    ungetc(c, stdin);
+                    return token;
+                }
+                break;
+
+                /* Identifier or keyword */
+            case STATE_KW_IDENT:
+                if (is_identifier(c) || isdigit(c)) {
+                    d_array_append(&token.lexeme, c);
+                } else {
+                    //scanner.p_state = STATE_START;
+                    ungetc(c, stdin);
+                    d_array_append(&token.lexeme, '\0');
+
+                    for (int i = 0; i < NOF_KEY_WORDS; i++) {
+                        if (!strcmp(token.lexeme.array, keywords[i])) {
+                            token.id = i + 3; // 3 is the offset of the tokens enum to the keywords
+                        }
+                    }
+
+                    d_array_remove(&token.lexeme, token.lexeme.length - 1);
+                    return token;
+                }
+                break;
+
+                /* Digits - integer or double */
             case STATE_DIGIT_ZERO:
-            	if(isdigit(c)) {
-            		token.id = TOKEN_ERROR;
-            		error = ERR_LEXICAL;
-            		fprintf(stderr, RED_BOLD("error")": A non-zero literal must not start with a 0\n");
-            		ungetc(c,stdin);
-            		return token;
-            	} else if(c == '.') {
-            		d_array_append(&token.lexeme, c);
-            		scanner.p_state = STATE_FLOATING_POINT;
-            	} else if(c == 'e') {
-            		d_array_append(&token.lexeme, c);
-            		scanner.p_state = STATE_EXPONENT;
-            	}
-            	else {
-            		token.id = TOKEN_LITERAL_I32;
-            		ungetc(c,stdin);
-            		return token;
-            	}
-            	break;
+                if (isdigit(c)) {
+                    token.id = TOKEN_ERROR;
+                    error = ERR_LEXICAL;
+                    fprintf(stderr, RED_BOLD("error")": A non-zero literal must not start with a 0\n");
+                    ungetc(c, stdin);
+                    return token;
+                } else if (c == '.') {
+                    d_array_append(&token.lexeme, c);
+                    scanner.p_state = STATE_FLOATING_POINT;
+                } else if (c == 'e') {
+                    d_array_append(&token.lexeme, c);
+                    scanner.p_state = STATE_EXPONENT;
+                } else {
+                    token.id = TOKEN_LITERAL_I32;
+                    ungetc(c, stdin);
+                    return token;
+                }
+                break;
 
             case STATE_DIGIT:
-            	if(isdigit(c)) {
-            		d_array_append(&token.lexeme, c);
-            	}
-            	else if(c == '.') {
-            		d_array_append(&token.lexeme, c);
-            		scanner.p_state = STATE_FLOATING_POINT;
-            	}
-            	else if(c == 'e' || c == 'E') {
-            		d_array_append(&token.lexeme, c);
-            		scanner.p_state = STATE_EXPONENT;
-            	}
-            	/*else if(is_identifier(c)) {
-            		token.id = TOKEN_ERROR;
+                if (isdigit(c)) {
+                    d_array_append(&token.lexeme, c);
+                } else if (c == '.') {
+                    d_array_append(&token.lexeme, c);
+                    scanner.p_state = STATE_FLOATING_POINT;
+                } else if (c == 'e' || c == 'E') {
+                    d_array_append(&token.lexeme, c);
+                    scanner.p_state = STATE_EXPONENT;
+                }
+                    /*else if(is_identifier(c)) {
+                        token.id = TOKEN_ERROR;
 
-            		char c;
+                        char c;
 
-            		// Skip all possible identifier characters
-            		while(is_identifier(c = getc(stdin)) || isdigit(c));
+                        // Skip all possible identifier characters
+                        while(is_identifier(c = getc(stdin)) || isdigit(c));
 
-            		error = ERR_LEXICAL;
-            		fprintf(stderr, RED_BOLD("error")": invalid suffix on integer constant\n");
-            		return token;
-            	}*/
-            	else {
-            		token.id = TOKEN_LITERAL_I32;
-            		ungetc(c,stdin);
-            		return token;
-            	}
-            	break;
+                        error = ERR_LEXICAL;
+                        fprintf(stderr, RED_BOLD("error")": invalid suffix on integer constant\n");
+                        return token;
+                    }*/
+                else {
+                    token.id = TOKEN_LITERAL_I32;
+                    ungetc(c, stdin);
+                    return token;
+                }
+                break;
 
             case STATE_FLOATING_POINT:
-            	if(isdigit(c)) {
-            		d_array_append(&token.lexeme, c);
-            		scanner.p_state = STATE_DECIMAL_PART;
-            	}
-            	else if(c == 'e' || c == 'E') {
-            		d_array_append(&token.lexeme, c);
-            		scanner.p_state = STATE_EXPONENT;
-            	} else {
-            		token.id = TOKEN_ERROR;
-            		error = ERR_LEXICAL;
-            		fprintf(stderr, RED_BOLD("error")": invalid decimal base\n");
-            		ungetc(c,stdin);
-            		return token;
-            	}
-            	break;
+                if (isdigit(c)) {
+                    d_array_append(&token.lexeme, c);
+                    scanner.p_state = STATE_DECIMAL_PART;
+                } else if (c == 'e' || c == 'E') {
+                    d_array_append(&token.lexeme, c);
+                    scanner.p_state = STATE_EXPONENT;
+                } else {
+                    token.id = TOKEN_ERROR;
+                    error = ERR_LEXICAL;
+                    fprintf(stderr, RED_BOLD("error")": invalid decimal base\n");
+                    ungetc(c, stdin);
+                    return token;
+                }
+                break;
 
             case STATE_DECIMAL_PART:
-            	if(isdigit(c)) {
-            		d_array_append(&token.lexeme, c);
-            	} else if(c == 'e' || c == 'E') {
-            		d_array_append(&token.lexeme, c);
-            		scanner.p_state = STATE_EXPONENT;
-            	}
-            	else {
-            		token.id = TOKEN_LITERAL_F64;
-            		ungetc(c,stdin);
-            		return token;
-            	}
-            	break;
+                if (isdigit(c)) {
+                    d_array_append(&token.lexeme, c);
+                } else if (c == 'e' || c == 'E') {
+                    d_array_append(&token.lexeme, c);
+                    scanner.p_state = STATE_EXPONENT;
+                } else {
+                    token.id = TOKEN_LITERAL_F64;
+                    ungetc(c, stdin);
+                    return token;
+                }
+                break;
 
             case STATE_EXPONENT:
-            	if(isdigit(c)) {
-            		d_array_append(&token.lexeme, c);
-            		scanner.p_state = STATE_EXPONENT_FINAL;
-            	} else if(c == '+' || c == '-') {
-            		d_array_append(&token.lexeme, c);
-            		scanner.p_state = STATE_EXPONENT_POSITIVE_NEGATIVE;
-            	} else {
-            		token.id = TOKEN_ERROR;
-            		error = ERR_LEXICAL;
-            		fprintf(stderr, RED_BOLD("error")": invalid decimal base\n");
-            		ungetc(c,stdin);
-            		return token;
-            	}
-            	break;
+                if (isdigit(c)) {
+                    d_array_append(&token.lexeme, c);
+                    scanner.p_state = STATE_EXPONENT_FINAL;
+                } else if (c == '+' || c == '-') {
+                    d_array_append(&token.lexeme, c);
+                    scanner.p_state = STATE_EXPONENT_POSITIVE_NEGATIVE;
+                } else {
+                    token.id = TOKEN_ERROR;
+                    error = ERR_LEXICAL;
+                    fprintf(stderr, RED_BOLD("error")": invalid decimal base\n");
+                    ungetc(c, stdin);
+                    return token;
+                }
+                break;
 
             case STATE_EXPONENT_POSITIVE_NEGATIVE:
-            	if(isdigit(c)) {
-            		d_array_append(&token.lexeme, c);
-            		scanner.p_state = STATE_EXPONENT_FINAL;
-            	} else {
-            		token.id = TOKEN_ERROR;
-            		error = ERR_LEXICAL;
-            		fprintf(stderr, RED_BOLD("error")": invalid decimal base\n");
-            		ungetc(c,stdin);
-            		return token;
-            	}
-            	break;	
+                if (isdigit(c)) {
+                    d_array_append(&token.lexeme, c);
+                    scanner.p_state = STATE_EXPONENT_FINAL;
+                } else {
+                    token.id = TOKEN_ERROR;
+                    error = ERR_LEXICAL;
+                    fprintf(stderr, RED_BOLD("error")": invalid decimal base\n");
+                    ungetc(c, stdin);
+                    return token;
+                }
+                break;
 
             case STATE_EXPONENT_FINAL:
-            	if(isdigit(c)) {
-            		d_array_append(&token.lexeme, c);
-            	} else {
-            		token.id = TOKEN_LITERAL_F64;
-            		ungetc(c,stdin);
-            		return token;
-            	}
-            	break;	
+                if (isdigit(c)) {
+                    d_array_append(&token.lexeme, c);
+                } else {
+                    token.id = TOKEN_LITERAL_F64;
+                    ungetc(c, stdin);
+                    return token;
+                }
+                break;
 
-            /* Prolog - builtin functions*/
+                /* Prolog - builtin functions*/
             case STATE_PROLOG:
-            	if(isalpha(c)) {
-            		d_array_append(&token.lexeme, c);
-            	} else {
-            		ungetc(c,stdin);
+                if (isalpha(c)) {
+                    d_array_append(&token.lexeme, c);
+                } else {
+                    ungetc(c, stdin);
 
-            		d_array_append(&token.lexeme,'\0');
+                    d_array_append(&token.lexeme, '\0');
 
-            		if(!strcmp(token.lexeme.array, "@import")) {
-            			token.id = TOKEN_PROLOG; 
-            		} else {
-            			token.id = TOKEN_ERROR;
-            			error = ERR_LEXICAL;
-            			fprintf(stderr, RED_BOLD("error")": invalid builtin function\n");
-            		}
+                    if (!strcmp(token.lexeme.array, "@import")) {
+                        token.id = TOKEN_PROLOG;
+                    } else {
+                        token.id = TOKEN_ERROR;
+                        error = ERR_LEXICAL;
+                        fprintf(stderr, RED_BOLD("error")": invalid builtin function\n");
+                    }
 
-            		d_array_remove(&token.lexeme, token.lexeme.length-1);
+                    d_array_remove(&token.lexeme, token.lexeme.length - 1);
 
-            		return token;
-            	}
-            	break;
+                    return token;
+                }
+                break;
+            case STATE_STRING_START:
+                if (c == '"') {
+                    return token;
+                } else if (c == '\\') {
+                    c = getc(stdin);
+                    int initial_array_size = token.lexeme.length;
+                    for (int i = 0; i < BACKSLASH_SIGNS; i++) {
+                        if (special_chars[i] == c) {
+                            d_array_append(&token.lexeme, special_chars_backslash[i]);
+                            break;
+                        } else if ('x' == c) {
+                            char hex_chars[3] = {0};
+                            for (int hex_number = 0; hex_number < 2; hex_number++) {
+                                c = getc(stdin);
+                                if (valid_hex(c)) {
+                                    hex_chars[hex_number] = c;
+                                } else {
+                                    token.id = TOKEN_ERROR;
+                                    return token;
+                                }
+                            }
+                            unsigned int value;
+                            sscanf(hex_chars, "%2x", &value);  // Convert hex string to integer
+                            d_array_append(&token.lexeme, (char)value);
+                            break;
+                        }
+                    }
+                    if (initial_array_size == token.lexeme.length) {
+                        token.id = TOKEN_ERROR;
+                        return token;
+                    }
+                } else if (c >= 32 && c <= 126) {
+                    d_array_append(&token.lexeme, c);
+                } else {
+                    token.id = TOKEN_ERROR;
+                    return token;
+                }
+                break;
+
+            case STATE_MULTILINE_STRING_START:
+                if (c == '\\') {
+                    d_array_append(&token.lexeme, '\\');
+                    c = getc(stdin);
+                    int initial_array_size = token.lexeme.length;
+                    for (int i = 0; i < BACKSLASH_SIGNS; i++) {
+                        if (special_chars[i] == c) {
+                            d_array_append(&token.lexeme, c);
+                            break;
+                        } else if ('x' == c) {
+                            d_array_append(&token.lexeme, c);
+                            for (int hex_number = 0; hex_number < 2; hex_number++) {
+                                c = getc(stdin);
+                                if (valid_hex(c)) {
+                                    d_array_append(&token.lexeme, c);
+                                } else {
+                                    token.id = TOKEN_ERROR;
+                                    return token;
+                                }
+                            }
+                            break;
+                        }
+                    }
+                    if (initial_array_size == token.lexeme.length) {
+                        token.id = TOKEN_ERROR;
+                        return token;
+                    }
+                } else if (c >= 32 && c <= 126) {
+                    d_array_append(&token.lexeme, c);
+                } else if (c == '\n'){
+                    scanner.p_state = STATE_NEXT_MULTILINE;
+                } else {
+                    token.id = TOKEN_ERROR;
+                    return token;
+                }
+                break;
+
+            case STATE_NEXT_MULTILINE:
+                if(c == '\\'){
+                    c = getc(stdin);
+                    if(c == '\\'){
+                        d_array_append(&token.lexeme, '\n');
+                        scanner.p_state = STATE_MULTILINE_STRING_START;
+                    }
+                } else if(c == ';'){
+                    ungetc(c, stdin);
+                    return token;
+                } else if (!isspace(c)){
+                    token.id = TOKEN_ERROR;
+                    return token;
+                }
+                break;
 
 			default:
 				token.id = TOKEN_ERROR;

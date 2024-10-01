@@ -32,7 +32,9 @@ typedef enum fsm_state {
 	STATE_EXPONENT_FINAL,				//numberEsign[Decimal]
 	STATE_UNDERSCORE,					// _
 	STATE_PROLOG,						// @import
-	STATE_STRING_START					// "
+	STATE_STRING_START,					// "
+    STATE_MULTILINE_STRING_START,       // //...
+    STATE_NEXT_MULTILINE
 } fsm_state;
 
 /* Structure containing data about current configuration of the scanner */
