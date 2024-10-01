@@ -20,61 +20,61 @@ typedef enum token_id {
 	TOKEN_IDENTIFIER,		// Sequence of alphanumerical characters + '_', must begin with <Aa-Zz> or '_'
 
 	/* Keywords */
-	TOKEN_KW_CONST,			// const
-	TOKEN_KW_ELSE,			// else
-	TOKEN_KW_FN,			// fn
-	TOKEN_KW_IF,			// if
-	TOKEN_KW_I32,			// i32
-	TOKEN_KW_F64,			// f64
-	TOKEN_KW_NULL,			// null
-	TOKEN_KW_PUB,			// pub
-	TOKEN_KW_RETURN,		// return
-	TOKEN_KW_U8,			// u8
-	TOKEN_KW_VAR,			// var
-	TOKEN_KW_VOID,			// void
-	TOKEN_KW_WHILE,			// while
+	TOKEN_KW_CONST,			// 'const' non modifiable
+	TOKEN_KW_ELSE,			// 'else'
+	TOKEN_KW_FN,			// 'fn'
+	TOKEN_KW_IF,			// 'if'
+	TOKEN_KW_I32,			// 'i32'
+	TOKEN_KW_F64,			// 'f64'
+	TOKEN_KW_NULL,			// 'null'
+	TOKEN_KW_PUB,			// 'pub'
+	TOKEN_KW_RETURN,		// 'return'
+	TOKEN_KW_U8,			// 'u8'
+	TOKEN_KW_VAR,			// 'var' modifiable
+	TOKEN_KW_VOID,			// 'void'
+	TOKEN_KW_WHILE,			// 'while'
 
 	/* Brackets  */
-	TOKEN_BRACKET_ROUND_LEFT, 		// (
-	TOKEN_BRACKET_ROUND_RIGHT,		// )
-	TOKEN_BRACKET_CURLY_LEFT, 		// {
-	TOKEN_BRACKET_CURLY_RIGHT,		// }
-	TOKEN_BRACKET_SQUARE_LEFT,		// [
-	TOKEN_BRACKET_SQUARE_RIGHT,		// ]
+	TOKEN_BRACKET_ROUND_LEFT, 		// '('
+	TOKEN_BRACKET_ROUND_RIGHT,		// ')'
+	TOKEN_BRACKET_CURLY_LEFT, 		// '{'
+	TOKEN_BRACKET_CURLY_RIGHT,		// '}'
+	TOKEN_BRACKET_SQUARE_LEFT,		// '['
+	TOKEN_BRACKET_SQUARE_RIGHT,		// ']'
 
 	/* Binary operators */
-	TOKEN_ADDITION,			// +
-	TOKEN_SUBSTRACTION,		// -
-	TOKEN_MULTIPLICATION,	// *
-	TOKEN_DIVISION, 	// / int division
+	TOKEN_ADDITION,			// '+'
+	TOKEN_SUBSTRACTION,		// '-'
+	TOKEN_MULTIPLICATION,	// '*'
+	TOKEN_DIVISION, 		// '/' 
 	
-	TOKEN_EQUAL,			// ==
-	TOKEN_NOT_EQUAL,		// !=
-	TOKEN_LESS,				// <
-	TOKEN_GREATER,			// >
-	TOKEN_GREATER_EQUAL,	// >=
-	TOKEN_LESS_EQUAL,		// <=
+	TOKEN_EQUAL,			// '=='
+	TOKEN_NOT_EQUAL,		// '!='
+	TOKEN_LESS,				// '<'
+	TOKEN_GREATER,			// '>'
+	TOKEN_GREATER_EQUAL,	// '>='
+	TOKEN_LESS_EQUAL,		// '<='
 
-	TOKEN_ASSIGNMENT,		// = 
+	TOKEN_ASSIGNMENT,		// '='
 
-	/* Literals (Operands) */
-	TOKEN_LITERAL_I32,		// 123
-	TOKEN_LITERAL_F64,		// 123.456
-	TOKEN_LITERAL_STRING,	// "Hello world!"
+	/* Literals (Terms/Operands) */
+	TOKEN_LITERAL_I32,		// Integer value '123'
+	TOKEN_LITERAL_F64,		// Decimal value '123.456, 123.e1, 123.4e5, 123.e+456, 123.e-456'
+	TOKEN_LITERAL_STRING,	// String "Hello world!"
 
 	/* Other tokens */
-	TOKEN_EOL,				// EOL \n
-	TOKEN_EOF,				// EOF -1
-	TOKEN_NAMESPACE,		// 'ifj.'
-	TOKEN_PROLOG,			// '@import' 
-	TOKEN_BACKSLASH,		// '\'
-	TOKEN_COLON,			// :
-	TOKEN_SEMICOLON,		// ;
-	TOKEN_POINT,			// .
-	TOKEN_NULL,				// 'null'
-	TOKEN_PIPE,				// |
-	TOKEN_OPTIONAL_TYPE,	// ?
-	TOKEN_SLICE 			// []
+	TOKEN_EOL,					// EOL \n
+	TOKEN_EOF,					// EOF -1
+	TOKEN_ACCESS_OPERATOR,		// 'ifj[.]'
+	TOKEN_PROLOG,				// '@import' '@' is used for builtin functions
+	TOKEN_BACKSLASH,			// '\'
+	TOKEN_COLON,				// :
+	TOKEN_SEMICOLON,			// ;
+	TOKEN_DISCARD_RESULT,		// '_' Special pseudo-variable '_' is used for discarding (declared non-use) the result of an expression or calling a function with a return value
+	TOKEN_NULL,					// 'null'
+	TOKEN_PIPE,					// |
+	TOKEN_OPTIONAL_TYPE_NULL,	// ? '?type', '{?}'
+	TOKEN_COMMA 				// ,
 } token_id;
 
 /* Structure containing data about tokens */

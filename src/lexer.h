@@ -23,12 +23,16 @@ typedef enum fsm_state {
 	STATE_NOT_EQUAL,		// Possible !=, standalone '!' is invalid (causes lexical error!)
 	STATE_LESS_LEQ,			// Possible < or <=
 	STATE_GREATER_GREQ,		// Possible > or >=
+	STATE_DIGIT_ZERO,			// Number starting with '0' can't have more than one digits
 	STATE_DIGIT,				// Possible integer or floating point digit, can be also invalid lexeme (causes lexical error!)
 	STATE_FLOATING_POINT,		// number[.]decimal
 	STATE_DECIMAL_PART,			// number.[decimal]
 	STATE_EXPONENT,				//number[E] or number.[E]
 	STATE_EXPONENT_POSITIVE_NEGATIVE,	// number[E+] or number[E-]
-	STATE_EXPONENT_FINAL				//numberEsign[Decimal]
+	STATE_EXPONENT_FINAL,				//numberEsign[Decimal]
+	STATE_UNDERSCORE,					// _
+	STATE_PROLOG,						// @import
+	STATE_STRING_START					// "
 } fsm_state;
 
 /* Structure containing data about current configuration of the scanner */

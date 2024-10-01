@@ -160,7 +160,7 @@ void d_array_print(dynamic_array* lexeme) {
         for (int i = 0; i < lexeme->length; ++i)
         {
             char c = lexeme->array[i];
-            fprintf(stdin, "%c", c);
+            putchar(c);
         }
     }
 }

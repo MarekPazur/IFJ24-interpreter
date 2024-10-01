@@ -26,6 +26,8 @@ int main(void) {
 	if(error)
 		print_error(error);
 
+	/* Testing phase, will be rewritten */
+
 	token_t test;
 
 	while((test = get_token()).id != TOKEN_EOF && test.id != TOKEN_ERROR) {
