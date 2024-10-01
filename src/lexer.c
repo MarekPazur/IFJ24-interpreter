@@ -59,20 +59,9 @@ token_t get_token(void) {
 		switch(scanner.p_state) {
             case STATE_START:
                 /* Simple states */
-
                 if (isspace(c)) {
                     scanner.p_state = STATE_START;
-                } else if (c == '"') {
-                    token.id = TOKEN_LITERAL_STRING;
-                    scanner.p_state = STATE_STRING_START;
-                } else if (c == '\\') {
-                    c = getc(stdin);
-                    if (c == '\\') {
-                        token.id = TOKEN_LITERAL_STRING;
-                        scanner.p_state = STATE_MULTILINE_STRING_START;
-                    }
-
-                } else if (c == EOF) {
+                }  else if (c == EOF) {
                     token.id = TOKEN_EOF;
                     return token;
                 } else if (c == '(') {
@@ -142,6 +131,19 @@ token_t get_token(void) {
                 else if (isdigit(c)) {
                     d_array_append(&token.lexeme, c);
                     scanner.p_state = STATE_DIGIT;
+                } else if (c == '"') {
+                    token.id = TOKEN_LITERAL_STRING;
+                    scanner.p_state = STATE_STRING_START;
+                } else if (c == '\\') {
+                    c = getc(stdin);
+                    if (c == '\\') {
+                        token.id = TOKEN_LITERAL_STRING;
+                        scanner.p_state = STATE_MULTILINE_STRING_START;
+                    } else {
+                    	token.id = TOKEN_ERROR;
+                    	error = ERR_LEXICAL;
+                    	return token;
+                    }
                 }
 
                     /* Identifiers or keywords */
@@ -411,6 +413,7 @@ token_t get_token(void) {
                     return token;
                 }
                 break;
+                
             case STATE_STRING_START:
                 if (c == '"') {
                     return token;
