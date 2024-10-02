@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "binary_tree.h"
 
@@ -37,6 +38,9 @@ static void free_nodes(Node** node){
     }
     free_nodes(&((*node)->left));
     free_nodes(&((*node)->right));
+    if((*node)->data != NULL){
+        free((*node)->data);
+    }
     free(*node);
 }
 
@@ -63,13 +67,22 @@ static bool add_node(Node** root, int key, void* data){
     }
 }
 
-static void in_order(Node* node, Operation operation){
+static void inorder(Node* node, Operation operation){
     if(node == NULL || operation == NULL){
         return;
     }
-    in_order(node->left, operation);
+    inorder(node->left, operation);
     operation(node);
-    in_order(node->right, operation);
+    inorder(node->right, operation);
+}
+
+// Node operations
+
+void node_print_int(Node* node){
+    if(node == NULL || node->data == NULL){
+        return;
+    }
+    printf("Key: %d, Data: %d\n", node->key, *((int*)node->data));
 }
 
 // Global functions
@@ -100,9 +113,9 @@ bool BST_add_node(BST* bst, int key, void* data){
     return add_node(&(bst->root), key, data);
 }
 
-void BST_in_order(BST* bst, Operation operation){
-    if(bst == NULL || operation == NULL){
+void BST_print_inorder_int(BST* bst){
+    if(bst == NULL){
         return;
     }
-    in_order(bst->root, operation);
+    inorder(bst->root, node_print_int);
 }
