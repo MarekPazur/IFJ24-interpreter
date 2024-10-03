@@ -1,0 +1,5 @@
+const str = \\hello
+\\my
+\\name
+\\is \\
+\\zdenek \n \r \xaB

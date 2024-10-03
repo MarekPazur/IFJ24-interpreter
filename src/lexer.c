@@ -26,10 +26,10 @@ char special_chars[] = {'"', 'n', 'r', 't', '\\'};
 char special_chars_backslash[] = {'\"', '\n', '\r', '\t', '\\'};
 
 void init_scanner(void) { 
-	scanner.p_state = STATE_START;
-	scanner.row = 1;
-	scanner.col = 0;
-	scanner.head_pos = 0;
+    scanner.p_state = STATE_START;
+    scanner.row = 1;
+    scanner.col = 0;
+    scanner.head_pos = 0;
 }
 
 bool valid_hex(char a){
@@ -37,26 +37,26 @@ bool valid_hex(char a){
 }
 
 token_t get_token(void) {
-	token_t token; /* New token is created every function call */
-	token.id = TOKEN_DEFAULT; /* Default placeholder */
-	d_array_init(&token.lexeme, 16); /* Each token has its own array of chars (string), necessary for keyword/identifier tokens */
+    token_t token; /* New token is created every function call */
+    token.id = TOKEN_DEFAULT; /* Default placeholder */
+    d_array_init(&token.lexeme, 16); /* Each token has its own array of chars (string), necessary for keyword/identifier tokens */
 
-	scanner.p_state = STATE_START; 
+    scanner.p_state = STATE_START; 
 
-	int c = 0;
+    int c = 0;
 
-	while(true) {
+    while(true) {
 
-		c = getc(stdin);
+        c = getc(stdin);
 
-		if(c == '\n') { /* row&column calculation */
-			++scanner.row;
-			scanner.col = 0;
-		}
-		++scanner.col;
-		++scanner.head_pos;
+        if(c == '\n') { /* row&column calculation */
+            ++scanner.row;
+            scanner.col = 0;
+        }
+        ++scanner.col;
+        ++scanner.head_pos;
 
-		switch(scanner.p_state) {
+        switch(scanner.p_state) {
             case STATE_START:
                 /* Simple states */
                 if (isspace(c)) {
@@ -140,9 +140,9 @@ token_t get_token(void) {
                         token.id = TOKEN_LITERAL_STRING;
                         scanner.p_state = STATE_MULTILINE_STRING_START;
                     } else {
-                    	token.id = TOKEN_ERROR;
-                    	error = ERR_LEXICAL;
-                    	return token;
+                        token.id = TOKEN_ERROR;
+                        error = ERR_LEXICAL;
+                        return token;
                     }
                 }
 
@@ -158,9 +158,9 @@ token_t get_token(void) {
                     token.id = TOKEN_IDENTIFIER;
                     scanner.p_state = STATE_KW_IDENT;
                 } else {
-                    //token.id = TOKEN_ERROR;
-                    //error = ERR_LEXICAL;
-                    //return token;
+                    token.id = TOKEN_ERROR;
+                    error = ERR_LEXICAL;
+                    return token;
                 }
 
                 break;
@@ -498,31 +498,31 @@ token_t get_token(void) {
                         d_array_append(&token.lexeme, '\n');
                         scanner.p_state = STATE_MULTILINE_STRING_START;
                     }
-                } else if(c == ';'){
+                } else if(!isspace(c) || c == EOF){
                     ungetc(c, stdin);
                     return token;
-                } else if (!isspace(c)){
+                } else {
                     token.id = TOKEN_ERROR;
                     return token;
                 }
                 break;
 
-			default:
-				token.id = TOKEN_ERROR;
-				return token;
-				break;
-		}
-	}
-	return token;
+            default:
+                token.id = TOKEN_ERROR;
+                return token;
+                break;
+        }
+    }
+    return token;
 }
 
 void ignore_comment() {
-	char c;
+    char c;
 
-	while((c = getc(stdin)) != '\n' && c != EOF);
+    while((c = getc(stdin)) != '\n' && c != EOF);
 
-	if(c == EOF) // Necessary to return EOF, since it is standalone token
-		ungetc(c,stdin);
+    if(c == EOF) // Necessary to return EOF, since it is standalone token
+        ungetc(c,stdin);
 }
 
 /**
@@ -540,77 +540,77 @@ bool is_identifier(char c){
 }
 
 void print_token(token_t token) {
-	char *token_info[] = {
-	"DEFAULT",
-	"ERROR",
-	/* Variable or function identifier */
-	"TOKEN_IDENTIFIER",
+    char *token_info[] = {
+    "DEFAULT",
+    "ERROR",
+    /* Variable or function identifier */
+    "TOKEN_IDENTIFIER",
 
-	/* Keywords */
-	"TOKEN_KW_CONST",
-	"TOKEN_KW_ELSE",
-	"TOKEN_KW_FN",
-	"TOKEN_KW_IF",
-	"TOKEN_KW_I32",
-	"TOKEN_KW_F64",
-	"TOKEN_KW_NULL",
-	"TOKEN_KW_PUB",
-	"TOKEN_KW_RETURN",
-	"TOKEN_KW_U8",
-	"TOKEN_KW_VAR",
-	"TOKEN_KW_VOID",
-	"TOKEN_KW_WHILE",
+    /* Keywords */
+    "TOKEN_KW_CONST",
+    "TOKEN_KW_ELSE",
+    "TOKEN_KW_FN",
+    "TOKEN_KW_IF",
+    "TOKEN_KW_I32",
+    "TOKEN_KW_F64",
+    "TOKEN_KW_NULL",
+    "TOKEN_KW_PUB",
+    "TOKEN_KW_RETURN",
+    "TOKEN_KW_U8",
+    "TOKEN_KW_VAR",
+    "TOKEN_KW_VOID",
+    "TOKEN_KW_WHILE",
 
-	/* Brackets  */
-	"TOKEN_BRACKET_ROUND_LEFT",
-	"TOKEN_BRACKET_ROUND_RIGHT",
-	"TOKEN_BRACKET_CURLY_LEFT",
-	"TOKEN_BRACKET_CURLY_RIGHT",
-	"TOKEN_BRACKET_SQUARE_LEFT",
-	"TOKEN_BRACKET_SQUARE_RIGHT",
+    /* Brackets  */
+    "TOKEN_BRACKET_ROUND_LEFT",
+    "TOKEN_BRACKET_ROUND_RIGHT",
+    "TOKEN_BRACKET_CURLY_LEFT",
+    "TOKEN_BRACKET_CURLY_RIGHT",
+    "TOKEN_BRACKET_SQUARE_LEFT",
+    "TOKEN_BRACKET_SQUARE_RIGHT",
 
-	/* Binary operators */
-	"TOKEN_ADDITION",
-	"TOKEN_SUBSTRACTION,",
-	"TOKEN_MULTIPLICATION",
-	"TOKEN_DIVISION",
-	
-	"TOKEN_EQUAL",
-	"TOKEN_NOT_EQUAL",
-	"TOKEN_LESS",
-	"TOKEN_GREATER",
-	"TOKEN_GREATER_EQUAL",
-	"TOKEN_LESS_EQUAL",
+    /* Binary operators */
+    "TOKEN_ADDITION",
+    "TOKEN_SUBSTRACTION,",
+    "TOKEN_MULTIPLICATION",
+    "TOKEN_DIVISION",
+    
+    "TOKEN_EQUAL",
+    "TOKEN_NOT_EQUAL",
+    "TOKEN_LESS",
+    "TOKEN_GREATER",
+    "TOKEN_GREATER_EQUAL",
+    "TOKEN_LESS_EQUAL",
 
-	"TOKEN_ASSIGNMENT",
+    "TOKEN_ASSIGNMENT",
 
-	/* Literals (Operands) */
-	"TOKEN_LITERAL_I32",
-	"TOKEN_LITERAL_F64",
-	"TOKEN_LITERAL_STRING",
+    /* Literals (Operands) */
+    "TOKEN_LITERAL_I32",
+    "TOKEN_LITERAL_F64",
+    "TOKEN_LITERAL_STRING",
 
-	/* Other tokens */
-	"TOKEN_EOL",
-	"TOKEN_EOF",
-	"TOKEN_ACCESS_OPERATOR",
-	"TOKEN_PROLOG",
-	"TOKEN_BACKSLASH",
-	"TOKEN_COLON",
-	"TOKEN_SEMICOLON",
-	"TOKEN_DISCARD_RESULT",
-	"TOKEN_NULL",
-	"TOKEN_PIPE",
-	"TOKEN_OPTIONAL_TYPE_NULL",
-	"TOKEN_COMMA"};
-	
-	printf(WHITE_BOLD("TOKEN: %s"), token_info[token.id]);
-	
-	if(token.lexeme.length > 0){
-		printf(WHITE_BOLD(" <LEXEME>: "));
-		printf("\033[1;33m'");
-		d_array_print(&token.lexeme);
-		printf("'\033[0;37m");
-	}
+    /* Other tokens */
+    "TOKEN_EOL",
+    "TOKEN_EOF",
+    "TOKEN_ACCESS_OPERATOR",
+    "TOKEN_PROLOG",
+    "TOKEN_BACKSLASH",
+    "TOKEN_COLON",
+    "TOKEN_SEMICOLON",
+    "TOKEN_DISCARD_RESULT",
+    "TOKEN_NULL",
+    "TOKEN_PIPE",
+    "TOKEN_OPTIONAL_TYPE_NULL",
+    "TOKEN_COMMA"};
+    
+    printf(WHITE_BOLD("TOKEN: %s"), token_info[token.id]);
+    
+    if(token.lexeme.length > 0){
+        printf(WHITE_BOLD(" <LEXEME>: "));
+        printf("\033[1;33m'");
+        d_array_print(&token.lexeme);
+        printf("'\033[0;37m");
+    }
 
-	putchar('\n');
+    putchar('\n');
 }
