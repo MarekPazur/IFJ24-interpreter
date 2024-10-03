@@ -31,3 +31,4 @@ result = n * temp_result;
 }
 return result;
 }
+// Program 2: Vypocet faktorialu (rekurzivne)
