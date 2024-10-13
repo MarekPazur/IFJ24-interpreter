@@ -17,7 +17,8 @@ struct stack {
 };
 
 /* FUNCTION PROTOTYPES */
-struct stack* create_stack();
+struct stack* init_stack();
+struct item* init_item(token_t token);
 void push(struct stack *s, token_t token);
 token_t pop(struct stack *s);
 void free_stack(struct stack *s);
