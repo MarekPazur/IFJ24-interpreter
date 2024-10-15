@@ -17,7 +17,7 @@ struct item* init_item(token_t token) {
 
 /* STACK PUSH FUNCTION */
 void push(struct stack *s, token_t token) {
-    struct item *new_item = create_item(token);
+    struct item *new_item = init_item(token);
     if (new_item) {
         new_item->next = s->last;
         s->last = new_item;
