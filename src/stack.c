@@ -68,7 +68,7 @@ token_t pop(struct stack *s) {
         print_stack_state(s);
     }
 
-    return token;
+    return token; //returns the popped token so there's no reason to save the current token seperately before popping in syntatic analysis
 }
 
 /* FREE STACK + ITEMS FUNCTION */
