@@ -1,3 +1,3 @@
-| Nonterminal | Terminal |
-| :---------- | :------- |
-| PROGRAM     | ...      |
+| Nonterminal | Derivation |
+| :---------- | :--------- |
+| PROGRAM     | ...        |
