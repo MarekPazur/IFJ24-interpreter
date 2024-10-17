@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #include "symtable.h"
 
 // STRUCTURES
@@ -65,7 +66,7 @@ TSymtable* symtable_init(void){
 }
 
 bool symtable_insert(TSymtable* symtable, TKey key, TData data){
-    if(symtable == NULL){
+    if(symtable == NULL || key == NULL){
         return false;
     }
     if(!bst_insert_node(&(symtable->root), key, data)){
@@ -75,21 +76,21 @@ bool symtable_insert(TSymtable* symtable, TKey key, TData data){
 }
 
 bool symtable_get_data(TSymtable* symtable, TKey key, TData* data_out){
-    if(symtable == NULL || data_out == NULL){
+    if(symtable == NULL || key == NULL || data_out == NULL){
         return false;
     }
     return bst_seek_node(symtable->root, key, data_out);
 }
 
 bool symtable_search(TSymtable* symtable, TKey key){
-    if(symtable == NULL){
+    if(symtable == NULL || key == NULL){
         return false;
     }
     return bst_seek_node(symtable->root, key, NULL);
 }
 
 bool symtable_delete(TSymtable* symtable, TKey key){
-    if(symtable == NULL){
+    if(symtable == NULL || key == NULL){
         return false;
     }
     bst_delete_node(&(symtable->root), key);
@@ -107,21 +108,21 @@ void symtable_free(TSymtable* symtable){
 // DATA OPERATION DEFINITIONS
 
 static bool key_is_equal(TKey key_1, TKey key_2){
-    if(key_1 == key_2){
+    if(strcmp(key_1, key_2) == 0){
         return true;
     }
     return false;
 }
 
 static bool key_is_less(TKey key_1, TKey key_2){
-    if(key_1 < key_2){
+    if(strcmp(key_1, key_2) < 0){
         return true;
     }
     return false;
 }
 
 //static bool key_is_greater(TKey key_1, TKey key_2){
-//    if(key_1 > key_2){
+//    if(strcmp(key_1, key_2) > 0){
 //        return true;
 //    }
 //    return false;
@@ -130,18 +131,28 @@ static bool key_is_less(TKey key_1, TKey key_2){
 // BST OPERATION DEFINITIONS
 
 static TNode* create_node(TKey key, TData data){
-    TNode* new_node = malloc(sizeof(TNode));
-    if(new_node != NULL){
-        new_node->key = key;
-        new_node->data = data;
-        new_node->left = NULL;
-        new_node->right = NULL;
+    if(key == NULL){
+        return NULL;
     }
+    TNode* new_node = malloc(sizeof(TNode));
+    if(new_node == NULL){
+        return NULL;
+    }
+    int length = (int)(strlen(key) + 1);
+    new_node->key = calloc(length, sizeof(char));
+    if(new_node->key == NULL){
+        free(new_node);
+        return NULL;
+    }
+    strcpy(new_node->key, key);
+    new_node->data = data;
+    new_node->left = NULL;
+    new_node->right = NULL;
     return new_node;
 }
 
 static bool bst_insert_node(TNode** root, TKey key, TData data){
-    if(root == NULL){
+    if(root == NULL || key == NULL){
         return false;
     }
     TNode* temp = *(root);
@@ -165,7 +176,7 @@ static bool bst_insert_node(TNode** root, TKey key, TData data){
 }
 
 static bool bst_seek_node(TNode* root, TKey key, TData* data_out){
-    if(root == NULL){
+    if(root == NULL || key == NULL){
         return false;
     }
     if(key_is_equal(key, root->key)){
@@ -188,6 +199,7 @@ static void bst_free_nodes(TNode* root){
     }
     bst_free_nodes(root->left);
     bst_free_nodes(root->right);
+    free(root->key);
     free(root);
 }
 
@@ -198,11 +210,13 @@ static void delete_node(TNode** root){
     TNode* temp = *root;
     if(temp->left == NULL){
         *root = temp->right;
+        free(temp->key);
         free(temp);
         return;
     }
     if(temp->right == NULL){
         *root = temp->left;
+        free(temp->key);
         free(temp);
         return;
     }
@@ -222,7 +236,7 @@ static void delete_node(TNode** root){
 }
 
 static void bst_delete_node(TNode** root, TKey key){
-    if(root == NULL || *root == NULL){
+    if(root == NULL || *root == NULL || key == NULL){
         return;
     }
     if(key_is_equal(key, (*root)->key)){
@@ -380,7 +394,7 @@ void bst_print_keys(TNode* root){
         return;
     }
     bst_print_keys(root->left);
-    printf("Key: %d\n", root->key);
+    printf("Key: %s\n", root->key);
     bst_print_keys(root->right);
 }
 
