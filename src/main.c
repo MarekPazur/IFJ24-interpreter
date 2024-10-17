@@ -29,7 +29,6 @@ int main(void) {
 
 	/* Testing phase, will be rewritten */
 	token_t test;
-	printf("gothere");
 	init_parser(test);
         /*
 	while((test = get_token()).id != TOKEN_EOF && test.id != TOKEN_ERROR) {

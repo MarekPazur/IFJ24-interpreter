@@ -39,6 +39,7 @@ void init_parser(token_t token){
    if(error){
       return;
    }
+   parser->state = STATE_ROOT;
    parser->current_token = token;
    root_code(parser);
 }
@@ -50,12 +51,257 @@ void init_parser(token_t token){
  */
 void root_code(Tparser* parser){
    parser->current_token = get_token();
-   switch(parser->current_token.id){
-      //<root_code> -> import | function_header | ""
-      case TOKEN_EOF:
-          return;
-      default:
-          error=ERR_SYNTAX;
-          return;
+   if(parser->state == STATE_ROOT){
+      switch(parser->current_token.id){
+          //<root_code> -> import_func | function_header | ""
+          case TOKEN_KW_PUB:
+              parser->state = STATE_fn;
+              function_header(parser);
+              break;
+          case TOKEN_KW_CONST:
+              parser->state = STATE_identifier;
+              import_func(parser);
+              break;
+          case TOKEN_EOF:
+              return;
+          default:
+              error=ERR_SYNTAX;
+      }
+   }else{
+       error = ERR_SYNTAX;
    }
+}
+
+/**
+ * @brief This function checks that the prolog is written syntactically correct
+ *
+ * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
+ */
+void import_func(Tparser* parser){
+   parser->current_token = get_token();
+   switch(parser->state){
+      case STATE_identifier: //checking for this part const ->ifj<- = @import("ifj24.zig");
+          if(parser->current_token.id == TOKEN_IDENTIFIER){
+              parser->state = STATE_assig;
+              import_func(parser);
+              break;
+          }
+          error = ERR_SYNTAX;
+          break;
+      case STATE_identifier_prolog: //checking for this part const ifj = @import(->"ifj24.zig"<-);
+          if(parser->current_token.id == TOKEN_LITERAL_STRING){
+              parser->state = STATE_rr_bracket;
+              import_func(parser);
+              break;
+          }
+          error = ERR_SYNTAX;
+          break;
+      case STATE_assig: //checking for this part const ifj ->=<- @import("ifj24.zig");
+          if(parser->current_token.id == TOKEN_ASSIGNMENT){
+              parser->state = STATE_prolog;
+              import_func(parser);
+              break;
+          }
+          error = ERR_SYNTAX;
+          break;
+      case STATE_prolog: //checking for this part const ifj = ->@import<-("ifj24.zig");
+          if(parser->current_token.id == TOKEN_PROLOG){
+              parser->state = STATE_lr_bracket;
+              import_func(parser);
+              break;
+          }
+          error = ERR_SYNTAX;
+          break;
+      case STATE_lr_bracket: //checking for this part const ifj = @import->(<-"ifj24.zig");
+          if(parser->current_token.id == TOKEN_BRACKET_ROUND_LEFT){
+              parser->state = STATE_identifier_prolog;
+              import_func(parser);
+              break;
+          }
+          error = ERR_SYNTAX;
+          break;
+      case STATE_rr_bracket: //checking for this part const ifj = @import("ifj24.zig"->)<-;
+          if(parser->current_token.id == TOKEN_BRACKET_ROUND_RIGHT){
+              parser->state = STATE_semicolon;
+              import_func(parser);
+              break;
+          }
+          error = ERR_SYNTAX;
+          break;
+      case STATE_semicolon: //checking for this part const ifj = @import("ifj24.zig")->;<-
+          if(parser->current_token.id == TOKEN_SEMICOLON){
+              parser->state = STATE_ROOT;
+              root_code(parser);
+              return;
+          }
+          error = ERR_SYNTAX;
+          break;
+      default:
+          error = ERR_SYNTAX;
+   }
+}
+
+/**
+ * @brief This function checks that a header of a function is syntactically correctly written
+ *
+ * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
+ */
+void function_header(Tparser* parser){
+    parser->current_token = get_token();
+    switch(parser->state){
+        case STATE_fn: 
+            if(parser->current_token.id == TOKEN_KW_FN){ //checking for pub ->fn<- name() type{
+                parser->state = STATE_identifier;
+                function_header(parser);
+                break;
+            }
+            error = ERR_SYNTAX;
+            break;
+        case STATE_identifier:
+            if(parser->current_token.id == TOKEN_IDENTIFIER){ //checking for pub fn ->name<-() type{
+                parser->state = STATE_lr_bracket;
+                function_header(parser);
+                break;
+            }
+            error = ERR_SYNTAX;
+            break;
+        case STATE_lr_bracket:
+            if(parser->current_token.id == TOKEN_BRACKET_ROUND_LEFT){ //checking for pub fn name->(<-) type{
+                parser->state = STATE_first_fn_param;
+                function_header(parser);
+                break;
+            }
+            error = ERR_SYNTAX;
+            break;
+        case STATE_first_fn_param:
+            switch(parser->current_token.id){
+                case TOKEN_BRACKET_ROUND_RIGHT: //checking for pub fn name(->)<- type{
+                    parser->state = STATE_type_return;
+                    function_header(parser);
+                    break;
+                case TOKEN_IDENTIFIER: //checking for pub fn name(->param<- : type) type{
+                    parser->state = STATE_colon;
+                    function_header(parser);
+                    break;
+                default:
+                error = ERR_SYNTAX;
+                return;
+            }
+            break;
+        case STATE_colon:
+            if(parser->current_token.id == TOKEN_COLON){ //checking for pub fn name(param ->:<- type) type{
+                parser->state = STATE_type_fn_param;
+                function_header(parser);
+                break;
+            }
+            error = ERR_SYNTAX;
+            break;
+        case STATE_type_fn_param:
+            switch(parser->current_token.id){
+                case TOKEN_KW_I32: //checking for pub fn name(param : ->i32<-) type{
+                case TOKEN_KW_F64: //checking for pub fn name(param : ->f64<-) type{
+                    parser->state = STATE_coma;
+                    function_header(parser);
+                    break;
+                case TOKEN_BRACKET_SQUARE_LEFT: //checking for pub fn name(param : ->[<-]u8) type{
+                    parser->state = STATE_rs_bracket_fn_param;
+                    function_header(parser);
+                    break;
+                default:
+                error = ERR_SYNTAX;
+                return;
+            }
+            break;
+        case STATE_rs_bracket_fn_param:
+            if(parser->current_token.id == TOKEN_BRACKET_SQUARE_RIGHT){ //checking for pub fn name(param : [->]<-u8) type{
+                parser->state = STATE_u8_fn_param;
+                function_header(parser);
+                break;
+            }
+            error = ERR_SYNTAX;
+            break;
+        case STATE_u8_fn_param:
+            if(parser->current_token.id == TOKEN_KW_U8){ //checking for pub fn name(param : []->u8<-) type{
+                parser->state = STATE_coma;
+                function_header(parser);
+                break;
+            }
+            error = ERR_SYNTAX;
+            break;
+        case STATE_coma:
+            switch(parser->current_token.id){
+                case TOKEN_COMMA: //checking for pub fn name(param : type ->,<- type) type{
+                    parser->state = STATE_identifier_fn_param;
+                    function_header(parser);
+                    break;
+                case TOKEN_BRACKET_ROUND_RIGHT: //checking for pub fn name(param : type ->)<- type{
+                    parser->state = STATE_type_return;
+                    function_header(parser);
+                    break;
+                default:
+                error = ERR_SYNTAX;
+                return;
+            }
+            break;
+        case STATE_identifier_fn_param:
+            switch(parser->current_token.id){
+                case TOKEN_BRACKET_ROUND_RIGHT: //checking for pub fn name(param : type ,->)<- type{
+                    parser->state = STATE_type_return;
+                    function_header(parser);
+                    break;
+                case TOKEN_IDENTIFIER: //checking for pub fn name(param : type ,->param<- : type) type{
+                    parser->state = STATE_colon;
+                    function_header(parser);
+                    break;
+                default:
+                error = ERR_SYNTAX;
+                return;
+            }
+            break;
+        case STATE_type_return:
+            switch(parser->current_token.id){
+                case TOKEN_KW_I32://checking for pub fn name() ->i32<-{
+                case TOKEN_KW_F64://checking for pub fn name() ->f64<-{
+                case TOKEN_KW_VOID://checking for pub fn name() ->void<-{
+                    parser->state = STATE_open_body_check;
+                    function_header(parser);
+                    break;
+                case TOKEN_BRACKET_SQUARE_LEFT: //checking for pub fn name() ->[<-]u8{
+                    parser->state = STATE_ls_bracket;
+                    function_header(parser);
+                    break;
+                default:
+                error = ERR_SYNTAX;
+                return;
+            }
+            break;
+        case STATE_open_body_check:
+            if(parser->current_token.id == TOKEN_BRACKET_CURLY_LEFT){ //checking for pub fn name() type->{<-
+                parser->state = STATE_body;
+                //TODO
+                printf("got inside a body of a function");
+                break;
+            }
+            error = ERR_SYNTAX;
+            break;
+        case STATE_ls_bracket:
+            if(parser->current_token.id == TOKEN_BRACKET_SQUARE_RIGHT){ //checking for pub fn name() [->]<-u8{
+                parser->state = STATE_u8;
+                function_header(parser);
+                break;
+            }
+            error = ERR_SYNTAX;
+            break;
+        case STATE_u8:
+            if(parser->current_token.id == TOKEN_KW_U8){ //checking for pub fn name() []->u8<-{
+                parser->state = STATE_open_body_check;
+                function_header(parser);
+                break;
+            }
+            error = ERR_SYNTAX;
+            break;
+            
+        default:
+            error = ERR_SYNTAX;
+    }
 }

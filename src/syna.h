@@ -11,12 +11,43 @@
 #include "token.h"
 #include "symtable.h"
 
+typedef enum fsm_state_syna {
+    STATE_ROOT, //expecting either a function header or import
+    STATE_identifier, //expecting identifier
+    STATE_assig, //expecting =
+    STATE_prolog, //expectin @import
+    STATE_lr_bracket, //expecting (
+    STATE_rr_bracket, //expecting )
+    STATE_semicolon, //expecting ;
+    STATE_identifier_prolog, //@import(this part)
+    STATE_fn, //expecting keyword fn
+    STATE_type, //data type
+    STATE_type_return, //expecting data type of the return value of a function
+    STATE_open_body_check, //the beginning { of the body of function/if/else/while
+    STATE_body,
+    STATE_next_command, //expecting either next command or } end of body
+    STATE_first_fn_param, //expecting either ) or the first param of fn
+    STATE_colon, //expecting :
+    STATE_ls_bracket, //expecting ]
+    STATE_u8, //expecting u8
+    STATE_type_fn_param, //expecting a type of a parameter of a function
+    STATE_rs_bracket_fn_param, //expecting the ] of []u8 in a parameter of a function
+    STATE_u8_fn_param, //expectin u8 keyword in a parameter of a function
+    STATE_coma, //expectin ,
+    STATE_identifier_fn_param //expecting an identifier of a parameter of a function (not first)
+} Pfsm_state_syna;
+
  typedef struct parser{
+  Pfsm_state_syna state;
   token_t current_token;
   TSymtable* global_symtable;
   TSymtable* local_symtable;
  } Tparser;
  
- void init_parser(token_t token);
+void init_parser(token_t token);
  
- void root_code(Tparser* parser);
+void root_code(Tparser* parser);
+ 
+void import_func(Tparser* parser);
+ 
+void function_header(Tparser* parser);
