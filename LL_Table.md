@@ -1,0 +1,3 @@
+| Nonterminal | Terminal |
+| :---------- | :------- |
+| PROGRAM     | ...      |
