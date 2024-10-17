@@ -11,6 +11,7 @@
 #include "compiler_error.h"
 #include "lexer.h"
 #include "dynamic_array.h"
+#include "syna.h"
 
 int main(void) {
 	//TODO
@@ -27,9 +28,10 @@ int main(void) {
 		print_error(error);
 
 	/* Testing phase, will be rewritten */
-
 	token_t test;
-
+	printf("gothere");
+	init_parser(test);
+        /*
 	while((test = get_token()).id != TOKEN_EOF && test.id != TOKEN_ERROR) {
 			print_token(test);
 			d_array_free(&test.lexeme);
@@ -39,7 +41,7 @@ int main(void) {
 			print_token(test);
 			d_array_free(&test.lexeme);
 		}
-
+        */
 	if(error)
 		print_error(error);
 
