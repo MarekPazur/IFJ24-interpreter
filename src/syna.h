@@ -29,7 +29,7 @@ typedef enum fsm_state_syna {
     STATE_colon, //expecting :
     STATE_ls_bracket, //expecting ]
     STATE_u8, //expecting u8
-    STATE_coma //expectin ,
+    STATE_coma	 //expectin ,
 } Pfsm_state_syna;
 
  typedef struct parser{
