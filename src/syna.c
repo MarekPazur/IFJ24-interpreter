@@ -57,18 +57,22 @@ void root_code(Tparser* parser){
           case TOKEN_KW_PUB:
               parser->state = STATE_fn;
               function_header(parser);
+              root_code(parser);
               break;
           case TOKEN_KW_CONST:
               parser->state = STATE_identifier;
               import_func(parser);
+              root_code(parser);
               break;
           case TOKEN_EOF:
               return;
           default:
               error=ERR_SYNTAX;
       }
+      return;
    }else{
        error = ERR_SYNTAX;
+       return;
    }
 }
 
@@ -131,7 +135,6 @@ void import_func(Tparser* parser){
       case STATE_semicolon: //checking for this part const ifj = @import("ifj24.zig")->;<-
           if(parser->current_token.id == TOKEN_SEMICOLON){
               parser->state = STATE_ROOT;
-              root_code(parser);
               return;
           }
           error = ERR_SYNTAX;
@@ -139,6 +142,7 @@ void import_func(Tparser* parser){
       default:
           error = ERR_SYNTAX;
    }
+   return;
 }
 
 /**
@@ -169,6 +173,8 @@ void function_header(Tparser* parser){
             if(parser->current_token.id == TOKEN_BRACKET_ROUND_LEFT){ //checking for pub fn name->(<-) type{
                 parser->state = STATE_first_fn_param;
                 function_params(parser);
+                parser->state = STATE_type;
+                function_header(parser);
                 break;
             }
             error = ERR_SYNTAX;
@@ -218,6 +224,7 @@ void function_header(Tparser* parser){
         default:
             error = ERR_SYNTAX;
     }
+    return;
 }
 
 /**
@@ -232,7 +239,6 @@ void function_params(Tparser* parser){
             switch(parser->current_token.id){
                 case TOKEN_BRACKET_ROUND_RIGHT: //checking for pub fn name(->)<- type{
                     parser->state = STATE_type;
-                    function_header(parser);
                     break;
                 case TOKEN_IDENTIFIER: //checking for pub fn name(->param<- : type) type{
                     parser->state = STATE_colon;
@@ -271,7 +277,6 @@ void function_params(Tparser* parser){
             switch(parser->current_token.id){
                 case TOKEN_BRACKET_ROUND_RIGHT: //checking for pub fn name(param : type ,->)<- type{
                     parser->state = STATE_type;
-                    function_header(parser);
                     break;
                 case TOKEN_IDENTIFIER: //checking for pub fn name(param : type ,->param<- : type) type{
                     parser->state = STATE_colon;
@@ -290,7 +295,6 @@ void function_params(Tparser* parser){
                     break;
                 case TOKEN_BRACKET_ROUND_RIGHT: //checking for pub fn name(param : type ->)<- type{
                     parser->state = STATE_type;
-                    function_header(parser);
                     break;
                 default:
                 error = ERR_SYNTAX;
@@ -317,6 +321,7 @@ void function_params(Tparser* parser){
         default:
             error = ERR_SYNTAX;
         }
+        return;
 
 }
 
@@ -327,15 +332,30 @@ void body(Tparser* parser){
             case TOKEN_KW_IF:
                 parser->state = STATE_lr_bracket;
                 if_while_header(parser);
+                body(parser);
                 break;
             case TOKEN_KW_WHILE:
                 parser->state = STATE_lr_bracket;
                 if_while_header(parser);
+                body(parser);
+                break;
+            case TOKEN_KW_VAR:
+                parser->state = STATE_identifier;
+                var_const_declaration(parser);
+                body(parser);
+                break;
+            case TOKEN_KW_CONST:
+                parser->state = STATE_identifier;
+                var_const_declaration(parser);
+                body(parser);
+                break;
+            case TOKEN_BRACKET_CURLY_RIGHT:
                 break;
             default:
                 error = ERR_SYNTAX;
                 return;
         }
+        return;
     }else{
         error = ERR_SYNTAX;
         return;
@@ -346,22 +366,22 @@ void if_while_header(Tparser* parser){
     parser->current_token = get_token();
     switch(parser->state){
         case STATE_lr_bracket:
-            if(parser->current_token.id == TOKEN_BRACKET_ROUND_LEFT){ //checking for if ->(<-true_statement) |null_replacement| {
+            if(parser->current_token.id == TOKEN_BRACKET_ROUND_LEFT){ //checking for if ->(<-true_expression) |null_replacement| {
                 parser->state = STATE_operand;
-                true_statement(parser);
+                true_expression(parser);
                 break;
             }
             error = ERR_SYNTAX;
             break;
         case STATE_pipe:
             switch(parser->current_token.id){
-                case TOKEN_PIPE: //checking for if (true_statement) ->|<-null_replacement| {
+                case TOKEN_PIPE: //checking for if (true_expresssion) ->|<-null_replacement| {
                     parser->state = STATE_operand;
                     null_replacement(parser);
+                    if_while_header(parser);
                     break;
-                case TOKEN_BRACKET_CURLY_LEFT: //checking for if (true_statement) ->{<-
+                case TOKEN_BRACKET_CURLY_LEFT: //checking for if (true_expression) ->{<-
                     parser->state = STATE_command;
-                    body(parser);
                     break;
                 default:
                     error = ERR_SYNTAX;
@@ -369,9 +389,8 @@ void if_while_header(Tparser* parser){
             }
             break;
         case STATE_open_body_check:
-            if(parser->current_token.id == TOKEN_BRACKET_CURLY_LEFT){ //checking for if (true_statement) |null_replacement| ->{<-
+            if(parser->current_token.id == TOKEN_BRACKET_CURLY_LEFT){ //checking for if (true_expression) |null_replacement| ->{<-
                 parser->state = STATE_command;
-                body(parser);
                 break;
             }
             error = ERR_SYNTAX;
@@ -380,23 +399,23 @@ void if_while_header(Tparser* parser){
             error = ERR_SYNTAX;
             return;
     }
+    return;
 }
 
 void null_replacement(Tparser* parser){
     parser->current_token = get_token();
     switch(parser->state){
         case STATE_identifier:
-            if(parser->current_token.id == TOKEN_IDENTIFIER){ //checking for if/while (true_statement) |->null_replacement<-| {
+            if(parser->current_token.id == TOKEN_IDENTIFIER){ //checking for if/while (true_expression) |->null_replacement<-| {
                 parser->state = STATE_pipe;
-                true_statement(parser);
+                null_replacement(parser);
                 break;
             }
             error = ERR_SYNTAX;
             break;
         case STATE_pipe:
-            if(parser->current_token.id == TOKEN_PIPE){ //checking for if/while (true_statement) |null_replacement->|<- {
+            if(parser->current_token.id == TOKEN_PIPE){ //checking for if/while (true_expression) |null_replacement->|<- {
                 parser->state = STATE_open_body_check;
-                if_while_header(parser);
                 break;
             }
             error = ERR_SYNTAX;
@@ -405,9 +424,43 @@ void null_replacement(Tparser* parser){
             error = ERR_SYNTAX;
             return;
     }
+    return;
 }
 
-void true_statement(Tparser* parser){
+void var_const_declaration(Tparser* parser){
+    parser->current_token = get_token();
+    switch(parser->state){
+        case STATE_identifier:
+            if(parser->current_token.id == TOKEN_IDENTIFIER){ //checking for var/const ->name<- = expression;
+                parser->state = STATE_assig;
+                var_const_declaration(parser);
+                break;
+            }
+            error = ERR_SYNTAX;
+            break;
+        case STATE_assig:
+            if(parser->current_token.id == TOKEN_ASSIGNMENT){ //checking for var/const name ->=<- expression;
+                parser->state = STATE_operand;
+                expression(parser);
+                break;
+            }
+            error = ERR_SYNTAX;
+            break;
+        default:
+            error = ERR_SYNTAX;
+            return;
+    }
+    return;
+}
+
+void true_expression(Tparser* parser){
     parser->current_token = get_token();
     //TODO
+    return;
+}
+
+void expression(Tparser* parser){
+    parser->current_token = get_token();
+    //TODO
+    return;
 }
