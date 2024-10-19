@@ -29,7 +29,14 @@ typedef enum fsm_state_syna {
     STATE_colon, //expecting :
     STATE_ls_bracket, //expecting ]
     STATE_u8, //expecting u8
-    STATE_coma	 //expectin ,
+    STATE_type_fn_param, //expecting a type of a parameter of a function
+    STATE_rs_bracket_fn_param, //expecting the ] of []u8 in a parameter of a function
+    STATE_u8_fn_param, //expectin u8 keyword in a parameter of a function
+    STATE_coma, //expectin ,
+    STATE_identifier_fn_param, //expecting an identifier of a parameter of a function (not first)
+    STATE_command, //expecting commands in the body of a function/while/if/else
+    STATE_operand, //expecting an operand in a true or a regular statement
+    STATE_pipe //expecting this |
 } Pfsm_state_syna;
 
  typedef struct parser{
@@ -38,7 +45,7 @@ typedef enum fsm_state_syna {
   TSymtable* global_symtable;
   TSymtable* local_symtable;
  } Tparser;
- 
+  
 void init_parser(token_t token);
  
 void root_code(Tparser* parser);
@@ -46,5 +53,13 @@ void root_code(Tparser* parser);
 void import_func(Tparser* parser);
 
 void function_header(Tparser* parser);
+
+void body(Tparser* parser);
+
+void if_header(Tparser* parser);
+
+void true_statement(Tparser* parser);
+
+void null_replacement(Tparser* parser);
  
 void function_params(Tparser* parser);
