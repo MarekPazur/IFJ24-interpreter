@@ -6,6 +6,9 @@
  * @file symtable.h
  */
 
+#ifndef SYMTABLE_H
+#define SYMTABLE_H
+
 typedef struct symtable TSymtable;
 
 typedef char* TKey;
@@ -67,3 +70,5 @@ void symtable_free(TSymtable* symtable);
 // DEBUG FUNCTIONS
 
 void debug_print_keys(TSymtable* symtable);
+
+#endif
