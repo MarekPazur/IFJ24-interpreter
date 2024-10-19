@@ -35,7 +35,9 @@ typedef enum fsm_state_syna {
     STATE_identifier_fn_param, //expecting an identifier of a parameter of a function (not first)
     STATE_command, //expecting commands in the body of a function/while/if/else
     STATE_operand, //expecting an operand in a true or a regular statement
-    STATE_pipe //expecting this |
+    STATE_pipe, //expecting this |
+    STATE_possible_else, //  else
+    STATE_open_else // { after else
 } Pfsm_state_syna;
 
  typedef struct parser{

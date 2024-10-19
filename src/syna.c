@@ -57,11 +57,13 @@ void root_code(Tparser* parser){
           case TOKEN_KW_PUB:
               parser->state = STATE_fn;
               function_header(parser);
+              parser->state = STATE_ROOT;
               root_code(parser);
               break;
           case TOKEN_KW_CONST:
               parser->state = STATE_identifier;
               import_func(parser);
+              parser->state = STATE_ROOT;
               root_code(parser);
               break;
           case TOKEN_EOF:
@@ -134,7 +136,6 @@ void import_func(Tparser* parser){
           break;
       case STATE_semicolon: //checking for this part const ifj = @import("ifj24.zig")->;<-
           if(parser->current_token.id == TOKEN_SEMICOLON){
-              parser->state = STATE_ROOT;
               return;
           }
           error = ERR_SYNTAX;
@@ -276,7 +277,6 @@ void function_params(Tparser* parser){
         case STATE_identifier:
             switch(parser->current_token.id){
                 case TOKEN_BRACKET_ROUND_RIGHT: //checking for pub fn name(param : type ,->)<- type{
-                    parser->state = STATE_type;
                     break;
                 case TOKEN_IDENTIFIER: //checking for pub fn name(param : type ,->param<- : type) type{
                     parser->state = STATE_colon;
@@ -294,7 +294,6 @@ void function_params(Tparser* parser){
                     function_params(parser);
                     break;
                 case TOKEN_BRACKET_ROUND_RIGHT: //checking for pub fn name(param : type ->)<- type{
-                    parser->state = STATE_type;
                     break;
                 default:
                 error = ERR_SYNTAX;
@@ -327,39 +326,90 @@ void function_params(Tparser* parser){
 
 void body(Tparser* parser){
     parser->current_token = get_token();
-    if(parser->state == STATE_command){
-        switch(parser->current_token.id){
-            case TOKEN_KW_IF:
-                parser->state = STATE_lr_bracket;
-                if_while_header(parser);
+    switch(parser->state){
+        case STATE_command:
+            switch(parser->current_token.id){
+                case TOKEN_KW_IF:
+                    parser->state = STATE_lr_bracket;
+                    if_while_header(parser);
+                    parser->state = STATE_possible_else;
+                    body(parser);
+                    break;
+                case TOKEN_KW_WHILE:
+                    parser->state = STATE_lr_bracket;
+                    if_while_header(parser);
+                    parser->state = STATE_command;
+                    body(parser);
+                    break;
+                case TOKEN_KW_VAR:
+                    parser->state = STATE_identifier;
+                    var_const_declaration(parser);
+                    parser->state = STATE_command;
+                    body(parser);
+                    break;
+                case TOKEN_KW_CONST:
+                    parser->state = STATE_identifier;
+                    var_const_declaration(parser);
+                    parser->state = STATE_command;
+                    body(parser);
+                    break;
+                case TOKEN_BRACKET_CURLY_RIGHT:
+                    break;
+                default:
+                    error = ERR_SYNTAX;
+                    return;
+            }
+            break;
+        case STATE_possible_else:
+            switch(parser->current_token.id){ 
+                case TOKEN_KW_ELSE://checking for ..} ->else<- { ..
+                    parser->state = STATE_open_else;
+                    body(parser);
+                    break;
+                case TOKEN_KW_IF:
+                    parser->state = STATE_lr_bracket;
+                    if_while_header(parser);
+                    parser->state = STATE_possible_else;
+                    body(parser);
+                    break;
+                case TOKEN_KW_WHILE:
+                    parser->state = STATE_lr_bracket;
+                    if_while_header(parser);
+                    parser->state = STATE_command;
+                    body(parser);
+                    break;
+                case TOKEN_KW_VAR:
+                    parser->state = STATE_identifier;
+                    var_const_declaration(parser);
+                    parser->state = STATE_command;
+                    body(parser);
+                    break;
+                case TOKEN_KW_CONST:
+                    parser->state = STATE_identifier;
+                    var_const_declaration(parser);
+                    parser->state = STATE_command;
+                    body(parser);
+                    break;
+                case TOKEN_BRACKET_CURLY_RIGHT:
+                    break;
+                default:
+                    error = ERR_SYNTAX;
+                    return;
+            }
+            break;
+        case STATE_open_else:
+            if(parser->current_token.id == TOKEN_BRACKET_CURLY_LEFT){ //checking for ..} else ->{<- ..
+                parser->state = STATE_command;
                 body(parser);
                 break;
-            case TOKEN_KW_WHILE:
-                parser->state = STATE_lr_bracket;
-                if_while_header(parser);
-                body(parser);
-                break;
-            case TOKEN_KW_VAR:
-                parser->state = STATE_identifier;
-                var_const_declaration(parser);
-                body(parser);
-                break;
-            case TOKEN_KW_CONST:
-                parser->state = STATE_identifier;
-                var_const_declaration(parser);
-                body(parser);
-                break;
-            case TOKEN_BRACKET_CURLY_RIGHT:
-                break;
-            default:
-                error = ERR_SYNTAX;
-                return;
-        }
-        return;
-    }else{
-        error = ERR_SYNTAX;
-        return;
+            }
+            error = ERR_SYNTAX;
+            break;
+        default:
+            error = ERR_SYNTAX;
+            return;
     }
+    return;
 }
 
 void if_while_header(Tparser* parser){
@@ -378,10 +428,10 @@ void if_while_header(Tparser* parser){
                 case TOKEN_PIPE: //checking for if (true_expresssion) ->|<-null_replacement| {
                     parser->state = STATE_operand;
                     null_replacement(parser);
+                    parser->state = STATE_open_body_check;
                     if_while_header(parser);
                     break;
                 case TOKEN_BRACKET_CURLY_LEFT: //checking for if (true_expression) ->{<-
-                    parser->state = STATE_command;
                     break;
                 default:
                     error = ERR_SYNTAX;
@@ -390,7 +440,6 @@ void if_while_header(Tparser* parser){
             break;
         case STATE_open_body_check:
             if(parser->current_token.id == TOKEN_BRACKET_CURLY_LEFT){ //checking for if (true_expression) |null_replacement| ->{<-
-                parser->state = STATE_command;
                 break;
             }
             error = ERR_SYNTAX;
@@ -415,7 +464,6 @@ void null_replacement(Tparser* parser){
             break;
         case STATE_pipe:
             if(parser->current_token.id == TOKEN_PIPE){ //checking for if/while (true_expression) |null_replacement->|<- {
-                parser->state = STATE_open_body_check;
                 break;
             }
             error = ERR_SYNTAX;
@@ -454,12 +502,14 @@ void var_const_declaration(Tparser* parser){
 }
 
 void true_expression(Tparser* parser){
+    printf("got in true expression");
     parser->current_token = get_token();
     //TODO
     return;
 }
 
 void expression(Tparser* parser){
+    printf("got in expression");
     parser->current_token = get_token();
     //TODO
     return;
