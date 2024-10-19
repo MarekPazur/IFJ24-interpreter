@@ -1,3 +1,11 @@
+/**
+ * Název projektu: Implementace překladače imperativního jazyka IFJ24.
+ *
+ * @author xukropj00, Jan Ukropec
+ *
+ * @file symtable.h
+ */
+
 typedef struct symtable TSymtable;
 
 typedef char* TKey;

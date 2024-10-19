@@ -1,3 +1,11 @@
+/**
+ * Název projektu: Implementace překladače imperativního jazyka IFJ24.
+ *
+ * @author xukropj00, Jan Ukropec
+ *
+ * @file symtable.c
+ */
+
 // INCLUDES
 
 #include <stdio.h>
