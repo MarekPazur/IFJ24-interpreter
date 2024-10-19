@@ -3,7 +3,7 @@
  *
  * @author xukropj00, Jan Ukropec
  *
- * @file symtable.h
+ * @file binary_tree.h
  */
 
 #ifndef BINARY_TREE_H
