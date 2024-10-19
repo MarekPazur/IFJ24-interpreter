@@ -55,7 +55,7 @@ void function_header(Tparser* parser);
 
 void body(Tparser* parser);
 
-void if_header(Tparser* parser);
+void if_while_header(Tparser* parser);
 
 void true_statement(Tparser* parser);
 
