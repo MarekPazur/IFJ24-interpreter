@@ -1,6 +1,17 @@
+/**
+ * Název projektu: Implementace překladače imperativního jazyka IFJ24.
+ *
+ * @author xukropj00, Jan Ukropec
+ *
+ * @file symtable.h
+ */
+
+#ifndef SYMTABLE_H
+#define SYMTABLE_H
+
 typedef struct symtable TSymtable;
 
-typedef int TKey;
+typedef char* TKey;
 
 typedef struct data TData;
 
@@ -12,7 +23,7 @@ struct data{
 
 /**
  * Initializes symtable
- * \return initialized symtable or NULL in case of an memory allocation error
+ * \return unitialized symtable or NULL in case of an memory allocation error
  */
 TSymtable* symtable_init(void);
 
@@ -21,7 +32,7 @@ TSymtable* symtable_init(void);
  * \param symtable
  * \param key
  * \param data
- * \return
+ * \return True: success False: Memory allocation error | NULL pointer error
  */
 bool symtable_insert(TSymtable* symtable, TKey key, TData data);
 
@@ -30,7 +41,7 @@ bool symtable_insert(TSymtable* symtable, TKey key, TData data);
  * \param symtable
  * \param key
  * \param data_out
- * \return
+ * \return True: succes False: data is not in table | NULL pointer error
  */
 bool symtable_get_data(TSymtable* symtable, TKey key, TData* data_out);
 
@@ -38,7 +49,7 @@ bool symtable_get_data(TSymtable* symtable, TKey key, TData* data_out);
  * Check if item with a certain key is in the symtable
  * \param symtable
  * \param key
- * \return
+ * \return True: item is in the symtable False: data is not in the symtable | NULL pointer error
  */
 bool symtable_search(TSymtable* symtable, TKey key);
 
@@ -46,7 +57,7 @@ bool symtable_search(TSymtable* symtable, TKey key);
  * Delete item from the symtable if it exists
  * \param symtable
  * \param key
- * \return
+ * \return True: item was deleted | False: item was not deleted | NULL pointer | memory allocation error
  */
 bool symtable_delete(TSymtable* symtable, TKey key);
 
@@ -59,3 +70,5 @@ void symtable_free(TSymtable* symtable);
 // DEBUG FUNCTIONS
 
 void debug_print_keys(TSymtable* symtable);
+
+#endif

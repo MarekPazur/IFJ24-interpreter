@@ -22,7 +22,6 @@ typedef enum fsm_state_syna {
     STATE_identifier_prolog, //@import(this part)
     STATE_fn, //expecting keyword fn
     STATE_type, //data type
-    STATE_type_return, //expecting data type of the return value of a function
     STATE_open_body_check, //the beginning { of the body of function/if/else/while
     STATE_body,
     STATE_next_command, //expecting either next command or } end of body
@@ -52,7 +51,7 @@ void init_parser(token_t token);
 void root_code(Tparser* parser);
  
 void import_func(Tparser* parser);
- 
+
 void function_header(Tparser* parser);
 
 void body(Tparser* parser);
@@ -62,4 +61,5 @@ void if_header(Tparser* parser);
 void true_statement(Tparser* parser);
 
 void null_replacement(Tparser* parser);
-
+ 
+void function_params(Tparser* parser);

@@ -168,97 +168,12 @@ void function_header(Tparser* parser){
         case STATE_lr_bracket:
             if(parser->current_token.id == TOKEN_BRACKET_ROUND_LEFT){ //checking for pub fn name->(<-) type{
                 parser->state = STATE_first_fn_param;
-                function_header(parser);
+                function_params(parser);
                 break;
             }
             error = ERR_SYNTAX;
             break;
-        case STATE_first_fn_param:
-            switch(parser->current_token.id){
-                case TOKEN_BRACKET_ROUND_RIGHT: //checking for pub fn name(->)<- type{
-                    parser->state = STATE_type_return;
-                    function_header(parser);
-                    break;
-                case TOKEN_IDENTIFIER: //checking for pub fn name(->param<- : type) type{
-                    parser->state = STATE_colon;
-                    function_header(parser);
-                    break;
-                default:
-                error = ERR_SYNTAX;
-                return;
-            }
-            break;
-        case STATE_colon:
-            if(parser->current_token.id == TOKEN_COLON){ //checking for pub fn name(param ->:<- type) type{
-                parser->state = STATE_type_fn_param;
-                function_header(parser);
-                break;
-            }
-            error = ERR_SYNTAX;
-            break;
-        case STATE_type_fn_param:
-            switch(parser->current_token.id){
-                case TOKEN_KW_I32: //checking for pub fn name(param : ->i32<-) type{
-                case TOKEN_KW_F64: //checking for pub fn name(param : ->f64<-) type{
-                    parser->state = STATE_coma;
-                    function_header(parser);
-                    break;
-                case TOKEN_BRACKET_SQUARE_LEFT: //checking for pub fn name(param : ->[<-]u8) type{
-                    parser->state = STATE_rs_bracket_fn_param;
-                    function_header(parser);
-                    break;
-                default:
-                error = ERR_SYNTAX;
-                return;
-            }
-            break;
-        case STATE_rs_bracket_fn_param:
-            if(parser->current_token.id == TOKEN_BRACKET_SQUARE_RIGHT){ //checking for pub fn name(param : [->]<-u8) type{
-                parser->state = STATE_u8_fn_param;
-                function_header(parser);
-                break;
-            }
-            error = ERR_SYNTAX;
-            break;
-        case STATE_u8_fn_param:
-            if(parser->current_token.id == TOKEN_KW_U8){ //checking for pub fn name(param : []->u8<-) type{
-                parser->state = STATE_coma;
-                function_header(parser);
-                break;
-            }
-            error = ERR_SYNTAX;
-            break;
-        case STATE_coma:
-            switch(parser->current_token.id){
-                case TOKEN_COMMA: //checking for pub fn name(param : type ->,<- type) type{
-                    parser->state = STATE_identifier_fn_param;
-                    function_header(parser);
-                    break;
-                case TOKEN_BRACKET_ROUND_RIGHT: //checking for pub fn name(param : type ->)<- type{
-                    parser->state = STATE_type_return;
-                    function_header(parser);
-                    break;
-                default:
-                error = ERR_SYNTAX;
-                return;
-            }
-            break;
-        case STATE_identifier_fn_param:
-            switch(parser->current_token.id){
-                case TOKEN_BRACKET_ROUND_RIGHT: //checking for pub fn name(param : type ,->)<- type{
-                    parser->state = STATE_type_return;
-                    function_header(parser);
-                    break;
-                case TOKEN_IDENTIFIER: //checking for pub fn name(param : type ,->param<- : type) type{
-                    parser->state = STATE_colon;
-                    function_header(parser);
-                    break;
-                default:
-                error = ERR_SYNTAX;
-                return;
-            }
-            break;
-        case STATE_type_return:
+        case STATE_type:
             switch(parser->current_token.id){
                 case TOKEN_KW_I32://checking for pub fn name() ->i32<-{
                 case TOKEN_KW_F64://checking for pub fn name() ->f64<-{
@@ -277,8 +192,9 @@ void function_header(Tparser* parser){
             break;
         case STATE_open_body_check:
             if(parser->current_token.id == TOKEN_BRACKET_CURLY_LEFT){ //checking for pub fn name() type->{<-
-                parser->state = STATE_command;
-                body(parser);
+                parser->state = STATE_body;
+                //TODO
+                printf("got inside a body of a function");
                 break;
             }
             error = ERR_SYNTAX;
@@ -303,6 +219,106 @@ void function_header(Tparser* parser){
         default:
             error = ERR_SYNTAX;
     }
+}
+
+/**
+ * @brief This function checks that a the parameters of a function are written correctly
+ *
+ * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
+ */
+void function_params(Tparser* parser){
+	parser->current_token = get_token();
+	switch(parser->state){
+	case STATE_first_fn_param:
+            switch(parser->current_token.id){
+                case TOKEN_BRACKET_ROUND_RIGHT: //checking for pub fn name(->)<- type{
+                    parser->state = STATE_type;
+                    function_header(parser);
+                    break;
+                case TOKEN_IDENTIFIER: //checking for pub fn name(->param<- : type) type{
+                    parser->state = STATE_colon;
+                    function_params(parser);
+                    break;
+                default:
+                error = ERR_SYNTAX;
+                return;
+            }
+            break;
+        case STATE_colon:
+            if(parser->current_token.id == TOKEN_COLON){ //checking for pub fn name(param ->:<- type) type{
+                parser->state = STATE_type;
+                function_params(parser);
+                break;
+            }
+            error = ERR_SYNTAX;
+            break;
+        case STATE_type:
+            switch(parser->current_token.id){
+                case TOKEN_KW_I32: //checking for pub fn name(param : ->i32<-) type{
+                case TOKEN_KW_F64: //checking for pub fn name(param : ->f64<-) type{
+                    parser->state = STATE_coma;
+                    function_params(parser);
+                    break;
+                case TOKEN_BRACKET_SQUARE_LEFT: //checking for pub fn name(param : ->[<-]u8) type{
+                    parser->state = STATE_ls_bracket;
+                    function_params(parser);
+                    break;
+                default:
+                error = ERR_SYNTAX;
+                return;
+            }
+            break;
+        case STATE_identifier:
+            switch(parser->current_token.id){
+                case TOKEN_BRACKET_ROUND_RIGHT: //checking for pub fn name(param : type ,->)<- type{
+                    parser->state = STATE_type;
+                    function_header(parser);
+                    break;
+                case TOKEN_IDENTIFIER: //checking for pub fn name(param : type ,->param<- : type) type{
+                    parser->state = STATE_colon;
+                    function_params(parser);
+                    break;
+                default:
+                error = ERR_SYNTAX;
+                return;
+            }
+            break;
+        case STATE_coma:
+            switch(parser->current_token.id){
+                case TOKEN_COMMA: //checking for pub fn name(param : type ->,<- type) type{
+                    parser->state = STATE_identifier;
+                    function_params(parser);
+                    break;
+                case TOKEN_BRACKET_ROUND_RIGHT: //checking for pub fn name(param : type ->)<- type{
+                    parser->state = STATE_type;
+                    function_header(parser);
+                    break;
+                default:
+                error = ERR_SYNTAX;
+                return;
+            }
+            break;
+        case STATE_ls_bracket:
+            if(parser->current_token.id == TOKEN_BRACKET_SQUARE_RIGHT){ //checking for pub fn name(param : [->]<-u8) type{
+                parser->state = STATE_u8;
+                function_params(parser);
+                break;
+            }
+            error = ERR_SYNTAX;
+            break;
+        case STATE_u8:
+            if(parser->current_token.id == TOKEN_KW_U8){ //checking for pub fn name(param : []->u8<-) type{
+                parser->state = STATE_coma;
+                function_params(parser);
+                break;
+            }
+            error = ERR_SYNTAX;
+            break;
+            
+        default:
+            error = ERR_SYNTAX;
+        }
+
 }
 
 void body(Tparser* parser){
