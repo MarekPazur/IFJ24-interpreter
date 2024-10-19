@@ -324,6 +324,11 @@ void function_params(Tparser* parser){
 
 }
 
+/**
+ * @brief This function checks that the bodies of functions, whiles, ifs and elses are written correctly
+ *
+ * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
+ */
 void body(Tparser* parser){
     parser->current_token = get_token();
     switch(parser->state){
@@ -350,6 +355,12 @@ void body(Tparser* parser){
                 case TOKEN_KW_CONST:
                     parser->state = STATE_identifier;
                     var_const_declaration(parser);
+                    parser->state = STATE_command;
+                    body(parser);
+                    break;
+                case TOKEN_IDENTIFIER:
+                    parser->state = STATE_assig;
+                    assignement(parser);
                     parser->state = STATE_command;
                     body(parser);
                     break;
@@ -390,6 +401,12 @@ void body(Tparser* parser){
                     parser->state = STATE_command;
                     body(parser);
                     break;
+                case TOKEN_IDENTIFIER:
+                    parser->state = STATE_assig;
+                    assignement(parser);
+                    parser->state = STATE_command;
+                    body(parser);
+                    break;
                 case TOKEN_BRACKET_CURLY_RIGHT:
                     break;
                 default:
@@ -412,6 +429,11 @@ void body(Tparser* parser){
     return;
 }
 
+/**
+ * @brief This function checks that a header of an if/while statement is written correctly
+ *
+ * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
+ */
 void if_while_header(Tparser* parser){
     parser->current_token = get_token();
     switch(parser->state){
@@ -451,6 +473,11 @@ void if_while_header(Tparser* parser){
     return;
 }
 
+/**
+ * @brief This function checks that the null replacement part in the head of a while or if is written correctly
+ *
+ * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
+ */
 void null_replacement(Tparser* parser){
     parser->current_token = get_token();
     switch(parser->state){
@@ -475,6 +502,11 @@ void null_replacement(Tparser* parser){
     return;
 }
 
+/**
+ * @brief This function checks that variable and constant declaration is written correctly
+ *
+ * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
+ */
 void var_const_declaration(Tparser* parser){
     parser->current_token = get_token();
     switch(parser->state){
@@ -488,6 +520,29 @@ void var_const_declaration(Tparser* parser){
             break;
         case STATE_assig:
             if(parser->current_token.id == TOKEN_ASSIGNMENT){ //checking for var/const name ->=<- expression;
+                parser->state = STATE_operand;
+                expression(parser);
+                break;
+            }
+            error = ERR_SYNTAX;
+            break;
+        default:
+            error = ERR_SYNTAX;
+            return;
+    }
+    return;
+}
+
+/**
+ * @brief This function checks that an assignment is written correctly
+ *
+ * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
+ */
+void assignement(Tparser* parser){
+    parser->current_token = get_token();
+    switch(parser->state){
+        case STATE_assig:
+            if(parser->current_token.id == TOKEN_ASSIGNMENT){ //checking for name ->=<- expression;
                 parser->state = STATE_operand;
                 expression(parser);
                 break;

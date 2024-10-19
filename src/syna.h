@@ -68,3 +68,5 @@ void null_replacement(Tparser* parser);
 void function_params(Tparser* parser);
 
 void var_const_declaration(Tparser* parser);
+
+void assignement(Tparser* parser);
