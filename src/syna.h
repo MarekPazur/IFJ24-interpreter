@@ -37,7 +37,8 @@ typedef enum fsm_state_syna {
     STATE_operand, //expecting an operand in a true or a regular statement
     STATE_pipe, //expecting this |
     STATE_possible_else, //  else
-    STATE_open_else // { after else
+    STATE_open_else, // { after else
+    STATE_possible_function
 } Pfsm_state_syna;
 
  typedef struct parser{
@@ -70,3 +71,7 @@ void function_params(Tparser* parser);
 void var_const_declaration(Tparser* parser);
 
 void assignement(Tparser* parser);
+
+void function_call(Tparser* parser);
+
+void function_call_params(Tparser* parser);

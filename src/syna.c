@@ -556,6 +556,104 @@ void assignement(Tparser* parser){
     return;
 }
 
+/**
+ * @brief This function checks that a calling of a function is written correctly
+ *
+ * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
+ */
+void function_call(Tparser* parser){
+    parser->current_token = get_token();
+    switch(parser->state){
+        case STATE_identifier:
+            if(parser->current_token.id == TOKEN_IDENTIFIER){ //..ifj.->something<-(param,param,...)..
+                parser->state = STATE_lr_bracket;
+                function_call(parser);
+                break;
+            }
+            error = ERR_SYNTAX;
+            break;
+        case STATE_lr_bracket:
+            if(parser->current_token.id == TOKEN_IDENTIFIER){ //..something->(<-param,param,...)..
+                parser->state = STATE_identifier;
+                function_call_params(parser);
+                break;
+            }
+            error = ERR_SYNTAX;
+            break;
+        default:
+            error = ERR_SYNTAX;
+            break;
+    return;
+    }
+}
+
+/**
+ * @brief This function checks that the parameters of called function are written correctly
+ *
+ * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
+ */
+void function_call_params(Tparser* parser){
+    switch(parser->state){
+        case STATE_identifier: //something(->param<-,param,...)..
+            switch(parser->current_token.id){
+                case TOKEN_BRACKET_ROUND_RIGHT:
+                    return;
+                case TOKEN_IDENTIFIER:
+                    parser->state=STATE_possible_function;
+                    function_call_params(parser);
+                    break;
+                case TOKEN_LITERAL_I32:
+                case TOKEN_LITERAL_F64:
+                case TOKEN_LITERAL_STRING:
+                    parser->state = STATE_coma;
+                    function_call_params(parser);
+                    break;
+                default:
+                    error = ERR_SYNTAX;
+                    return;
+            }
+            break;
+        case STATE_coma: //something(param->,<-param,...)..
+            switch(parser->current_token.id){
+                case TOKEN_COMMA:
+                    parser->state = STATE_identifier;
+                    function_call_params(parser);
+                    break;
+                case TOKEN_BRACKET_ROUND_RIGHT:
+                    return;
+                default:
+                    error = ERR_SYNTAX;
+                    return;
+            }
+            break;
+        case STATE_possible_function: //something(param->.<-something(...),param,...).. || //something(param->(<-...),param,...)..
+            switch(parser->current_token.id){
+                case TOKEN_BRACKET_ROUND_RIGHT:
+                    return;
+                case TOKEN_COMMA:
+                    parser->state = STATE_identifier;
+                    function_call_params(parser);
+                    break;
+                case TOKEN_ACCESS_OPERATOR:
+                    parser->state = STATE_identifier;
+                    function_call(parser);
+                    break;
+                case TOKEN_BRACKET_ROUND_LEFT:
+                    parser->state = STATE_identifier;
+                    function_call_params(parser);
+                    break;
+                default:
+                    error = ERR_SYNTAX;
+                    return;
+            }
+            break;
+        default:
+            error = ERR_SYNTAX;
+            return;
+    }
+    return;
+}
+
 void true_expression(Tparser* parser){
     printf("got in true expression");
     parser->current_token = get_token();
