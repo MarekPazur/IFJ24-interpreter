@@ -192,9 +192,8 @@ void function_header(Tparser* parser){
             break;
         case STATE_open_body_check:
             if(parser->current_token.id == TOKEN_BRACKET_CURLY_LEFT){ //checking for pub fn name() type->{<-
-                parser->state = STATE_body;
-                //TODO
-                printf("got inside a body of a function");
+                parser->state = STATE_command;
+                body(parser);
                 break;
             }
             error = ERR_SYNTAX;

@@ -23,7 +23,6 @@ typedef enum fsm_state_syna {
     STATE_fn, //expecting keyword fn
     STATE_type, //data type
     STATE_open_body_check, //the beginning { of the body of function/if/else/while
-    STATE_body,
     STATE_next_command, //expecting either next command or } end of body
     STATE_first_fn_param, //expecting either ) or the first param of fn
     STATE_colon, //expecting :

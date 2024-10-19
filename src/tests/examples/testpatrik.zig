@@ -1,7 +1,7 @@
 // Program 3: Prace s retezci a vestavenymi funkcemi
 const ifj = @import("ifj24.zig");
 // Hlavni funkce
-pub fn main(a : []u8, b: f64, c:i32, d:[]u8,) void {
+pub fn main(a : []u8,b: i32, abkd : []u8, kk : f64,) void {
 const str1 = ifj.string("Toto je text v programu jazyka IFJ24");
 var str2 = ifj.string(", ktery jeste trochu obohatime");
 str2 = ifj.concat(str1, str2);
