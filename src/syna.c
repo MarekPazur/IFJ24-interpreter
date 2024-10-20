@@ -252,11 +252,31 @@ void function_params(Tparser* parser){
             break;
         case STATE_colon:
             if(parser->current_token.id == TOKEN_COLON){ //checking for pub fn name(param ->:<- type) type{
-                parser->state = STATE_type;
+                parser->state = STATE_possible_qmark;
                 function_params(parser);
                 break;
             }
             error = ERR_SYNTAX;
+            break;
+        case STATE_possible_qmark:
+            switch(parser->current_token.id){ //checking for pub fn name(param : ?type) type{
+                case TOKEN_OPTIONAL_TYPE_NULL:
+                    parser->state = STATE_type;
+                    function_params(parser);
+                    break;
+                case TOKEN_KW_I32: //checking for pub fn name(param : ->i32<-) type{
+                case TOKEN_KW_F64: //checking for pub fn name(param : ->f64<-) type{
+                    parser->state = STATE_coma;
+                    function_params(parser);
+                    break;
+                case TOKEN_BRACKET_SQUARE_LEFT: //checking for pub fn name(param : ->[<-]u8) type{
+                    parser->state = STATE_ls_bracket;
+                    function_params(parser);
+                    break;
+                default:
+                    error = ERR_SYNTAX;
+                    break;
+                }
             break;
         case STATE_type:
             switch(parser->current_token.id){
@@ -340,6 +360,12 @@ void body(Tparser* parser){
                     parser->state = STATE_possible_else;
                     body(parser);
                     break;
+                case TOKEN_KW_RETURN:
+                    parser->state = STATE_operand;
+                    expression(parser, TOKEN_SEMICOLON);
+                    parser->state = STATE_command;
+                    body(parser);
+                    break;
                 case TOKEN_KW_WHILE:
                     parser->state = STATE_lr_bracket;
                     if_while_header(parser);
@@ -359,14 +385,31 @@ void body(Tparser* parser){
                     body(parser);
                     break;
                 case TOKEN_IDENTIFIER:
-                    parser->state = STATE_assig;
-                    assignement(parser);
+                    parser->current_token = get_token();
+                    if(parser->current_token.id == TOKEN_ASSIGNMENT){
+                    	parser->state = STATE_operand;
+                    	expression(parser, TOKEN_SEMICOLON);
+                    }
+                    else if(parser->current_token.id == TOKEN_ACCESS_OPERATOR){
+                    	parser->state = STATE_identifier;
+                    	function_call(parser);
+                    	parser->current_token = get_token();
+                    	if(parser->current_token.id != TOKEN_SEMICOLON){
+                    		error=ERR_SYNTAX;
+                    		return;
+                    	}
+                    }
+                    else{
+                    	error=ERR_SYNTAX;
+                    	return;
+                    }
                     parser->state = STATE_command;
                     body(parser);
                     break;
                 case TOKEN_BRACKET_CURLY_RIGHT:
                     break;
                 default:
+                    printf("%d", parser->current_token.id);
                     error = ERR_SYNTAX;
                     return;
             }
@@ -391,6 +434,12 @@ void body(Tparser* parser){
                     parser->state = STATE_command;
                     body(parser);
                     break;
+                case TOKEN_KW_RETURN:
+                    parser->state = STATE_operand;
+                    expression(parser, TOKEN_SEMICOLON);
+                    parser->state = STATE_command;
+                    body(parser);
+                    break;
                 case TOKEN_KW_VAR:
                     parser->state = STATE_identifier;
                     var_const_declaration(parser);
@@ -404,8 +453,24 @@ void body(Tparser* parser){
                     body(parser);
                     break;
                 case TOKEN_IDENTIFIER:
-                    parser->state = STATE_assig;
-                    assignement(parser);
+                    parser->current_token = get_token();
+                    if(parser->current_token.id == TOKEN_ASSIGNMENT){
+                    	parser->state = STATE_operand;
+                    	expression(parser, TOKEN_SEMICOLON);
+                    }
+                    else if(parser->current_token.id == TOKEN_ACCESS_OPERATOR){
+                    	parser->state = STATE_identifier;
+                    	function_call(parser);
+                    	parser->current_token = get_token();
+                    	if(parser->current_token.id != TOKEN_SEMICOLON){
+                    		error=ERR_SYNTAX;
+                    		return;
+                    	}
+                    }
+                    else{
+                    	error=ERR_SYNTAX;
+                    	return;
+                    }
                     parser->state = STATE_command;
                     body(parser);
                     break;
@@ -467,8 +532,8 @@ void if_while_header(Tparser* parser){
             }
             break;
         case STATE_open_body_check:
-            if(parser->current_token.id == TOKEN_BRACKET_CURLY_LEFT){ //checking for if (expression) |null_replacement| ->{<-
-            	parser->state = STATE_command;
+            if(parser->current_token.id == TOKEN_BRACKET_CURLY_LEFT){ //checking for if (true_expression) |null_replacement| ->{<-
+                parser->state=STATE_command;
                 body(parser);
                 break;
             }
@@ -531,32 +596,73 @@ void var_const_declaration(Tparser* parser){
                 parser->state = STATE_operand;
                 expression(parser, TOKEN_SEMICOLON);
                 break;
+            }else if (parser->current_token.id == TOKEN_COLON){ //checking for var/const name ->:<- type = expression;
+                parser->state = STATE_possible_qmark;
+                var_const_declaration(parser);
+                break;
             }
             error = ERR_SYNTAX;
             break;
-        default:
-            error = ERR_SYNTAX;
-            return;
-    }
-    return;
-}
-
-/**
- * @brief This function checks that an assignment is written correctly
- *
- * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
- */
-void assignement(Tparser* parser){
-    parser->current_token = get_token();
-    switch(parser->state){
-        case STATE_assig:
-            if(parser->current_token.id == TOKEN_ASSIGNMENT){ //checking for name ->=<- expression;
+        case STATE_possible_qmark:
+            switch(parser->current_token.id){ //checking for pub fn name(param : ?type) type{
+                case TOKEN_OPTIONAL_TYPE_NULL:
+                    parser->state = STATE_type;
+                    var_const_declaration(parser);
+                    break;
+                case TOKEN_KW_I32: //checking for pub fn name(param : ->i32<-) type{
+                case TOKEN_KW_F64: //checking for pub fn name(param : ->f64<-) type{
+                    parser->state = STATE_assig_must;
+                    var_const_declaration(parser);
+                    break;
+                case TOKEN_BRACKET_SQUARE_LEFT: //checking for pub fn name(param : ->[<-]u8) type{
+                    parser->state = STATE_ls_bracket;
+                    var_const_declaration(parser);
+                    break;
+                default:
+                    error = ERR_SYNTAX;
+                    break;
+            }
+            break;
+        case STATE_type:
+            switch(parser->current_token.id){ //checking for pub fn name(param : ?type) type{
+                case TOKEN_KW_I32: //checking for pub fn name(param : ->i32<-) type{
+                case TOKEN_KW_F64: //checking for pub fn name(param : ->f64<-) type{
+                    parser->state = STATE_assig_must;
+                    var_const_declaration(parser);
+                    break;
+                case TOKEN_BRACKET_SQUARE_LEFT: //checking for pub fn name(param : ->[<-]u8) type{
+                    parser->state = STATE_ls_bracket;
+                    var_const_declaration(parser);
+                    break;
+                default:
+                    error = ERR_SYNTAX;
+                    break;
+            }
+            break;
+        case STATE_assig_must:
+            if(parser->current_token.id == TOKEN_ASSIGNMENT){ //checking for var/const name ->=<- expression;
                 parser->state = STATE_operand;
                 expression(parser, TOKEN_SEMICOLON);
                 break;
             }
             error = ERR_SYNTAX;
             break;
+        case STATE_ls_bracket:
+            if(parser->current_token.id == TOKEN_BRACKET_SQUARE_RIGHT){ // var/const name :[->]<-u8 =
+                parser->state = STATE_u8;
+                var_const_declaration(parser);
+                break;
+            }
+            error = ERR_SYNTAX;
+            break;
+        case STATE_u8:
+            if(parser->current_token.id == TOKEN_KW_U8){ //var/const name :[]->u8<- =
+                parser->state = STATE_assig_must;
+                var_const_declaration(parser);
+                break;
+            }
+            error = ERR_SYNTAX;
+            return;
         default:
             error = ERR_SYNTAX;
             return;
@@ -578,6 +684,7 @@ void function_call(Tparser* parser){
                 function_call(parser);
                 break;
             }
+            printf("klatic");
             error = ERR_SYNTAX;
             break;
         case STATE_lr_bracket:
@@ -734,5 +841,4 @@ void expression(Tparser* parser, token_id end){
     		error=ERR_SYNTAX;
     		return;
     }
-    return;
 }

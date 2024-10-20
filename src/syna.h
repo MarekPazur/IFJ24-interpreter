@@ -40,7 +40,9 @@ typedef enum fsm_state_syna {
     STATE_pipe, //expecting this |
     STATE_possible_else, //  else
     STATE_open_else, // { after else
-    STATE_possible_function
+    STATE_possible_function,
+    STATE_possible_qmark, //?
+    STATE_assig_must
 } Pfsm_state_syna;
 
 
@@ -70,8 +72,6 @@ void null_replacement(Tparser* parser);
 void function_params(Tparser* parser);
 
 void var_const_declaration(Tparser* parser);
-
-void assignement(Tparser* parser);
 
 void function_call(Tparser* parser);
 
