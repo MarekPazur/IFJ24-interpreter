@@ -484,6 +484,8 @@ void body(Tparser* parser){
             if(parser->current_token.id == TOKEN_BRACKET_CURLY_LEFT){ //checking for ..} else ->{<- ..
                 parser->state = STATE_command;
                 body(parser);
+                parser->state = STATE_command;
+                body(parser);
                 break;
             }
             error = ERR_SYNTAX;
