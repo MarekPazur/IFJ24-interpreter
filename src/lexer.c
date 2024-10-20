@@ -492,6 +492,9 @@ token_t get_token(void) {
                 break;
 
             case STATE_NEXT_MULTILINE:
+                while(isspace(c)){
+                    c = getc(stdin);
+                }
                 if(c == '\\'){
                     c = getc(stdin);
                     if(c == '\\'){
