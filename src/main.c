@@ -40,7 +40,8 @@ int main(void) {
 			print_token(test);
 			d_array_free(&test.lexeme);
 		}
-        */
+        
+	*/
 	if(error)
 		print_error(error);
 

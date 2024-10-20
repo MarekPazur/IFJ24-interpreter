@@ -409,7 +409,6 @@ void body(Tparser* parser){
                 case TOKEN_BRACKET_CURLY_RIGHT:
                     break;
                 default:
-                    printf("%d", parser->current_token.id);
                     error = ERR_SYNTAX;
                     return;
             }
@@ -517,7 +516,7 @@ void if_while_header(Tparser* parser){
         case STATE_pipe:
             switch(parser->current_token.id){
                 case TOKEN_PIPE: //checking for if (true_expresssion) ->|<-null_replacement| {
-                    parser->state = STATE_operand;
+                    parser->state = STATE_identifier;
                     null_replacement(parser);
                     parser->state = STATE_open_body_check;
                     if_while_header(parser);
@@ -684,7 +683,6 @@ void function_call(Tparser* parser){
                 function_call(parser);
                 break;
             }
-            printf("klatic");
             error = ERR_SYNTAX;
             break;
         case STATE_lr_bracket:
@@ -809,7 +807,7 @@ void expression(Tparser* parser, token_id end){
     				parser->state = STATE_operator;
     				expression(parser, end);
     				break;
-    			case TOKEN_LITERAL_STRING:
+    			case TOKEN_LITERAL_STRING: case TOKEN_KW_NULL:
     				parser->current_token = get_token();
     				if(parser->current_token.id == TOKEN_SEMICOLON){
     					return;
