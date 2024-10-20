@@ -369,6 +369,12 @@ void body(Tparser* parser){
                     parser->state = STATE_command;
                     body(parser);
                     break;
+                case TOKEN_BRACKET_CURLY_LEFT:
+                    parser->state = STATE_command;
+                    body(parser);
+                    parser->state = STATE_command;
+                    body(parser);
+                    break;
                 case TOKEN_KW_WHILE:
                     parser->state = STATE_lr_bracket;
                     if_while_header(parser);
@@ -421,6 +427,12 @@ void body(Tparser* parser){
             break;
         case STATE_possible_else:
             switch(parser->current_token.id){ 
+                case TOKEN_BRACKET_CURLY_LEFT:
+                    parser->state = STATE_command;
+                    body(parser);
+                    parser->state = STATE_command;
+                    body(parser);
+                    break;
                 case TOKEN_KW_ELSE://checking for ..} ->else<- { ..
                     parser->state = STATE_open_else;
                     body(parser);
