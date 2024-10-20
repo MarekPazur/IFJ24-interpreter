@@ -29,11 +29,10 @@ newInput = null; // misto break;
 ifj.write("Spatne zadana posloupnost, zkuste \n \" \x7A znovu:\n");
 all = ifj.concat(all, inpOK); // spojuji neplatne vstupy
 const str = \\hello
-	\\my
+        \\my
 	\\name
 	\\is \\
-	\\zdenek \n \" \x7A
-	;
+	\\zdenek \n \" \x7A ;
 newInput = ifj.readstr();
 }
 }
