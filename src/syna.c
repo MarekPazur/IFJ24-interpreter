@@ -363,6 +363,9 @@ void body(Tparser* parser){
                 case TOKEN_KW_RETURN:
                     parser->state = STATE_operand;
                     expression(parser, TOKEN_SEMICOLON);
+                    if(error){
+                    	return;
+                    }
                     parser->state = STATE_command;
                     body(parser);
                     break;
@@ -389,6 +392,9 @@ void body(Tparser* parser){
                     if(parser->current_token.id == TOKEN_ASSIGNMENT){
                     	parser->state = STATE_operand;
                     	expression(parser, TOKEN_SEMICOLON);
+                    	if(error){
+                    		return;
+                    	}
                     }
                     else if(parser->current_token.id == TOKEN_ACCESS_OPERATOR){
                     	parser->state = STATE_identifier;
@@ -436,6 +442,9 @@ void body(Tparser* parser){
                 case TOKEN_KW_RETURN:
                     parser->state = STATE_operand;
                     expression(parser, TOKEN_SEMICOLON);
+                    if(error){
+                    	return;
+                    }
                     parser->state = STATE_command;
                     body(parser);
                     break;
@@ -456,6 +465,9 @@ void body(Tparser* parser){
                     if(parser->current_token.id == TOKEN_ASSIGNMENT){
                     	parser->state = STATE_operand;
                     	expression(parser, TOKEN_SEMICOLON);
+                    	if(error){
+                    		return;
+                    	}
                     }
                     else if(parser->current_token.id == TOKEN_ACCESS_OPERATOR){
                     	parser->state = STATE_identifier;
@@ -594,6 +606,9 @@ void var_const_declaration(Tparser* parser){
             if(parser->current_token.id == TOKEN_ASSIGNMENT){ //checking for var/const name ->=<- expression;
                 parser->state = STATE_operand;
                 expression(parser, TOKEN_SEMICOLON);
+                if(error){
+                	return;
+                }
                 break;
             }else if (parser->current_token.id == TOKEN_COLON){ //checking for var/const name ->:<- type = expression;
                 parser->state = STATE_possible_qmark;
@@ -642,6 +657,9 @@ void var_const_declaration(Tparser* parser){
             if(parser->current_token.id == TOKEN_ASSIGNMENT){ //checking for var/const name ->=<- expression;
                 parser->state = STATE_operand;
                 expression(parser, TOKEN_SEMICOLON);
+                if(error){
+                	return;
+                }
                 break;
             }
             error = ERR_SYNTAX;
