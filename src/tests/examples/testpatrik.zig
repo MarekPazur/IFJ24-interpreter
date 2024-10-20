@@ -2,6 +2,14 @@
 const ifj = @import("ifj24.zig");
 // Hlavni funkce
 pub fn main(a : []u8,b: i32, abkd : []u8, kk : f64,) void {
+if(b){
+ const a = ifj.a("kokot") + 8;
+ const a = (8+9) + (8+8);
+ var a = "kokot";
+ return a+b;
+}
+else{
+}
 const str1 = ifj.string("Toto je text v programu jazyka IFJ24");
 var str2 = ifj.string(", ktery jeste trochu obohatime");
 str2 = ifj.concat(str1, str2);
@@ -30,4 +38,3 @@ newInput = ifj.readstr();
 }
 }
 }
-S
