@@ -11,6 +11,7 @@
 #include "token.h"
 #include "symtable.h"
 
+
 typedef enum fsm_state_syna {
     STATE_ROOT, //expecting either a function header or import
     STATE_identifier, //expecting identifier
@@ -35,10 +36,13 @@ typedef enum fsm_state_syna {
     STATE_identifier_fn_param, //expecting an identifier of a parameter of a function (not first)
     STATE_command, //expecting commands in the body of a function/while/if/else
     STATE_operand, //expecting an operand in a true or a regular statement
+    STATE_operator, //expecting an operator in a true or a regular statement
     STATE_pipe, //expecting this |
     STATE_possible_else, //  else
-    STATE_open_else // { after else
+    STATE_open_else, // { after else
+    STATE_possible_function
 } Pfsm_state_syna;
+
 
  typedef struct parser{
   Pfsm_state_syna state;
@@ -59,12 +63,16 @@ void body(Tparser* parser);
 
 void if_while_header(Tparser* parser);
 
-void true_expression(Tparser* parser);
-
-void expression(Tparser* parser);
+void expression(Tparser* parser, token_id end);
 
 void null_replacement(Tparser* parser);
  
 void function_params(Tparser* parser);
 
 void var_const_declaration(Tparser* parser);
+
+void assignement(Tparser* parser);
+
+void function_call(Tparser* parser);
+
+void function_call_params(Tparser* parser);
