@@ -395,6 +395,7 @@ void body(Tparser* parser){
                 case TOKEN_KW_IF:
                     parser->state = STATE_lr_bracket;
                     if_while_header(parser);
+                    if (error) return;
                     parser->state = STATE_possible_else;
                     body(parser);
                     break;
@@ -410,12 +411,14 @@ void body(Tparser* parser){
                 case TOKEN_BRACKET_CURLY_LEFT:
                     parser->state = STATE_command;
                     body(parser);
+                    if (error) return;
                     parser->state = STATE_command;
                     body(parser);
                     break;
                 case TOKEN_KW_WHILE:
                     parser->state = STATE_lr_bracket;
                     if_while_header(parser);
+                    if (error) return;
                     parser->state = STATE_command;
                     body(parser);
                     break;
@@ -577,9 +580,6 @@ void body(Tparser* parser){
                 parser->state = STATE_command;
                 body(parser);
                 if (error) return;
-                parser->state = STATE_command;
-                body(parser);
-                if (error) return;
                 break;
             }
             error = ERR_SYNTAX;
@@ -598,7 +598,6 @@ void body(Tparser* parser){
  */
 void if_while_header(Tparser* parser){
     if (error) return;
-
     if((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
         return;
 

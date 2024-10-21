@@ -32,7 +32,8 @@ const str = \\hello
         \\my
 	\\name
 	\\is \\
-	\\zdenek \n \" \x7A ;
+	\\zdenek \n \" \x7A 
+	;
 newInput = ifj.readstr();
 }
 }
