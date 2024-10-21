@@ -304,18 +304,6 @@ token_t get_token(void) {
                     d_array_append(&token.lexeme, c);
                     scanner.p_state = STATE_EXPONENT;
                 }
-                    /*else if(is_identifier(c)) {
-                        token.id = TOKEN_ERROR;
-
-                        char c;
-
-                        // Skip all possible identifier characters
-                        while(is_identifier(c = getc(stdin)) || isdigit(c));
-
-                        error = ERR_LEXICAL;
-                        fprintf(stderr, RED_BOLD("error")": invalid suffix on integer constant\n");
-                        return token;
-                    }*/
                 else {
                     token.id = TOKEN_LITERAL_I32;
                     ungetc(c, stdin);
@@ -449,6 +437,7 @@ token_t get_token(void) {
                     d_array_append(&token.lexeme, c);
                 } else {
                     token.id = TOKEN_ERROR;
+                    printf("440");
                     error = ERR_LEXICAL;
                     return token;
                 }
@@ -483,7 +472,10 @@ token_t get_token(void) {
                     }
                 } else if (c >= 32 && c <= 126) {
                     d_array_append(&token.lexeme, c);
-                } else if (c == '\n'){
+                } else if (c == '\n') {
+                    scanner.p_state = STATE_NEXT_MULTILINE;
+                }    
+                  else if (c == EOF) {
                     scanner.p_state = STATE_NEXT_MULTILINE;
                 } else {
                     token.id = TOKEN_ERROR;
