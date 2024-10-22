@@ -3,7 +3,8 @@
  * 
  * @author xglosro00, Robert Glos
  * @author xukropj00, Jan Ukropec
- * @author xtomasp00, Patrik Tomasko
+ * @author xtomasp00, Patrik Tomaško
+ * @author xpazurm00, Marek Pazúr
  * 
  * @file syna.c
  */

@@ -16,7 +16,11 @@ const abcdefgh = ifj.string("abcdefgh");
 const strcmpResult = ifj.strcmp(inpOK, abcdefgh);
 if (strcmpResult == 0) {
 
-}  const x = 5;
+} if(0) {
+	const y = 5;
+}
+
+const x = 5;
 
 }
 

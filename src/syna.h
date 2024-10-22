@@ -3,10 +3,14 @@
  * 
  * @author xglosro00, Robert Glos
  * @author xukropj00, Jan Ukropec
- * @author xtomasp00, Patrik Tomasko
+ * @author xtomasp00, Patrik Tomaško
+ * @author xpazurm00, Marek Pazúr
  * 
  * @file syna.h
  */
+
+#ifndef SYNA_H
+#define SYNA_H
  
 #include "token.h"
 #include "symtable.h"
@@ -76,3 +80,5 @@ void var_const_declaration(Tparser* parser);
 void function_call(Tparser* parser);
 
 void function_call_params(Tparser* parser);
+
+#endif
