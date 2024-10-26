@@ -24,25 +24,30 @@ int main(void) {
 	/* Init. of scanner struct */
 	init_scanner();
 
-	if(error)
+	if(error) {
 		print_error(error);
+	}
 
 	/* Testing phase, will be rewritten */
 	token_t test;
 	init_parser(test);
-        /*
-	while((test = get_token()).id != TOKEN_EOF && test.id != TOKEN_ERROR) {
+        
+ /* Uncomment for lexer debug info */       
+/*	while((test = get_token()).id != TOKEN_EOF && test.id != TOKEN_ERROR) {
 			print_token(test);
 			d_array_free(&test.lexeme);
-		}
+	}
+
+	print_token(test);
 
 	if(test.id == TOKEN_ERROR) {
 			print_token(test);
 			d_array_free(&test.lexeme);
-		}
-        */
-	if(error)
+		}*/
+        
+	if(error) {
 		print_error(error);
+	}
 
 	return error;
 }
