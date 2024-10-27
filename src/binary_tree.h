@@ -11,10 +11,6 @@
 
 typedef struct binary_tree TBinaryTree;
 
-typedef struct data_bt{
-    int temp;
-} TDataBT;
-
 /**
  * Allocates memory for binary tree and initializes it
  * \return New binary tree | NULL in case of a memory allocation error
@@ -76,7 +72,7 @@ void BT_go_right(TBinaryTree* BT);
  * \param data
  * \return True: Succes, False: Memory allocation error | BT is NULL | BT is not active | Active node has a left node
  */
-bool BT_insert_left(TBinaryTree* BT, TDataBT data);
+bool BT_insert_left(TBinaryTree* BT, token_t data);
 
 /**
  * Inserts node as a right child of the active node.
@@ -84,7 +80,7 @@ bool BT_insert_left(TBinaryTree* BT, TDataBT data);
  * \param data
  * \return True: Succes, False: Memory allocation error | BT is NULL | BT is not active | Active node has a right node
  */
-bool BT_insert_right(TBinaryTree* BT, TDataBT data);
+bool BT_insert_right(TBinaryTree* BT, token_t data);
 
 /**
  * Checks if the binary tree has a root.
@@ -99,7 +95,7 @@ bool BT_has_root(TBinaryTree* BT);
  * \param data
  * \return True: Success, False: Memory allocation error | BT is NULL | BT already has a root node
  */
-bool BT_insert_root(TBinaryTree* BT, TDataBT data);
+bool BT_insert_root(TBinaryTree* BT, token_t data);
 
 /**
  * Frees all nodes
@@ -131,7 +127,7 @@ void BT_free_active_tree(TBinaryTree* BT);
  * \param[out] data_out Data output variable
  * \return True: Success, False: NULL pointer argument | Binary tree is not active
  */
-bool BT_get_data(TBinaryTree* BT, TDataBT* data_out);
+bool BT_get_data(TBinaryTree* BT, token_t* data_out);
 
 /**
  *
@@ -139,7 +135,7 @@ bool BT_get_data(TBinaryTree* BT, TDataBT* data_out);
  * \param[out] data_out Data output variable
  * \return True: Success, False: NULL pointer argument | Binary tree is not active | Active node does not have a left node
  */
-bool BT_get_data_left(TBinaryTree* BT, TDataBT* data_out);
+bool BT_get_data_left(TBinaryTree* BT, token_t* data_out);
 
 /**
  *
@@ -147,7 +143,7 @@ bool BT_get_data_left(TBinaryTree* BT, TDataBT* data_out);
  * \param[out] data_out Data output variable
  * \return True: Success, False: NULL pointer argument | Binary tree is not active | Active node does not have a right node
  */
-bool BT_get_data_right(TBinaryTree* BT, TDataBT* data_out);
+bool BT_get_data_right(TBinaryTree* BT, token_t* data_out);
 
 /**
  *
@@ -155,6 +151,6 @@ bool BT_get_data_right(TBinaryTree* BT, TDataBT* data_out);
  * \param[out] data_out Data output variable
  * \return True: Success, False: NULL pointer argument | Binary tree is not active | Active node does not have a parent node
  */
-bool BT_get_data_parent(TBinaryTree* BT, TDataBT* data_out);
+bool BT_get_data_parent(TBinaryTree* BT, token_t* data_out);
 
 #endif

@@ -8,6 +8,7 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
+#include "token.h"
 #include "binary_tree.h"
 
 typedef struct node TNode;
@@ -15,7 +16,7 @@ struct node{
     TNode* parent;
     TNode* left;
     TNode* right;
-    TDataBT data;
+    token_t data;
 };
 
 struct binary_tree{
@@ -30,7 +31,7 @@ struct binary_tree{
  * \param data
  * \return New node | NULL in case of a memory allocation error
  */
-TNode* create_node(TDataBT data){
+TNode* create_node(token_t data){
     TNode* new_node = malloc(sizeof(TNode));
     if(new_node != NULL){
         new_node->parent = NULL;
@@ -118,7 +119,7 @@ void BT_go_right(TBinaryTree* BT){
     }
 }
 
-bool BT_insert_left(TBinaryTree* BT, TDataBT data){
+bool BT_insert_left(TBinaryTree* BT, token_t data){
     if(!BT_is_active(BT)){
         return false;
     }
@@ -134,7 +135,7 @@ bool BT_insert_left(TBinaryTree* BT, TDataBT data){
     return true;
 }
 
-bool BT_insert_right(TBinaryTree* BT, TDataBT data){
+bool BT_insert_right(TBinaryTree* BT, token_t data){
     if(!BT_is_active(BT)){
         return false;
     }
@@ -157,7 +158,7 @@ bool BT_has_root(TBinaryTree* BT){
     return (BT->root != NULL);
 }
 
-bool BT_insert_root(TBinaryTree* BT, TDataBT data){
+bool BT_insert_root(TBinaryTree* BT, token_t data){
     if(BT == NULL){
         return false;
     }
@@ -208,7 +209,7 @@ void BT_free_active_tree(TBinaryTree* BT){
     }
 }
 
-bool BT_get_data(TBinaryTree* BT, TDataBT* data_out){
+bool BT_get_data(TBinaryTree* BT, token_t* data_out){
     if(!BT_is_active(BT)){
         return false;
     }
@@ -219,7 +220,7 @@ bool BT_get_data(TBinaryTree* BT, TDataBT* data_out){
     return true;
 }
 
-bool BT_get_data_left(TBinaryTree* BT, TDataBT* data_out){
+bool BT_get_data_left(TBinaryTree* BT, token_t* data_out){
     if(!BT_has_left(BT)){
         return false;
     }
@@ -230,7 +231,7 @@ bool BT_get_data_left(TBinaryTree* BT, TDataBT* data_out){
     return true;
 }
 
-bool BT_get_data_right(TBinaryTree* BT, TDataBT* data_out){
+bool BT_get_data_right(TBinaryTree* BT, token_t* data_out){
     if(!BT_has_right(BT)){
         return false;
     }
@@ -241,7 +242,7 @@ bool BT_get_data_right(TBinaryTree* BT, TDataBT* data_out){
     return true;
 }
 
-bool BT_get_data_parent(TBinaryTree* BT, TDataBT* data_out){
+bool BT_get_data_parent(TBinaryTree* BT, token_t* data_out){
     if(!BT_has_parent(BT)){
         return false;
     }
