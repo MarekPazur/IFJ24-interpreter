@@ -12,15 +12,21 @@
 #include "lexer.h"
 #include "dynamic_array.h"
 #include "syna.h"
+#include "precedent.h"
+
+/*
+ * @TODO
+ * lexical analyser = OK
+ * syntax analyser - rekurzivni sestup = OK
+ * syntax analyser - precedence
+ * symtable - vyvazeny binarni strom = OK
+ * obecny binarni strom = OK
+ * stack = OK
+ * semantic analyser
+ * code generator
+ */
 
 int main(void) {
-	//TODO
-	//lexical analyser
-	//syntax analyser - rekurzivni sestup?
-	//symtable - vyvazeny binarni strom?
-	//semantic analyser
-	//code generator
-
 	/* Init. of scanner struct */
 	init_scanner();
 
@@ -29,10 +35,12 @@ int main(void) {
 	}
 
 	/* Testing phase, will be rewritten */
-	token_t test;
-	init_parser(test);
+	//token_t test;
+	//init_parser(test);
         
- /* Uncomment for lexer debug info */       
+	precedent();
+
+	/* Uncomment for lexer debug info */       
 /*	while((test = get_token()).id != TOKEN_EOF && test.id != TOKEN_ERROR) {
 			print_token(test);
 			d_array_free(&test.lexeme);

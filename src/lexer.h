@@ -59,7 +59,4 @@ void ignore_comment();
 /* Checks if the first character is either an alphabet character or '_' */
 bool is_identifier(char c);
 
-/* Prints information about current token (debug info) */
-void print_token(token_t token);
-
 #endif

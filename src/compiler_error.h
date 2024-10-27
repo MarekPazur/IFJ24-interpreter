@@ -25,7 +25,8 @@ typedef enum error_code {
 
 #define RED_BOLD(msg) "\033[1;31m" msg "\033[0;37m"
 #define RED(msg) "\033[0;31m" msg "\033[0;37m"
-#define GREEN(msg) "\033[0;32m" msg "\033[0;37m" 
+#define GREEN(msg) "\033[0;32m" msg "\033[0;37m"
+#define YELLOW_BOLD(msg) "\033[1;33m" msg "\033[0;37m"
 #define WHITE_BOLD(msg) "\033[1;37m" msg "\033[0;37m"
 
 extern unsigned int error;
