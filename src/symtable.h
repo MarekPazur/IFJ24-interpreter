@@ -15,8 +15,25 @@ typedef char* TKey;
 
 typedef struct data TData;
 
+typedef enum type{
+    INTEGER,
+    FLOAT,
+    STRING,
+    BOOLEAN
+} Type;
+
+typedef union value{
+    long int int_val;
+    double float_val;
+    char* string_var;
+    bool bool_val;
+} Value;
+
 struct data{
-    int temp;
+    Type type;
+    Value value;
+    bool is_null;
+    bool is_constant;
 };
 
 // SYMTABLE OPERATIONS
