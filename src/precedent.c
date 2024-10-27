@@ -297,6 +297,7 @@ int precedent(void) {
 			/* Pushes input symbol onto stack top*/
 			printf("[=]\n");
 			equal(&sym_stack, next_term);
+			read_enable = true;
 			break;
 		case '<':
 			/* Puts SHIFT symbol after topmost TERM, pushes input symbol onto stack top*/
@@ -312,7 +313,7 @@ int precedent(void) {
 			break;
 		case 'e':
 			//print_symbol_info(top_term);print_symbol_info(next_term);print_stack_content(&sym_stack);
-			printf("error: invalid expression (empty expression, operator precedence error)\n");
+			printf("error: invalid expression (empty expression, operator precedence error)\n");print_token(token);
 			error = ERR_SYNTAX;
 			break;
 		default:
@@ -329,19 +330,19 @@ int precedent(void) {
 		if (read_enable)
 			next_term = token_to_symbol((token = get_token()));
 
-		if ((top_term.id == END && next_term.id == END)) // $ = $ -> topmost term in stack = next term, expression is finally solved
+		if ((top_term.id == END && next_term.id == END)) // $ = $ -> topmost term in stack = next term, expression is finally solved $E$
 			expr_solved = true;
 	}
 
 
 	//print_token(token);
-	//print_stack_content(&sym_stack);
+	print_stack_content(&sym_stack);
 	free_stack(&sym_stack);
 	//print_stack_content(&sym_stack);
 
 	if (error == 0)
-		printf("Expression solved!\n");
-	else printf("Unable to solve given expression!\n");
+		printf(GREEN("Expression solved!")"\n");
+	else printf(RED("Unable to solve given expression!")"\n");
 
 	return 0;
 }
