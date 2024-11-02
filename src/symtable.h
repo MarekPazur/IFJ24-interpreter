@@ -8,7 +8,7 @@
 
 #ifndef SYMTABLE_H
 #define SYMTABLE_H
-
+#include "dynamic_array.h"
 typedef struct symtable TSymtable;
 
 typedef char* TKey;
@@ -16,17 +16,21 @@ typedef char* TKey;
 typedef struct data TData;
 
 typedef enum type{
+    UNDEFINED,
     INTEGER,
     FLOAT,
     STRING,
-    BOOLEAN
+    BOOLEAN,
+    FUNCTION,
+    IMPORT
 } Type;
 
 typedef union value{
-    long int int_val;
+    int int_val;
     double float_val;
-    char* string_var;
+    char* string_val;
     bool bool_val;
+    dynamic_array argument_types;
 } Value;
 
 struct data{

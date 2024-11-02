@@ -64,7 +64,6 @@ static TNode* array_to_balanced_bst(TNode* node_arr[], unsigned int len);
 static bool bst_balance(TNode** root);
 
 // SYMTABLE OPERATIONS DEFINITIONS
-
 TSymtable* symtable_init(void){
     TSymtable* new_symtable = malloc(sizeof(TSymtable));
     if(new_symtable != NULL) {

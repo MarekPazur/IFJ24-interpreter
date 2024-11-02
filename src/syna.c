@@ -25,6 +25,21 @@
  *
  * @param token, will be used to store the current token
  */
+ TData current_data;
+ TKey current_key;
+ TData local_data;
+ TKey local_key;
+ 
+void wipe_data(TData* data){
+	data->is_null=false;
+	data->is_constant=false;
+	data->value.int_val = 0;
+	data->value.float_val = 0.0;
+	data->value.string_val = NULL;
+	data->value.bool_val = NULL;
+	d_array_free(&data->value.argument_types);
+	data->type = UNDEFINED;
+}
 void init_parser(token_t token){
    //malloc for the parser and checking if it went correctly
    Tparser* parser = malloc(sizeof(Tparser));
@@ -45,6 +60,8 @@ void init_parser(token_t token){
 
    parser->current_token = token;
    root_code(parser);
+   //printf("\n global");
+   //debug_print_keys(parser->global_symtable);
 }
 
 /**
@@ -61,8 +78,23 @@ void root_code(Tparser* parser){
       switch(parser->current_token.id){
           //<root_code> -> import_func | function_header | ""
           case TOKEN_KW_PUB:
+              d_array_init(&current_data.value.argument_types, 1); //init new argument type dynamic array for each new function
               parser->state = STATE_fn;
+              current_data.type = FUNCTION;
               function_header(parser);
+              
+              //Symtable handling of local symtable
+              //printf("\nlocal");
+              //debug_print_keys(parser->local_symtable);
+              symtable_free(parser->local_symtable);
+              parser->local_symtable = symtable_init();
+              
+              //insertion of function into global symtable
+              symtable_insert(parser->global_symtable, current_key, current_data);
+              //d_array_print(&current_data.value.argument_types); debug print for function types
+              
+              //wipe current global data
+              wipe_data(&current_data);
               parser->state = STATE_ROOT;
 
               if(error)
@@ -76,11 +108,12 @@ void root_code(Tparser* parser){
               break;
           case TOKEN_KW_CONST:
               parser->state = STATE_identifier;
+              current_data.is_constant = true;
               import_func(parser);
-
+	      symtable_insert(parser->global_symtable,current_key,current_data);
               if(error)
                 return;
-
+	      wipe_data(&current_data);
               parser->state = STATE_ROOT;
               root_code(parser);
 
@@ -114,6 +147,8 @@ void import_func(Tparser* parser){
    switch(parser->state){
       case STATE_identifier: //checking for this part const ->ifj<- = @import("ifj24.zig");
           if(parser->current_token.id == TOKEN_IDENTIFIER){
+              current_data.type = IMPORT;
+              current_key = parser->current_token.lexeme.array;
               parser->state = STATE_assig;
               import_func(parser);
               break;
@@ -122,6 +157,7 @@ void import_func(Tparser* parser){
           break;
       case STATE_identifier_prolog: //checking for this part const ifj = @import(->"ifj24.zig"<-);
           if(parser->current_token.id == TOKEN_LITERAL_STRING){
+              current_data.value.string_val = parser->current_token.lexeme.array;
               parser->state = STATE_rr_bracket;
               import_func(parser);
               break;
@@ -194,6 +230,7 @@ void function_header(Tparser* parser){
             break;
         case STATE_identifier:
             if(parser->current_token.id == TOKEN_IDENTIFIER){ //checking for pub fn ->name<-() type{
+            	current_key = parser->current_token.lexeme.array;
                 parser->state = STATE_lr_bracket;
                 function_header(parser);
                 break;
@@ -277,6 +314,7 @@ void function_params(Tparser* parser){
                     parser->state = STATE_type;
                     break;
                 case TOKEN_IDENTIFIER: //checking for pub fn name(->param<- : type) type{
+                    local_key = parser->current_token.lexeme.array;
                     parser->state = STATE_colon;
                     function_params(parser);
                     break;
@@ -296,11 +334,19 @@ void function_params(Tparser* parser){
         case STATE_possible_qmark:
             switch(parser->current_token.id){ //checking for pub fn name(param : ?type) type{
                 case TOKEN_OPTIONAL_TYPE_NULL:
+                    local_data.is_null=true;
                     parser->state = STATE_type;
                     function_params(parser);
                     break;
                 case TOKEN_KW_I32: //checking for pub fn name(param : ->i32<-) type{
+                    d_array_append(&current_data.value.argument_types, 'i');
+                    local_data.type = INTEGER;
+                    parser->state = STATE_coma;
+                    function_params(parser);
+                    break;
                 case TOKEN_KW_F64: //checking for pub fn name(param : ->f64<-) type{
+                    d_array_append(&current_data.value.argument_types, 'f');
+                    local_data.type=FLOAT;
                     parser->state = STATE_coma;
                     function_params(parser);
                     break;
@@ -316,7 +362,14 @@ void function_params(Tparser* parser){
         case STATE_type:
             switch(parser->current_token.id){
                 case TOKEN_KW_I32: //checking for pub fn name(param : ->i32<-) type{
+                    d_array_append(&current_data.value.argument_types, 'i');
+                    local_data.type = INTEGER;
+                    parser->state = STATE_coma;
+                    function_params(parser);
+                    break;
                 case TOKEN_KW_F64: //checking for pub fn name(param : ->f64<-) type{
+                    d_array_append(&current_data.value.argument_types, 'f');
+                    local_data.type=FLOAT;
                     parser->state = STATE_coma;
                     function_params(parser);
                     break;
@@ -334,6 +387,7 @@ void function_params(Tparser* parser){
                 case TOKEN_BRACKET_ROUND_RIGHT: //checking for pub fn name(param : type ,->)<- type{
                     break;
                 case TOKEN_IDENTIFIER: //checking for pub fn name(param : type ,->param<- : type) type{
+                    local_key = parser->current_token.lexeme.array;
                     parser->state = STATE_colon;
                     function_params(parser);
                     break;
@@ -345,10 +399,14 @@ void function_params(Tparser* parser){
         case STATE_coma:
             switch(parser->current_token.id){
                 case TOKEN_COMMA: //checking for pub fn name(param : type ->,<- type) type{
+                    symtable_insert(parser->local_symtable, local_key, local_data);
+                    wipe_data(&local_data);
                     parser->state = STATE_identifier;
                     function_params(parser);
                     break;
-                case TOKEN_BRACKET_ROUND_RIGHT: //checking for pub fn name(param : type ->)<- type{
+                case TOKEN_BRACKET_ROUND_RIGHT: //checking for pub fn name(param : type ->)<- type{7
+                    symtable_insert(parser->local_symtable, local_key, local_data);
+                    wipe_data(&local_data);
                     break;
                 default:
                 error = ERR_SYNTAX;
@@ -365,6 +423,8 @@ void function_params(Tparser* parser){
             break;
         case STATE_u8:
             if(parser->current_token.id == TOKEN_KW_U8){ //checking for pub fn name(param : []->u8<-) type{
+            	d_array_append(&current_data.value.argument_types, 's');
+                local_data.type = STRING;
                 parser->state = STATE_coma;
                 function_params(parser);
                 break;
@@ -426,6 +486,8 @@ void body(Tparser* parser){
                 case TOKEN_KW_VAR:
                     parser->state = STATE_identifier;
                     var_const_declaration(parser);
+                    symtable_insert(parser->local_symtable, local_key, local_data);
+                    wipe_data(&local_data);
                     if (error) return;
                     parser->state = STATE_command;
                     body(parser);
@@ -433,8 +495,11 @@ void body(Tparser* parser){
                         return;
                     break;
                 case TOKEN_KW_CONST:
+                    local_data.is_constant=true;
                     parser->state = STATE_identifier;
                     var_const_declaration(parser);
+                    symtable_insert(parser->local_symtable, local_key, local_data);
+                    wipe_data(&local_data);
                     if (error) return;
                     parser->state = STATE_command;
                     body(parser);
@@ -449,7 +514,7 @@ void body(Tparser* parser){
                     	parser->state = STATE_operand;
 
                     	expression(parser, TOKEN_SEMICOLON);
-
+                    	//set data type for local_databased on expression result
                     	if(error){
                     		return;
                     	}
@@ -533,6 +598,7 @@ void body(Tparser* parser){
                     if (error) return;
                     break;
                 case TOKEN_KW_CONST:
+                    local_data.is_constant = true;
                     parser->state = STATE_identifier;
                     var_const_declaration(parser);
                     if (error) return;
@@ -541,6 +607,7 @@ void body(Tparser* parser){
                     if (error) return;
                     break;
                 case TOKEN_IDENTIFIER:
+                    //probably set key here, depends on how we decide to approach this
                     if((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
                         return;
 
@@ -691,6 +758,7 @@ void var_const_declaration(Tparser* parser){
 
     switch(parser->state){
         case STATE_identifier:
+            local_key=parser->current_token.lexeme.array;
             if(parser->current_token.id == TOKEN_IDENTIFIER){ //checking for var/const ->name<- = expression;
                 parser->state = STATE_assig;
                 var_const_declaration(parser);
@@ -702,6 +770,7 @@ void var_const_declaration(Tparser* parser){
             if(parser->current_token.id == TOKEN_ASSIGNMENT){ //checking for var/const name ->=<- expression;
                 parser->state = STATE_operand;
                 expression(parser, TOKEN_SEMICOLON);
+                //something to match the data type of the final expression result
                 if(error){
                 	return;
                 }
@@ -716,6 +785,7 @@ void var_const_declaration(Tparser* parser){
         case STATE_possible_qmark:
             switch(parser->current_token.id){ //checking for pub fn name(param : ?type) type{
                 case TOKEN_OPTIONAL_TYPE_NULL:
+                    local_data.is_null = true;
                     parser->state = STATE_type;
                     var_const_declaration(parser);
                     break;
@@ -736,7 +806,12 @@ void var_const_declaration(Tparser* parser){
         case STATE_type:
             switch(parser->current_token.id){ //checking for pub fn name(param : ?type) type{
                 case TOKEN_KW_I32: //checking for pub fn name(param : ->i32<-) type{
+                    local_data.type = INTEGER;
+                    parser->state = STATE_assig_must;
+                    function_params(parser);
+                    break;
                 case TOKEN_KW_F64: //checking for pub fn name(param : ->f64<-) type{
+                    local_data.type = FLOAT;
                     parser->state = STATE_assig_must;
                     var_const_declaration(parser);
                     break;
@@ -770,6 +845,7 @@ void var_const_declaration(Tparser* parser){
             break;
         case STATE_u8:
             if(parser->current_token.id == TOKEN_KW_U8){ //var/const name :[]->u8<- =
+            	local_data.type = STRING;
                 parser->state = STATE_assig_must;
                 var_const_declaration(parser);
                 break;
