@@ -20,11 +20,7 @@
 #include "compiler_error.h"
 #include "lexer.h"
 
-/**
- * @brief This function initializes the parser
- *
- * @param token, will be used to store the current token
- */
+
  TData current_data;
  TKey current_key;
  TData local_data;
@@ -40,6 +36,12 @@ void wipe_data(TData* data){
 	d_array_free(&data->value.argument_types);
 	data->type = UNDEFINED;
 }
+
+/**
+ * @brief This function initializes the parser
+ *
+ * @param token, will be used to store the current token
+ */
 void init_parser(token_t token){
    //malloc for the parser and checking if it went correctly
    Tparser* parser = malloc(sizeof(Tparser));
