@@ -31,7 +31,7 @@ int pt_map(symbol term);
 /* Converts token to precedence symbol */
 symbol token_to_symbol(token_t term);
 
-/* Uses rules to reduce terms */
+/* Rules to solve expressions, check semantics */
 void reduction(stack_t *stack, int expresion_length);	// > REDUCE
 void shift(stack_t *stack, symbol next_symbol);			// < SHIFT
 void equal(stack_t *stack, symbol next_symbol);			// = EQUAL

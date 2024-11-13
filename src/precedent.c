@@ -344,5 +344,11 @@ int precedent(void) {
 		printf(GREEN("Expression solved!")"\n");
 	else printf(RED("Unable to solve given expression!")"\n");
 
+	/* Expression can be solved, but can still be incorrect with missing semicolon */
+	if (token.id != TOKEN_SEMICOLON) {
+		printf("error: missing semicolon at the end of expression!\n");
+		error = ERR_SYNTAX;
+	}
+
 	return 0;
 }
