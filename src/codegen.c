@@ -13,7 +13,7 @@
 #include "codegen.h"
 
 // Return value global frame variable
-const TTerm cg_var_retval = {.type = VARIABLE_T, .value.var_name = "input", .frame = GLOBAL};
+const TTerm cg_var_retval = {.type = VARIABLE_T, .value.var_name = "retval", .frame = GLOBAL};
 
 // IFJ24code frame types
 #define GF "GF@"
@@ -113,15 +113,15 @@ void cg_return(void){
     printf("return\n");
 }
 
-void cg_move(TTerm var, TTerm symb){
-    if(var.type != VARIABLE_T){
+void cg_move(TTerm dest, TTerm src){
+    if(dest.type != VARIABLE_T){
         //set_error(ERR_COMPILER_INTERNAL);
         return;
     }
     printf("move ");
-    cg_term(var);
+    cg_term(dest);
     putchar(' ');
-    cg_term(symb);
+    cg_term(src);
     putchar('\n');
 }
 
@@ -148,10 +148,6 @@ void cg_ifj_write(TTerm term){
 }
 
 void cg_ifj_i2f(TTerm term){
-    if(term.type != INTEGER_T){
-        //set error
-        return;
-    }
     printf("int2float ");
     cg_term(cg_var_retval);
     putchar(' ');
@@ -160,10 +156,6 @@ void cg_ifj_i2f(TTerm term){
 }
 
 void cg_ifj_f2i(TTerm term){
-    if(term.type != FLOAT_T){
-        //set error
-        return;
-    }
     printf("float2int ");
     cg_term(cg_var_retval);
     putchar(' ');

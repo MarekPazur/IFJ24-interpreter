@@ -65,22 +65,27 @@ void cg_push_frame(void);
  */
 void cg_pop_frame(void);
 
-void cg_move(TTerm var, TTerm symb);
+/**
+ * Copies value to a variable
+ * \param dest Variable
+ * \param src Variable or constant
+ */
+void cg_move(TTerm dest, TTerm src);
 
 // IFJ BUILT-IN
 
 /**
- * Reads a string from stdin and saves it into a variable GF@input
+ * Reads a string from stdin and saves it into a variable GF@retval (cg_var_retval)
  */
 void cg_ifj_readstr(void);
 
 /**
- * Reads an integer from stdin and saves it into a variable GF@input
+ * Reads an integer from stdin and saves it into a variable GF@retval (cg_var_retval)
  */
 void cg_ifj_readi32(void);
 
 /**
- * Reads a float from stdin and saves it into a variable GF@input
+ * Reads a float from stdin and saves it into a variable GF@retval (cg_var_retval)
  */
 void cg_ifj_readf64(void);
 
@@ -89,5 +94,17 @@ void cg_ifj_readf64(void);
  * \param term
  */
 void cg_ifj_write(TTerm term);
+
+/**
+ * Convers integer value to float and saves it into GF@retval (cg_var_retval)
+ * \param term Integer value
+ */
+void cg_ifj_i2f(TTerm term);
+
+/**
+ * Convers float value to integer and saves it into GF@retval (cg_var_retval)
+ * \param term Float value
+ */
+void cg_ifj_f2i(TTerm term);
 
 #endif
