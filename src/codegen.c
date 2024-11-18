@@ -83,7 +83,7 @@ void cg_init(void){
 
 void cg_create_var(TTerm var){
     if(var.type != VARIABLE_T || var.value.var_name == NULL){
-        //set_error(ERR_COMPILER_INTERNAL);
+        error = ERR_COMPILER_INTERNAL;
         return;
     }
     printf("defvar %s%s\n", get_frame(var.frame), var.value.var_name);
@@ -103,7 +103,7 @@ void cg_pop_frame(void){
 
 void cg_call(char* label){
     if(label == NULL){
-        //set_error(ERR_COMPILER_INTERNAL);
+        error = ERR_COMPILER_INTERNAL;
         return;
     }
     printf("call %s\n", label);
@@ -115,7 +115,7 @@ void cg_return(void){
 
 void cg_move(TTerm dest, TTerm src){
     if(dest.type != VARIABLE_T){
-        //set_error(ERR_COMPILER_INTERNAL);
+        error = ERR_COMPILER_INTERNAL;
         return;
     }
     printf("move ");
@@ -148,6 +148,10 @@ void cg_ifj_write(TTerm term){
 }
 
 void cg_ifj_i2f(TTerm term){
+    if(term.type != VARIABLE_T && term.type != INTEGER_T){
+        error = ERR_COMPILER_INTERNAL;
+        return;
+    }
     printf("int2float ");
     cg_term(cg_var_retval);
     putchar(' ');
@@ -156,10 +160,33 @@ void cg_ifj_i2f(TTerm term){
 }
 
 void cg_ifj_f2i(TTerm term){
+    if(term.type != VARIABLE_T && term.type != FLOAT_T){
+        error = ERR_COMPILER_INTERNAL;
+        return;
+    }
     printf("float2int ");
     cg_term(cg_var_retval);
     putchar(' ');
     cg_term(term);
+    putchar('\n');
+}
+
+void cg_ifj_string(TTerm term){
+    if(term.type != VARIABLE_T && term.type != STRING_T){
+        error = ERR_COMPILER_INTERNAL;
+    }
+    cg_move(cg_var_retval, term);
+}
+
+void cg_ifj_length(TTerm slice){
+    if(slice.type != VARIABLE_T){
+        error = ERR_COMPILER_INTERNAL;
+        return;
+    }
+    printf("strlen ");
+    cg_term(cg_var_retval);
+    putchar(' ');
+    cg_term(slice);
     putchar('\n');
 }
 

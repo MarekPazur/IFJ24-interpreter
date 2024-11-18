@@ -39,6 +39,8 @@ typedef struct term{
 // Constants
 extern const TTerm cg_var_retval;
 
+void cg_term(TTerm term);
+
 /**
  * Sets interpreted language to IFJcode24
  */
@@ -106,5 +108,17 @@ void cg_ifj_i2f(TTerm term);
  * \param term Float value
  */
 void cg_ifj_f2i(TTerm term);
+
+/**
+ *
+ * \param term
+ */
+void cg_ifj_string(TTerm term);
+
+/**
+ *
+ * \param term
+ */
+void cg_ifj_length(TTerm slice);
 
 #endif
