@@ -15,7 +15,6 @@
 #include <ctype.h>
 #include <string.h>
 
-
 #include "syna.h"
 #include "compiler_error.h"
 #include "lexer.h"

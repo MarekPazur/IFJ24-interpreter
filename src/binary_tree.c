@@ -8,34 +8,8 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
-#include "token.h"
 #include "binary_tree.h"
-#include "symtable.h"
 
-typedef struct node TNode;
-
-typedef struct node_data {
-
-        char *identifier;
-        TSymtable *scope;
-        void *parent_scope;
-        
-
-} node_data;
-
-struct node{
-
-    TNode* parent;
-    TNode* left;
-    TNode* right;
-
-    token_t data;
-};
-
-struct binary_tree{
-    TNode* root;
-    TNode* active;
-};
 
 // Binary tree private functions
 
@@ -44,13 +18,13 @@ struct binary_tree{
  * \param data
  * \return New node | NULL in case of a memory allocation error
  */
-TNode* create_node(token_t data){
+TNode* create_node(node_type type) {
     TNode* new_node = malloc(sizeof(TNode));
     if(new_node != NULL){
         new_node->parent = NULL;
         new_node->left = NULL;
         new_node->right = NULL;
-        new_node->data = data;
+        new_node->type = type;
     }
     return new_node;
 }
@@ -132,14 +106,14 @@ void BT_go_right(TBinaryTree* BT){
     }
 }
 
-bool BT_insert_left(TBinaryTree* BT, token_t data){
+bool BT_insert_left(TBinaryTree* BT, node_type type){
     if(!BT_is_active(BT)){
         return false;
     }
     if(BT_has_left(BT)){
         return false;
     }
-    TNode* new_node = create_node(data);
+    TNode* new_node = create_node(type);
     if(new_node == NULL){
         return false;
     }
@@ -148,14 +122,14 @@ bool BT_insert_left(TBinaryTree* BT, token_t data){
     return true;
 }
 
-bool BT_insert_right(TBinaryTree* BT, token_t data){
+bool BT_insert_right(TBinaryTree* BT, node_type type){
     if(!BT_is_active(BT)){
         return false;
     }
     if(BT_has_right(BT)){
         return false;
     }
-    TNode* new_node = create_node(data);
+    TNode* new_node = create_node(type);
     if(new_node == NULL){
         return false;
     }
@@ -171,14 +145,14 @@ bool BT_has_root(TBinaryTree* BT){
     return (BT->root != NULL);
 }
 
-bool BT_insert_root(TBinaryTree* BT, token_t data){
+bool BT_insert_root(TBinaryTree* BT, node_type type){
     if(BT == NULL){
         return false;
     }
     if(BT_has_root(BT)){
         return false;
     }
-    TNode* new_node = create_node(data);
+    TNode* new_node = create_node(type);
     if(new_node == NULL){
         return false;
     }
@@ -222,7 +196,7 @@ void BT_free_active_tree(TBinaryTree* BT){
     }
 }
 
-bool BT_get_data(TBinaryTree* BT, token_t* data_out){
+bool BT_get_data(TBinaryTree* BT, node_data* data_out){
     if(!BT_is_active(BT)){
         return false;
     }
@@ -233,7 +207,7 @@ bool BT_get_data(TBinaryTree* BT, token_t* data_out){
     return true;
 }
 
-bool BT_get_data_left(TBinaryTree* BT, token_t* data_out){
+bool BT_get_data_left(TBinaryTree* BT, node_data* data_out){
     if(!BT_has_left(BT)){
         return false;
     }
@@ -244,7 +218,7 @@ bool BT_get_data_left(TBinaryTree* BT, token_t* data_out){
     return true;
 }
 
-bool BT_get_data_right(TBinaryTree* BT, token_t* data_out){
+bool BT_get_data_right(TBinaryTree* BT, node_data* data_out){
     if(!BT_has_right(BT)){
         return false;
     }
@@ -255,7 +229,7 @@ bool BT_get_data_right(TBinaryTree* BT, token_t* data_out){
     return true;
 }
 
-bool BT_get_data_parent(TBinaryTree* BT, token_t* data_out){
+bool BT_get_data_parent(TBinaryTree* BT, node_data* data_out){
     if(!BT_has_parent(BT)){
         return false;
     }

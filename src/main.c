@@ -12,6 +12,7 @@
 #include "lexer.h"
 #include "dynamic_array.h"
 #include "syna.h"
+#include "binary_tree.h"
 
 int main(void) {
 	//TODO
@@ -29,9 +30,20 @@ int main(void) {
 	}
 
 	/* Testing phase, will be rewritten */
-	token_t test;
-	init_parser(test);
-        
+	//token_t test;
+	//init_parser(test);
+      
+	TBinaryTree *AST = BT_init();
+	BT_insert_root(AST, RETURN);
+
+	TNode** tree = &(AST->root);
+
+	printf("%d",(*tree)->type);
+
+
+
+	BT_free_nodes(AST);
+
  /* Uncomment for lexer debug info */       
 /*	while((test = get_token()).id != TOKEN_EOF && test.id != TOKEN_ERROR) {
 			print_token(test);
