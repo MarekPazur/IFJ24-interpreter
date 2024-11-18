@@ -190,3 +190,28 @@ void cg_ifj_length(TTerm slice){
     putchar('\n');
 }
 
+void cg_ifj_concat(TTerm slice_beg, TTerm slice_end){
+    if(slice_beg.type != VARIABLE_T || slice_end.type != VARIABLE_T){
+        error = ERR_COMPILER_INTERNAL;
+        return;
+    }
+    printf("concat ");
+    cg_term(cg_var_retval);
+    putchar(' ');
+    cg_term(slice_beg);
+    putchar(' ');
+    cg_term(slice_end);
+    putchar('\n');
+}
+
+void cg_ifj_substring(/*TTerm slice, TTerm beg_index, TTerm after_last_index*/){
+
+
+    //TODO:
+    // printf("jump cg_ifj_substring")
+    // printf("label cg_ifj_substring_label_ret_null\n");
+    // TTerm null_const = {.type = NULL_T};
+    // cg_move(cg_var_retval, null_const);
+    // printf("label cg_ifj_substring_label_ret_end\n");
+}
+
