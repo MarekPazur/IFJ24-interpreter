@@ -17,6 +17,7 @@
 #include "stack.h"
 
 #define PT_SIZE 7
+#define PUSH_SYMBOL(symbol_id) push(&sym_stack, (symbol) {.id = symbol_id, .token = {.id = TOKEN_DEFAULT, .lexeme = {.array = NULL}}, .type = NON_OPERAND})
 
 /*@TODO
 *
@@ -37,7 +38,7 @@
 *[stack_top_term] [next_token]
 */
 static int precedence_table[PT_SIZE][PT_SIZE] = {
-//   [ +- | */ |  l |  ( |  ) |  i |  $ ]
+//       [ +- | */ |  l |  ( |  ) |  i |  $ ]
 	/*0*/{ '>', '<', '>', '<', '>', '<', '>'}, //|+-| ARITHMETIC OPERATORS
 	/*1*/{ '>', '>', '>', '<', '>', '<', '>'}, //|*/| * / ARITHMETIC OPERATORS
 	/*2*/{ '<', '<', '>', '<', '>', '<', '>'}, //| l| > < => <= == != LOGIC OPERATORS
@@ -45,7 +46,7 @@ static int precedence_table[PT_SIZE][PT_SIZE] = {
 	/*4*/{ '>', '>', '>', 'e', '>', 'e', '>'}, //| )| )
 	/*5*/{ '>', '>', '>', 'e', '>', 'e', '>'}, //| i| IDENTIFIER LITERAL_i32 LITERAL_f64 LITERAL_string
 	/*6*/{ '<', '<', '<', '<', 'e', '<', 'e'}, //| $| STACK BOTTOM
-//   [  0 |  1 |  2 |  3 |  4 |  5 |  6 ]
+//       [  0 |  1 |  2 |  3 |  4 |  5 |  6 ]
 };
 
 /* Maps symbol into PT */
@@ -90,7 +91,7 @@ int pt_map(symbol sym) {
 
 	return index;
 }
-/* Creates symbol out of processed token */
+/* Creates a symbol out of processed token */
 symbol token_to_symbol(token_t term) {
 	symbol symbol;
 	symbol.id = DEFAULT; // uninitialised
@@ -167,6 +168,7 @@ symbol token_to_symbol(token_t term) {
 	return symbol;
 }
 
+/* Pushes symbol to stack */
 void equal(stack_t *stack, symbol next_symbol) {
 	push(stack, next_symbol);
 
@@ -175,6 +177,7 @@ void equal(stack_t *stack, symbol next_symbol) {
 	}
 }
 
+/* Inserts shift symbol on the stack */
 void shift(stack_t *stack, symbol next_symbol) {
 	insert_shift(stack);	// Inserts shift symbol
 	push(stack, next_symbol);	// Pushes next symbol
@@ -184,8 +187,7 @@ void shift(stack_t *stack, symbol next_symbol) {
 	}
 }
 
-/* Expression reduction with semantic checks */
-/*@TODO semantics*/
+/* Expression reduction + semantic checks */
 void reduction(stack_t *stack, int expresion_length) {
 	/* E -> i */
 	if (expresion_length == 1) {
@@ -201,7 +203,7 @@ void reduction(stack_t *stack, int expresion_length) {
 		symbol E1 = pop(stack); // expression
 		pop(stack);				// pop shift
 
-		/* Create new non-term */
+		/* Create new non-term Expression*/
 		symbol E = {.id = E_EXP,
 		            .token = {.id = TOKEN_DEFAULT, .lexeme = {.array = NULL}},
 		            .type = NON_OPERAND
@@ -221,9 +223,9 @@ void reduction(stack_t *stack, int expresion_length) {
 			return;
 		}
 
-		/* Operators can't be applied on STRING literals or []u8 type (slice) */
-		if ((E1.type == STRING || E2.type == STRING) || (E1.type == U8 || E2.type == U8)) {
-			printf("error: string literal or []u8 type used in expression!\n");
+		/* Operators can't be applied on string, []u8, null type  */
+		if ((E1.type == STRING || E2.type == STRING) || (E1.type == U8 || E2.type == U8) || (E1.type == NULL_T || E2.type == NULL_T)) {
+			printf("error: invalid type used in expression!\n");
 			error = ERR_TYPE_COMPATABILITY;
 			return;
 		}
@@ -269,28 +271,22 @@ void reduction(stack_t *stack, int expresion_length) {
 	}
 }
 
-#define PUSH_DEBUG(symbol_id) push(&sym_stack, (symbol) {.id = symbol_id, .token = {.id = TOKEN_DEFAULT, .lexeme = {.array = NULL}}, .type = NON_OPERAND})
-
 /* Precedent analysis main function */
-int precedent(void) {
-	/*@TODO
-	 *symbol stack OK
-	 *shift OK
-	 *reduce OK
-	 *semantics
-	 *binary tree + codegen */
-	stack_t sym_stack; // Stack of symbols
+/* Checks expression in assingment or condiiton */
+int precedent(token_id end_marker) {
+	stack_t sym_stack;
 	init_stack(&sym_stack);
-	PUSH_DEBUG(END);	//PUSH_DEBUG(R);PUSH_DEBUG(LBR);PUSH_DEBUG(E_OPERAND);/*PUSH_DEBUG(END);PUSH_DEBUG(R);PUSH_DEBUG(LBR);PUSH_DEBUG(R);PUSH_DEBUG(E_OPERAND);PUSH_DEBUG(MUL);PUSH_DEBUG(E_OPERAND);*/
-	token_t token;	// Input (next) term
-	symbol top_term, next_term;	// Tokens in symbol form
+	PUSH_SYMBOL(END);
+
+	token_t token;
+	symbol top_term, next_term;
 	bool read_enable = true, expr_solved = false; // Enable/Disable read when needed during expression reduction, break cycle if the expression is solved
 
 	top_term = get_topmost_term(&sym_stack); // $ at the bottom of the stack
 	next_term = token_to_symbol((token = get_token())); // anything from the input
 
 	while (expr_solved == false) { // Repeat until $ = $ -> stack top = input term
-		int precedence = precedence_table[pt_map(top_term)][pt_map(next_term)]; // term precedence
+		int precedence = precedence_table[pt_map(top_term)][pt_map(next_term)]; // get term precedence
 		
 		switch (precedence) {
 		case '=':
@@ -312,8 +308,7 @@ int precedent(void) {
 			read_enable = false; /* Will reduce until SHIFT or solved expression */
 			break;
 		case 'e':
-			//print_symbol_info(top_term);print_symbol_info(next_term);print_stack_content(&sym_stack);
-			printf("error: invalid expression (empty expression, operator precedence error)\n");print_token(token);
+			printf("error: invalid expression (empty expression, operator precedence error)\n");
 			error = ERR_SYNTAX;
 			break;
 		default:
@@ -330,23 +325,21 @@ int precedent(void) {
 		if (read_enable)
 			next_term = token_to_symbol((token = get_token()));
 
-		if ((top_term.id == END && next_term.id == END)) // $ = $ -> topmost term in stack = next term, expression is finally solved $E$
+		if (end_marker == TOKEN_SEMICOLON ? (top_term.id == END && next_term.id == END) : (top_term.id == END && next_term.id == RBR)) // $ = $ -> topmost term in stack = next term, expression is finally solved $E$
 			expr_solved = true;
 	}
 
 
-	//print_token(token);
+	/* DEBUG functions */
 	print_stack_content(&sym_stack);
 	free_stack(&sym_stack);
-	//print_stack_content(&sym_stack);
-
 	if (error == 0)
 		printf(GREEN("Expression solved!")"\n");
 	else printf(RED("Unable to solve given expression!")"\n");
 
-	/* Expression can be solved, but can still be incorrect with missing semicolon */
-	if (token.id != TOKEN_SEMICOLON) {
-		printf("error: missing semicolon at the end of expression!\n");
+	/* Expression can be solved, but can still be incorrect with missing end marker */
+	if (token.id != end_marker) {
+		printf("error: missing semicolon or parenthesis at the end of expression!\n");
 		error = ERR_SYNTAX;
 	}
 

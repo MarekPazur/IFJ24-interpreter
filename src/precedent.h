@@ -37,6 +37,6 @@ void shift(stack_t *stack, symbol next_symbol);			// < SHIFT
 void equal(stack_t *stack, symbol next_symbol);			// = EQUAL
 
 /* Precedent analysis main function */
-int precedent(void);
+int precedent(token_id end_marker);
 
 #endif

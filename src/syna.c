@@ -898,7 +898,6 @@ void function_call_params(Tparser* parser){
 void expression(Tparser* parser, token_id end){
     if (error) return;
 
-
     if((parser->current_token = get_token()).id == TOKEN_ERROR) { // Token is invalid
         return;}
 

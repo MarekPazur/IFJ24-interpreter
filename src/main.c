@@ -35,10 +35,10 @@ int main(void) {
 	}
 
 	/* Testing phase, will be rewritten */
-	//token_t test;
+	token_t test = {.id = TOKEN_BRACKET_ROUND_RIGHT};
 	//init_parser(test);
-        
-	precedent();
+
+	precedent(test.id);
 
 	/* Uncomment for lexer debug info */       
 /*	while((test = get_token()).id != TOKEN_EOF && test.id != TOKEN_ERROR) {
