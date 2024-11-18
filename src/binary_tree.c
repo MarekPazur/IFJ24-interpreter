@@ -10,12 +10,25 @@
 #include <stdbool.h>
 #include "token.h"
 #include "binary_tree.h"
+#include "symtable.h"
 
 typedef struct node TNode;
+
+typedef struct node_data {
+
+        char *identifier;
+        TSymtable *scope;
+        void *parent_scope;
+        
+
+} node_data;
+
 struct node{
+
     TNode* parent;
     TNode* left;
     TNode* right;
+
     token_t data;
 };
 

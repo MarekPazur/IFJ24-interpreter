@@ -11,6 +11,33 @@
 
 typedef struct binary_tree TBinaryTree;
 
+/* ***********************
+ *		AST utilities
+ * ***********************/
+typedef enum node_type {
+	ROOT,
+
+	PROLOGUE,
+	FUNCTION,
+	BODY,
+
+	WHILE,
+	IF,
+	ELSE,
+
+	EXPRESSION,
+
+	RETURN
+} node_type;
+
+typedef enum data_type {
+	VOID_TYPE,
+	I32,
+	F64,
+	U8_SLICE,
+	NULL_TYPE
+} data_type;
+
 /**
  * Allocates memory for binary tree and initializes it
  * \return New binary tree | NULL in case of a memory allocation error
