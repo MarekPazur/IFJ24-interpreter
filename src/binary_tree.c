@@ -8,8 +8,10 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
 #include "binary_tree.h"
-
+#include "compiler_error.h"
 
 // Binary tree private functions
 
@@ -239,3 +241,118 @@ bool BT_get_data_parent(TBinaryTree* BT, node_data* data_out){
     *data_out = BT->active->parent->data;
     return true;
 }
+
+
+// Binary tree debug functions
+
+const char *node_t_string[] = {
+    "ROOT",
+    "PROLOGUE",
+    "FUNCTION",
+    "COMMAND",
+    "BODY",
+    "WHILE",
+    "IF",
+    "ELSE",
+    "EXPRESSION",
+    "RETURN"
+};
+
+typedef enum side {
+    ROOT,
+    LEFT_SIDE,
+    RIGHT_SIDE
+} side_t;
+
+/*
+* Creates new line out of previous and string suffix to be added
+*/
+char *new_line(char *line, char *str) {
+    char *new;
+    size_t new_size = strlen(line) + strlen(str) + 1; /* Size of previous line + string suffix + terminator */
+
+    if((new = (char *) malloc(new_size)) == NULL) {
+        fprintf(stderr,"Tree print function resource allocation failure");
+        error =  ERR_COMPILER_INTERNAL;
+        return NULL;
+    }; 
+    
+    strcpy(new, line);
+    strcat(new, str);
+    
+    return new;
+}
+
+/*
+* Returns index of appropriate node type according to its children
+*/
+int get_node_type(TNode *tree) {
+    int node_type;
+    if (tree->right && tree->left)
+        node_type = 0;
+    else if (tree->right && tree->left == NULL)
+        node_type = 1;
+    else if (tree->right == NULL && tree->left)
+        node_type = 2;
+    else node_type = 3;
+
+    return node_type;
+}
+
+/*
+* Prints the subtrees using inverse in-order traversal (Right subtree first)
+*/
+void BT_print_subtree(TNode *tree, char *line, side_t side) {
+    /* Empty node */
+    if (tree == NULL)
+        return;
+
+    /* Append branch and space to current line (Creates two variants, selects one later) */
+    char *current_branch = new_line(line,  "|    ");
+    char *current_space = new_line(line, "     ");
+
+    /* Prints branch when entering left-side node */
+    if (side == LEFT_SIDE) {
+        printf("%s\n", current_branch);
+    }
+
+    /* Traverses through right subtree first, selects appropriate new line to be passed to recursive call of this function */
+    BT_print_subtree(tree->right, side == LEFT_SIDE ? current_branch : current_space, RIGHT_SIDE);
+
+    /* Shape of node according to its children */
+    char* node_type[] = {           /*   Node has:   */
+        "\033[0;94m┼\033[0;37m",    /* Both children */
+        "\033[0;94m┴\033[0;37m",    /* Right children*/
+        "\033[0;94m┬\033[0;37m",    /* Left children */
+        "\033[0;92m>\033[0;37m"     /* Leaf node     */
+    };
+
+    /* Prinst node content with its edge and shape */
+    printf("%s%s----%s", line, (side == ROOT ? "\033[0;91m~\033[0;37m" : (side == RIGHT_SIDE ? "┌" : "└")), node_type[get_node_type(tree)]);
+    printf("\033[1;33m %s\033[0;37m\n", node_t_string[tree->type]);
+
+    /* Traverse through left subtree */
+    BT_print_subtree(tree->left, side == RIGHT_SIDE ? current_branch : current_space, LEFT_SIDE);
+
+    /* Prints branch after return from previous right-side node (backstep) */
+    if (side == RIGHT_SIDE) {
+        printf("%s\n", current_branch);
+    }
+
+    /* Frees resources used for lines after its printed */
+    free(current_branch);
+    free(current_space);
+}
+
+/* 
+* Debug function for printing binary tree
+*/
+void BT_print_tree(TNode *tree) {
+    printf("    \033[4;37mAbstract syntax tree for IFJ24:\033[0;37m\n\n");
+
+    /* Prints tree if its not empty, else returns */
+    if (tree)
+        BT_print_subtree(tree, "", ROOT);
+    else
+        printf("Tree is NULL!\n");
+} 

@@ -81,7 +81,6 @@ struct binary_tree{
     TNode* active;
 };
 
-
 /**
  * Allocates memory for binary tree and initializes it
  * \return New binary tree | NULL in case of a memory allocation error
@@ -225,5 +224,11 @@ bool BT_get_data_right(TBinaryTree* BT, node_data* data_out);
  * \return True: Success, False: NULL pointer argument | Binary tree is not active | Active node does not have a parent node
  */
 bool BT_get_data_parent(TBinaryTree* BT, node_data* data_out);
+
+/**
+ * Prints given tree (subtree)
+ * \param tree TNode Pointer to tree
+*/
+void BT_print_tree(TNode *tree);
 
 #endif
