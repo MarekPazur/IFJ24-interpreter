@@ -36,10 +36,11 @@ typedef enum symbol_t {
 /* Enumeration of datatypes for literals and variables */
 typedef enum datatype {
 	NON_OPERAND,
-	U8,		// : []u8 slice type
-	I32,	// : i32
-	F64,	// : f64
-	STRING, // : "string"
+	CONST_VAR_ID,
+	U8_T,		// : []u8 slice type
+	I32_T,	// : i32
+	F64_T,	// : f64
+	STRING_T, // : "string"
 	NULL_T	// : null
 } datatype_t;
 

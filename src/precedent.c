@@ -131,19 +131,19 @@ symbol token_to_symbol(token_t term) {
 	/* ID and type literals are i symbol */
 	case TOKEN_IDENTIFIER:			// IDENTIFIER
 		symbol.id = I;
-		//symbol.type = symtable_get(token.lexeme).type
+		symbol.type = CONST_VAR_ID;
 		break;
 	case TOKEN_LITERAL_I32:			// integer literal
 		symbol.id = I;
-		symbol.type = I32;
+		symbol.type = I32_T;
 		break;
 	case TOKEN_LITERAL_F64:			// float literal
 		symbol.id = I;
-		symbol.type = F64;
+		symbol.type = F64_T;
 		break;
 	case TOKEN_LITERAL_STRING:		// string literal
 		symbol.id = I;
-		symbol.type = STRING;
+		symbol.type = STRING_T;
 		break;
 	case TOKEN_KW_NULL:
 		symbol.id = I;			// I_ID_ILIT = 5
@@ -214,7 +214,7 @@ void reduction(stack_t *stack, int expresion_length) {
 		}
 
 		/* Operators can't be applied on string, []u8, null type  */
-		if ((E1.type == STRING || E2.type == STRING) || (E1.type == U8 || E2.type == U8) || (E1.type == NULL_T || E2.type == NULL_T)) {
+		if ((E1.type == STRING_T || E2.type == STRING_T) || (E1.type == U8_T || E2.type == U8_T) || (E1.type == NULL_T || E2.type == NULL_T)) {
 			printf("error: invalid type used in expression!\n");
 			error = ERR_TYPE_COMPATABILITY;
 			return;
@@ -229,7 +229,7 @@ void reduction(stack_t *stack, int expresion_length) {
 		} else if (op.id == MUL) {
 
 		} else if (op.id == DIV) {
-			if (E2.type == I32 && E2.token.lexeme.array[0] == '0')
+			if (E2.type == I32_T && E2.token.lexeme.array[0] == '0')
 			{
 				printf("error: division by zero causes undefined behavior!\n");
 				error = ERR_SEMANTIC_OTHER;
