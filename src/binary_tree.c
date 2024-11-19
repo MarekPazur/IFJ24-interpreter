@@ -250,11 +250,21 @@ const char *node_t_string[] = {
     "PROLOGUE",
     "FUNCTION",
     "COMMAND",
+    "METADATA",
+    "NULL REPLACEMENT",
+    "VAR DECLARATION",
+    "CONST DECLARATION",
+    "ASSIGNMENT",
     "BODY",
     "WHILE",
     "IF",
     "ELSE",
+    "INTEGER",
+    "FLOAT",
+    "STRING",
+    "VARIABLE/CONSTANT",
     "EXPRESSION",
+    "FUNCTION CALL",
     "RETURN"
 };
 

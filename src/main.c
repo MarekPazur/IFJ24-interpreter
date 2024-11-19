@@ -31,8 +31,8 @@ int main(void) {
 		print_error(error);
 	}
 
-	//token_t test;
-	//init_parser(test);
+	token_t test;
+	init_parser(test);
 
 	// Btree testing
 	/*	TBinaryTree *AST = BT_init();

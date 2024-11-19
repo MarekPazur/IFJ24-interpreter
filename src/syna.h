@@ -79,8 +79,8 @@ void function_params(Tparser* parser);
 
 void var_const_declaration(Tparser* parser, TNode** current_node, node_type type);
 
-void function_call(Tparser* parser);
+void function_call(Tparser* parser, TNode** current_node);
 
-void function_call_params(Tparser* parser);
+void function_call_params(Tparser* parser, TNode** current_node);
 
 #endif

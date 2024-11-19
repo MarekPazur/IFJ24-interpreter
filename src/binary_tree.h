@@ -37,8 +37,14 @@ typedef enum node_type {
 	WHILE,
 	IF,
 	ELSE,
+	
+	INT,
+	FL,
+	STR,
+	VAR_CONST,
 
 	EXPRESSION,
+	FUNCTION_CALL,
 
 	RETURN
 } node_type;
@@ -75,6 +81,12 @@ struct node_data {
         struct {
             char *identifier;
         } identifier;
+        struct {
+            char *literal;
+            int integer_value;
+            double float_value;
+            char *identifier;
+        } value;
     } nodeData;
 };
 
