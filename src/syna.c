@@ -267,6 +267,10 @@ void function_header(Tparser* parser, TNode** current_node){
             error = ERR_SYNTAX;
             break;
         case STATE_type:
+            if(parser->current_token.id == TOKEN_OPTIONAL_TYPE_NULL){
+                if((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
+                    return;
+            }
             switch(parser->current_token.id){
                 case TOKEN_KW_I32://checking for pub fn name() ->i32<-{
                     (*current_node)->data.nodeData.function.type = I32;
