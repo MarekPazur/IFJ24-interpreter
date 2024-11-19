@@ -14,6 +14,10 @@
 
 // Return value global frame variable
 const TTerm cg_var_retval = {.type = VARIABLE_T, .value.var_name = "retval", .frame = GLOBAL};
+// Global terms
+const TTerm cg_null_term = {.type = NULL_T};
+const TTerm cg_true_term = {.type = BOOLEAN_T, .value.bool_val = true};
+const TTerm cg_zero_int_term = {.type = INTEGER_T, .value.int_val = 0};
 
 // IFJ24code frame types
 #define GF "GF@"
@@ -76,6 +80,8 @@ void cg_term(TTerm term){
     }
 }
 
+// CG variables and frames
+
 void cg_init(void){
     printf(".IFJcode24\n");
     cg_create_var(cg_var_retval);
@@ -101,6 +107,8 @@ void cg_pop_frame(void){
     printf("popframe\n");
 }
 
+// Function calling
+
 void cg_call(char* label){
     if(label == NULL){
         error = ERR_COMPILER_INTERNAL;
@@ -123,6 +131,91 @@ void cg_move(TTerm dest, TTerm src){
     putchar(' ');
     cg_term(src);
     putchar('\n');
+}
+
+// Labels
+
+ull cg_get_new_label_number(void){
+    ull label = 0;
+    return label++;
+}
+
+void cg_create_label(ull label_number){
+    printf("label L%llu\n", label_number);
+}
+
+void cg_label(ull label_number){
+    printf("L%llu\n", label_number);
+}
+
+// Comparisons
+
+void cg_two_operands(TTerm o1, TTerm o2){
+    cg_term(o1);
+    putchar(' ');
+    cg_term(o2);
+    putchar('\n');
+}
+
+void cg_three_operands(TTerm o1, TTerm o2, TTerm o3){
+    cg_term(o1);
+    putchar(' ');
+    cg_two_operands(o2, o3);
+}
+
+void cg_equal(TTerm result_var, TTerm value1, TTerm value2){
+    printf("eq ");
+    cg_three_operands(result_var, value1, value2);
+}
+
+void cg_less_than(TTerm result_var, TTerm value1, TTerm value2){
+    printf("lt ");
+    cg_three_operands(result_var, value1, value2);
+}
+
+void cg_greater_than(TTerm result_var, TTerm value1, TTerm value2){
+    printf("gt ");
+    cg_three_operands(result_var, value1, value2);
+}
+
+// Jumps
+
+void cg_jump(ull label){
+    printf("jump ");
+    cg_label(label);
+    putchar('\n');
+}
+
+void cg_jump_eq(ull label, TTerm value1, TTerm value2){
+    printf("jumpifeq ");
+    cg_label(label);
+    cg_two_operands(value1, value2);
+}
+
+void cg_jump_not_neq(ull label, TTerm value1, TTerm value2){
+    printf("jumpifneq ");
+    cg_label(label);
+    cg_two_operands(value1, value2);
+}
+
+void cg_jump_lt(ull label, TTerm value1, TTerm value2){
+    cg_less_than(cg_var_retval, value1, value2);
+    cg_jump_eq(label, cg_var_retval, cg_true_term);
+}
+
+void cg_jump_gt(ull label, TTerm value1, TTerm value2){
+    cg_greater_than(cg_var_retval, value1, value2);
+    cg_jump_eq(label, cg_var_retval, cg_true_term);
+}
+
+void cg_jump_lteq(ull label, TTerm value1, TTerm value2){
+    cg_jump_eq(label, value1, value2);
+    cg_jump_lt(label, value1, value2);
+}
+
+void cg_jump_gteq(ull label, TTerm value1, TTerm value2){
+    cg_jump_eq(label, value1, value2);
+    cg_jump_gt(label, value1, value2);
 }
 
 // IFJ BUILT-IN
@@ -178,40 +271,62 @@ void cg_ifj_string(TTerm term){
     cg_move(cg_var_retval, term);
 }
 
-void cg_ifj_length(TTerm slice){
-    if(slice.type != VARIABLE_T){
+void cg_ifj_length(TTerm s){
+    if(s.type != VARIABLE_T){
         error = ERR_COMPILER_INTERNAL;
         return;
     }
     printf("strlen ");
     cg_term(cg_var_retval);
     putchar(' ');
-    cg_term(slice);
+    cg_term(s);
     putchar('\n');
 }
 
-void cg_ifj_concat(TTerm slice_beg, TTerm slice_end){
-    if(slice_beg.type != VARIABLE_T || slice_end.type != VARIABLE_T){
+void cg_ifj_concat(TTerm s1, TTerm s2){
+    if(s1.type != VARIABLE_T || s2.type != VARIABLE_T){
         error = ERR_COMPILER_INTERNAL;
         return;
     }
     printf("concat ");
     cg_term(cg_var_retval);
     putchar(' ');
-    cg_term(slice_beg);
+    cg_term(s1);
     putchar(' ');
-    cg_term(slice_end);
+    cg_term(s2);
     putchar('\n');
 }
 
-void cg_ifj_substring(/*TTerm slice, TTerm beg_index, TTerm after_last_index*/){
+// TODO:
+void cg_ifj_substring(TTerm s, TTerm i, TTerm j){
+    cg_create_frame();
+    cg_push_frame();
 
+    // Label numbers
+    ull ret_null = cg_get_new_label_number();
+    ull finish = cg_get_new_label_number();
+    // Terms
+    TTerm str_len = {.type = VARIABLE_T, .value.var_name = "str_len", .frame = LOCAL};
+    cg_create_var(str_len);
+    // Code
+    // i < 0
+    cg_jump_lt(ret_null, i, cg_zero_int_term);
+    // j < 0
+    cg_jump_lt(ret_null, j, cg_zero_int_term);
+    // i > j
+    cg_jump_gt(ret_null, i, j);
+    // i >= ifj.length(s)
+    cg_ifj_length(s);
+    cg_move(str_len, cg_var_retval);
+    cg_jump_gteq(ret_null, i, str_len);
+    // j > ifj.length(s)
+    cg_jump_gt(ret_null, j, str_len);
 
-    //TODO:
-    // printf("jump cg_ifj_substring")
-    // printf("label cg_ifj_substring_label_ret_null\n");
-    // TTerm null_const = {.type = NULL_T};
-    // cg_move(cg_var_retval, null_const);
-    // printf("label cg_ifj_substring_label_ret_end\n");
+    cg_create_label(ret_null);
+
+    cg_move(cg_var_retval, cg_null_term);
+    cg_create_label(finish);
+
+    cg_pop_frame();
 }
 

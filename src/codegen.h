@@ -15,8 +15,6 @@ typedef enum frame{
     TEMPORARY = 2,
 } Frame;
 
-//typedef TTerm_type;
-
 typedef struct term{
     enum _term_type{
         VARIABLE_T,
@@ -36,8 +34,14 @@ typedef struct term{
     Frame frame; // In case of VARIABLE_T (otherwise can be left uninitialized)
 } TTerm;
 
+typedef unsigned long long ull;
+
 // Constants
 extern const TTerm cg_var_retval;
+// Global terms
+extern const TTerm cg_null_term;
+extern const TTerm cg_true_term;
+extern const TTerm cg_zero_int_term;
 
 void cg_term(TTerm term);
 
@@ -119,6 +123,13 @@ void cg_ifj_string(TTerm term);
  *
  * \param term
  */
-void cg_ifj_length(TTerm slice);
+void cg_ifj_length(TTerm s);
+
+/**
+ *
+ * \param s1
+ * \param s2
+ */
+void cg_ifj_concat(TTerm s1, TTerm s2);
 
 #endif
