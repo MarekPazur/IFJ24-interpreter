@@ -25,6 +25,13 @@ typedef enum node_type {
 	FN,
 
 	COMMAND,
+	METADATA,
+	NULL_REPLACEMENT,
+	
+	VAR_DECL,
+	CONST_DECL,
+	
+	ASSIG,
 
 	BODY,
 	WHILE,
@@ -64,6 +71,10 @@ struct node_data {
             TSymtable *scope;
             void *parent_scope;
         } body;
+        
+        struct {
+            char *identifier;
+        } identifier;
     } nodeData;
 };
 

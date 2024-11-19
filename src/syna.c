@@ -48,6 +48,10 @@ void init_parser(token_t token){
       error = ERR_COMPILER_INTERNAL;
       return;
    }
+   //initialising the ABT
+   parser->ABT = BT_init();
+   BT_insert_root(parser->ABT, PROGRAM);
+   parser->ABT->root->data.nodeData.program.globalSymTable = parser->global_symtable;
    //malloc and initialisation for the global and local symtables and checking if it went correctly
    parser->global_symtable = symtable_init();
    parser->local_symtable = symtable_init();
@@ -60,7 +64,12 @@ void init_parser(token_t token){
    parser->state = STATE_ROOT; // delete later
 
    parser->current_token = token;
-   root_code(parser);
+   root_code(parser, &(parser->ABT->root));
+   
+   /*printf("Left of root %d", parser->ABT->root->left->type);
+   printf("Function name starts with %c", *parser->ABT->root->left->data.nodeData.function.identifier);
+   printf("Function type is %d", parser->ABT->root->left->data.nodeData.function.type);
+   printf("Right of root %d", parser->ABT->root->right->type);*/
    //printf("\n global");
    //debug_print_keys(parser->global_symtable);
 }
@@ -70,7 +79,7 @@ void init_parser(token_t token){
  *
  * @param parser, holds the current token, symtables and the binary tree
  */
-void root_code(Tparser* parser){
+void root_code(Tparser* parser, TNode** current_node){
 
    if((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
     return;
@@ -82,7 +91,7 @@ void root_code(Tparser* parser){
               d_array_init(&current_data.value.argument_types, 1); //init new argument type dynamic array for each new function
               parser->state = STATE_fn;
               current_data.type = FUNCTION;
-              function_header(parser);
+              function_header(parser, &(*current_node)->left);
               
               //Symtable handling of local symtable
               //printf("\nlocal");
@@ -101,7 +110,7 @@ void root_code(Tparser* parser){
               if(error)
                 return;
 
-              root_code(parser);
+              root_code(parser, &(*current_node)->left);
 
               if(error)
                 return;
@@ -110,13 +119,13 @@ void root_code(Tparser* parser){
           case TOKEN_KW_CONST:
               parser->state = STATE_identifier;
               current_data.is_constant = true;
-              import_func(parser);
+              import_func(parser, &(parser->ABT->root->right));
 	      symtable_insert(parser->global_symtable,current_key,current_data);
               if(error)
                 return;
 	      wipe_data(&current_data);
               parser->state = STATE_ROOT;
-              root_code(parser);
+              root_code(parser, current_node);
 
               if(error)
                 return;
@@ -141,17 +150,18 @@ void root_code(Tparser* parser){
  *
  * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
  */
-void import_func(Tparser* parser){
+void import_func(Tparser* parser, TNode** current_node){
    if((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
     return;
 
    switch(parser->state){
       case STATE_identifier: //checking for this part const ->ifj<- = @import("ifj24.zig");
           if(parser->current_token.id == TOKEN_IDENTIFIER){
+              (*current_node) = create_node(PROLOGUE);
               current_data.type = IMPORT;
               current_key = parser->current_token.lexeme.array;
               parser->state = STATE_assig;
-              import_func(parser);
+              import_func(parser, current_node);
               break;
           }
           error = ERR_SYNTAX;
@@ -160,7 +170,7 @@ void import_func(Tparser* parser){
           if(parser->current_token.id == TOKEN_LITERAL_STRING){
               current_data.value.string_val = parser->current_token.lexeme.array;
               parser->state = STATE_rr_bracket;
-              import_func(parser);
+              import_func(parser, current_node);
               break;
           }
           error = ERR_SYNTAX;
@@ -168,7 +178,7 @@ void import_func(Tparser* parser){
       case STATE_assig: //checking for this part const ifj ->=<- @import("ifj24.zig");
           if(parser->current_token.id == TOKEN_ASSIGNMENT){
               parser->state = STATE_prolog;
-              import_func(parser);
+              import_func(parser, current_node);
               break;
           }
           error = ERR_SYNTAX;
@@ -176,7 +186,7 @@ void import_func(Tparser* parser){
       case STATE_prolog: //checking for this part const ifj = ->@import<-("ifj24.zig");
           if(parser->current_token.id == TOKEN_PROLOG){
               parser->state = STATE_lr_bracket;
-              import_func(parser);
+              import_func(parser, current_node);
               break;
           }
           error = ERR_SYNTAX;
@@ -184,7 +194,7 @@ void import_func(Tparser* parser){
       case STATE_lr_bracket: //checking for this part const ifj = @import->(<-"ifj24.zig");
           if(parser->current_token.id == TOKEN_BRACKET_ROUND_LEFT){
               parser->state = STATE_identifier_prolog;
-              import_func(parser);
+              import_func(parser, current_node);
               break;
           }
           error = ERR_SYNTAX;
@@ -192,7 +202,7 @@ void import_func(Tparser* parser){
       case STATE_rr_bracket: //checking for this part const ifj = @import("ifj24.zig"->)<-;
           if(parser->current_token.id == TOKEN_BRACKET_ROUND_RIGHT){
               parser->state = STATE_semicolon;
-              import_func(parser);
+              import_func(parser, current_node);
               break;
           }
           error = ERR_SYNTAX;
@@ -214,7 +224,7 @@ void import_func(Tparser* parser){
  *
  * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
  */
-void function_header(Tparser* parser){
+void function_header(Tparser* parser, TNode** current_node){
     if (error) return;
 
     if((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
@@ -223,17 +233,20 @@ void function_header(Tparser* parser){
     switch(parser->state){
         case STATE_fn: 
             if(parser->current_token.id == TOKEN_KW_FN){ //checking for pub ->fn<- name() type{
+                (*current_node) = create_node(FN);
+                (*current_node)->data.nodeData.function.scope = parser->local_symtable;
                 parser->state = STATE_identifier;
-                function_header(parser);
+                function_header(parser, current_node);
                 break;
             }
             error = ERR_SYNTAX;
             break;
         case STATE_identifier:
             if(parser->current_token.id == TOKEN_IDENTIFIER){ //checking for pub fn ->name<-() type{
+                (*current_node)->data.nodeData.function.identifier = parser->current_token.lexeme.array;
             	current_key = parser->current_token.lexeme.array;
                 parser->state = STATE_lr_bracket;
-                function_header(parser);
+                function_header(parser, current_node);
                 break;
             }
             error = ERR_SYNTAX;
@@ -243,7 +256,7 @@ void function_header(Tparser* parser){
                 parser->state = STATE_first_fn_param;
                 function_params(parser);
                 parser->state = STATE_type;
-                function_header(parser);
+                function_header(parser, current_node);
                 break;
             }
             error = ERR_SYNTAX;
@@ -251,14 +264,24 @@ void function_header(Tparser* parser){
         case STATE_type:
             switch(parser->current_token.id){
                 case TOKEN_KW_I32://checking for pub fn name() ->i32<-{
-                case TOKEN_KW_F64://checking for pub fn name() ->f64<-{
-                case TOKEN_KW_VOID://checking for pub fn name() ->void<-{
+                    (*current_node)->data.nodeData.function.type = I32;
                     parser->state = STATE_open_body_check;
-                    function_header(parser);
+                    function_header(parser, current_node);
+                    break;
+                case TOKEN_KW_F64://checking for pub fn name() ->f64<-{
+                    (*current_node)->data.nodeData.function.type = F64;
+                    parser->state = STATE_open_body_check;
+                    function_header(parser, current_node);
+                    break;
+                case TOKEN_KW_VOID://checking for pub fn name() ->void<-{
+                    (*current_node)->data.nodeData.function.type = VOID_TYPE;
+                    parser->state = STATE_open_body_check;
+                    function_header(parser, current_node);
                     break;
                 case TOKEN_BRACKET_SQUARE_LEFT: //checking for pub fn name() ->[<-]u8{
+                    (*current_node)->data.nodeData.function.type = U8_SLICE;
                     parser->state = STATE_ls_bracket;
-                    function_header(parser);
+                    function_header(parser, current_node);
                     break;
                 default:
                 error = ERR_SYNTAX;
@@ -268,7 +291,7 @@ void function_header(Tparser* parser){
         case STATE_open_body_check:
             if(parser->current_token.id == TOKEN_BRACKET_CURLY_LEFT){ //checking for pub fn name() type->{<-
                 parser->state = STATE_command;
-                body(parser);
+                body(parser, &(*current_node)->right);
                 break;
             }
             error = ERR_SYNTAX;
@@ -276,7 +299,7 @@ void function_header(Tparser* parser){
         case STATE_ls_bracket:
             if(parser->current_token.id == TOKEN_BRACKET_SQUARE_RIGHT){ //checking for pub fn name() [->]<-u8{
                 parser->state = STATE_u8;
-                function_header(parser);
+                function_header(parser, current_node);
                 break;
             }
             error = ERR_SYNTAX;
@@ -284,7 +307,7 @@ void function_header(Tparser* parser){
         case STATE_u8:
             if(parser->current_token.id == TOKEN_KW_U8){ //checking for pub fn name() []->u8<-{
                 parser->state = STATE_open_body_check;
-                function_header(parser);
+                function_header(parser, current_node);
                 break;
             }
             error = ERR_SYNTAX;
@@ -307,7 +330,6 @@ void function_params(Tparser* parser){
 
    if((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
     return;
-
 	switch(parser->state){
 	case STATE_first_fn_param:
             switch(parser->current_token.id){
@@ -445,7 +467,7 @@ void function_params(Tparser* parser){
  *
  * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
  */
-void body(Tparser* parser){
+void body(Tparser* parser, TNode** current_node){
     if (error) return;
 
     if((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
@@ -453,61 +475,69 @@ void body(Tparser* parser){
 
     switch(parser->state){
         case STATE_command:
+            (*current_node) = create_node(COMMAND);
             switch(parser->current_token.id){
                 case TOKEN_KW_IF:
                     parser->state = STATE_lr_bracket;
-                    if_while_header(parser);
+                    if_while_header(parser, &(*current_node)->left, IF);
                     if (error) return;
                     parser->state = STATE_possible_else;
-                    body(parser);
+                    body(parser, &(*current_node)->right);
                     break;
                 case TOKEN_KW_RETURN:
+                    (*current_node)->left = create_node(RETURN);
+                    //TODO give the expression function the current_node->left->left to make the expression there
                     parser->state = STATE_operand;
                     expression(parser, TOKEN_SEMICOLON);
                     if(error){
                     	return;
                     }
                     parser->state = STATE_command;
-                    body(parser);
+                    body(parser, &(*current_node)->right);
                     break;
                 case TOKEN_BRACKET_CURLY_LEFT:
+                    //TODO add the local symtable for the headerless body
+                    (*current_node)->left = create_node(BODY);
                     parser->state = STATE_command;
-                    body(parser);
+                    body(parser, &(*current_node)->left->right);
                     if (error) return;
                     parser->state = STATE_command;
-                    body(parser);
+                    body(parser, &(*current_node)->right);
                     break;
                 case TOKEN_KW_WHILE:
                     parser->state = STATE_lr_bracket;
-                    if_while_header(parser);
+                    if_while_header(parser, &(*current_node)->left, WHILE);
                     if (error) return;
                     parser->state = STATE_command;
-                    body(parser);
+                    body(parser, &(*current_node)->right);
                     break;
                 case TOKEN_KW_VAR:
                     parser->state = STATE_identifier;
-                    var_const_declaration(parser);
+                    var_const_declaration(parser, &(*current_node)->left, VAR_DECL);
                     symtable_insert(parser->local_symtable, local_key, local_data);
                     wipe_data(&local_data);
                     if (error) return;
                     parser->state = STATE_command;
-                    body(parser);
+                    body(parser, &(*current_node)->right);
                     if(error)
                         return;
                     break;
                 case TOKEN_KW_CONST:
                     local_data.is_constant=true;
                     parser->state = STATE_identifier;
-                    var_const_declaration(parser);
+                    var_const_declaration(parser, &(*current_node)->left, CONST_DECL);
                     symtable_insert(parser->local_symtable, local_key, local_data);
                     wipe_data(&local_data);
                     if (error) return;
                     parser->state = STATE_command;
-                    body(parser);
+                    body(parser, &(*current_node)->right);
                     if(error)
                         return;
                     break;
                 case TOKEN_IDENTIFIER:
+                    (*current_node)->left = create_node(ASSIG);
+                    (*current_node)->data.nodeData.identifier.identifier = parser->current_token.lexeme.array;
+                    //TODO add the expression
                     if((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
                         return;
 
@@ -538,7 +568,7 @@ void body(Tparser* parser){
                     	return;
                     }
                     parser->state = STATE_command;
-                    body(parser);
+                    body(parser, &(*current_node)->right);
                     if (error) return;
                     break;
                 case TOKEN_BRACKET_CURLY_RIGHT:
@@ -549,65 +579,73 @@ void body(Tparser* parser){
             }
             break;
         case STATE_possible_else:
+            (*current_node) = create_node(COMMAND);
             switch(parser->current_token.id){ 
                 case TOKEN_BRACKET_CURLY_LEFT:
+                    //TODO add the local symtable for the headerless body
+                    (*current_node)->left = create_node(BODY);
                     parser->state = STATE_command;
-                    body(parser);
+                    body(parser, &(*current_node)->left->right);
                     if (error) return;
                     parser->state = STATE_command;
-                    body(parser);
+                    body(parser, &(*current_node)->right);
                     if (error) return;
                     break;
                 case TOKEN_KW_ELSE://checking for ..} ->else<- { ..
                     parser->state = STATE_open_else;
-                    body(parser);
+                    body(parser, &(*current_node)->left);
                     if (error) return;
                     parser->state = STATE_command;
-                    body(parser);
+                    body(parser, &(*current_node)->right);
                     if (error) return;
                     break;
                 case TOKEN_KW_IF:
                     parser->state = STATE_lr_bracket;
-                    if_while_header(parser);
+                    if_while_header(parser, &(*current_node)->left, IF);
                     if (error) return;
                     parser->state = STATE_possible_else;
-                    body(parser);
+                    body(parser, &(*current_node)->right);
                     if (error) return;
                     break;
                 case TOKEN_KW_WHILE:
                     parser->state = STATE_lr_bracket;
-                    if_while_header(parser);
+                    if_while_header(parser, &(*current_node)->left, WHILE);
                     if (error) return;
                     parser->state = STATE_command;
-                    body(parser);
+                    body(parser, &(*current_node)->right);
                     if (error) return;
                     break;
                 case TOKEN_KW_RETURN:
+                    (*current_node)->left = create_node(RETURN);
+                    //TODO give the expression function the current_node->left->left to make the expression there
                     parser->state = STATE_operand;
                     expression(parser, TOKEN_SEMICOLON);
                     if (error) return;
                     parser->state = STATE_command;
-                    body(parser);
+                    body(parser, &(*current_node)->right);
                     if (error) return;
                     break;
                 case TOKEN_KW_VAR:
                     parser->state = STATE_identifier;
-                    var_const_declaration(parser);
+                    var_const_declaration(parser, &(*current_node)->left, VAR_DECL);
                     if (error) return;
                     parser->state = STATE_command;
-                    body(parser);
+                    body(parser, &(*current_node)->right);
                     if (error) return;
                     break;
                 case TOKEN_KW_CONST:
                     local_data.is_constant = true;
                     parser->state = STATE_identifier;
-                    var_const_declaration(parser);
+                    var_const_declaration(parser, &(*current_node)->left, CONST_DECL);
                     if (error) return;
                     parser->state = STATE_command;
-                    body(parser);
+                    body(parser, &(*current_node)->right);
                     if (error) return;
                     break;
                 case TOKEN_IDENTIFIER:
+                    (*current_node)->left = create_node(ASSIG);
+                    (*current_node)->data.nodeData.identifier.identifier = parser->current_token.lexeme.array;
+                    //TODO add the expression
                     //probably set key here, depends on how we decide to approach this
                     if((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
                         return;
@@ -634,7 +672,7 @@ void body(Tparser* parser){
                     	return;
                     }
                     parser->state = STATE_command;
-                    body(parser);
+                    body(parser, &(*current_node)->right);
                     if (error) return;
                     break;
                 case TOKEN_BRACKET_CURLY_RIGHT:
@@ -646,8 +684,10 @@ void body(Tparser* parser){
             break;
         case STATE_open_else:
             if(parser->current_token.id == TOKEN_BRACKET_CURLY_LEFT){ //checking for ..} else ->{<- ..
+                (*current_node) = create_node(ELSE);
+                //TODO add the local symtable which Robert didn't do
                 parser->state = STATE_command;
-                body(parser);
+                body(parser, current_node);
                 if (error) return;
                 break;
             }
@@ -665,7 +705,8 @@ void body(Tparser* parser){
  *
  * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
  */
-void if_while_header(Tparser* parser){
+ //TODO local symtable for the if and whiles, and then add it into the ABT structures
+void if_while_header(Tparser* parser, TNode** current_node, node_type type){
     if (error) return;
     if((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
         return;
@@ -673,10 +714,11 @@ void if_while_header(Tparser* parser){
     switch(parser->state){
         case STATE_lr_bracket:
             if(parser->current_token.id == TOKEN_BRACKET_ROUND_LEFT){ //checking for if ->(<-expression) |null_replacement| {
+                (*current_node) = create_node(type);
                 parser->state = STATE_operand;
                 expression(parser, TOKEN_BRACKET_ROUND_RIGHT);
                 parser->state = STATE_pipe;
-                if_while_header(parser);
+                if_while_header(parser, current_node, type);
                 break;
             }
             error = ERR_SYNTAX;
@@ -685,13 +727,13 @@ void if_while_header(Tparser* parser){
             switch(parser->current_token.id){
                 case TOKEN_PIPE: //checking for if (true_expresssion) ->|<-null_replacement| {
                     parser->state = STATE_identifier;
-                    null_replacement(parser);
+                    null_replacement(parser, &(*current_node)->left->left);
                     parser->state = STATE_open_body_check;
-                    if_while_header(parser);
+                    if_while_header(parser, current_node, type);
                     break;
                 case TOKEN_BRACKET_CURLY_LEFT: //checking for if (expression) ->{<-
                     parser->state = STATE_command;
-                    body(parser);
+                    body(parser, &(*current_node)->right);
                     break;
                 default:
                     error = ERR_SYNTAX;
@@ -701,7 +743,7 @@ void if_while_header(Tparser* parser){
         case STATE_open_body_check:
             if(parser->current_token.id == TOKEN_BRACKET_CURLY_LEFT){ //checking for if (true_expression) |null_replacement| ->{<-
                 parser->state=STATE_command;
-                body(parser);
+                body(parser, &(*current_node)->right);
                 break;
             }
             error = ERR_SYNTAX;
@@ -718,7 +760,7 @@ void if_while_header(Tparser* parser){
  *
  * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
  */
-void null_replacement(Tparser* parser){
+void null_replacement(Tparser* parser, TNode** current_node){
     if (error) return;
 
     if((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
@@ -727,8 +769,10 @@ void null_replacement(Tparser* parser){
     switch(parser->state){
         case STATE_identifier:
             if(parser->current_token.id == TOKEN_IDENTIFIER){ //checking for if/while (expression) |->null_replacement<-| {
+                (*current_node) = create_node(NULL_REPLACEMENT);
+                (*current_node)->data.nodeData.identifier.identifier = parser->current_token.lexeme.array;
                 parser->state = STATE_pipe;
-                null_replacement(parser);
+                null_replacement(parser, current_node);
                 break;
             }
             error = ERR_SYNTAX;
@@ -751,7 +795,7 @@ void null_replacement(Tparser* parser){
  *
  * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
  */
-void var_const_declaration(Tparser* parser){
+void var_const_declaration(Tparser* parser, TNode** current_node, node_type type){
     if (error) return;
 
     if((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
@@ -761,8 +805,10 @@ void var_const_declaration(Tparser* parser){
         case STATE_identifier:
             local_key=parser->current_token.lexeme.array;
             if(parser->current_token.id == TOKEN_IDENTIFIER){ //checking for var/const ->name<- = expression;
+                (*current_node) = create_node(type);
+                (*current_node)->data.nodeData.identifier.identifier = local_key;
                 parser->state = STATE_assig;
-                var_const_declaration(parser);
+                var_const_declaration(parser, current_node, type);
                 break;
             }
             error = ERR_SYNTAX;
@@ -778,7 +824,7 @@ void var_const_declaration(Tparser* parser){
                 break;
             }else if (parser->current_token.id == TOKEN_COLON){ //checking for var/const name ->:<- type = expression;
                 parser->state = STATE_possible_qmark;
-                var_const_declaration(parser);
+                var_const_declaration(parser, current_node, type);
                 break;
             }
             error = ERR_SYNTAX;
@@ -788,16 +834,16 @@ void var_const_declaration(Tparser* parser){
                 case TOKEN_OPTIONAL_TYPE_NULL:
                     local_data.is_null = true;
                     parser->state = STATE_type;
-                    var_const_declaration(parser);
+                    var_const_declaration(parser, current_node, type);
                     break;
                 case TOKEN_KW_I32: //checking for pub fn name(param : ->i32<-) type{
                 case TOKEN_KW_F64: //checking for pub fn name(param : ->f64<-) type{
                     parser->state = STATE_assig_must;
-                    var_const_declaration(parser);
+                    var_const_declaration(parser, current_node, type);
                     break;
                 case TOKEN_BRACKET_SQUARE_LEFT: //checking for pub fn name(param : ->[<-]u8) type{
                     parser->state = STATE_ls_bracket;
-                    var_const_declaration(parser);
+                    var_const_declaration(parser, current_node, type);
                     break;
                 default:
                     error = ERR_SYNTAX;
@@ -814,11 +860,11 @@ void var_const_declaration(Tparser* parser){
                 case TOKEN_KW_F64: //checking for pub fn name(param : ->f64<-) type{
                     local_data.type = FLOAT;
                     parser->state = STATE_assig_must;
-                    var_const_declaration(parser);
+                    var_const_declaration(parser, current_node, type);
                     break;
                 case TOKEN_BRACKET_SQUARE_LEFT: //checking for pub fn name(param : ->[<-]u8) type{
                     parser->state = STATE_ls_bracket;
-                    var_const_declaration(parser);
+                    var_const_declaration(parser, current_node, type);
                     break;
                 default:
                     error = ERR_SYNTAX;
@@ -839,7 +885,7 @@ void var_const_declaration(Tparser* parser){
         case STATE_ls_bracket:
             if(parser->current_token.id == TOKEN_BRACKET_SQUARE_RIGHT){ // var/const name :[->]<-u8 =
                 parser->state = STATE_u8;
-                var_const_declaration(parser);
+                var_const_declaration(parser, current_node, type);
                 break;
             }
             error = ERR_SYNTAX;
@@ -848,7 +894,7 @@ void var_const_declaration(Tparser* parser){
             if(parser->current_token.id == TOKEN_KW_U8){ //var/const name :[]->u8<- =
             	local_data.type = STRING;
                 parser->state = STATE_assig_must;
-                var_const_declaration(parser);
+                var_const_declaration(parser, current_node, type);
                 break;
             }
             error = ERR_SYNTAX;
