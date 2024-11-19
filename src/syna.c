@@ -48,10 +48,11 @@ void init_parser(token_t token){
       error = ERR_COMPILER_INTERNAL;
       return;
    }
-   //initialising the ABT
-   parser->ABT = BT_init();
-   BT_insert_root(parser->ABT, PROGRAM);
-   parser->ABT->root->data.nodeData.program.globalSymTable = parser->global_symtable;
+
+   //initialising the AST
+   parser->AST = BT_init();
+   BT_insert_root(parser->AST, PROGRAM);
+   parser->AST->root->data.nodeData.program.globalSymTable = parser->global_symtable;
    //malloc and initialisation for the global and local symtables and checking if it went correctly
    parser->global_symtable = symtable_init();
    parser->local_symtable = symtable_init();
@@ -64,12 +65,15 @@ void init_parser(token_t token){
    parser->state = STATE_ROOT; // delete later
 
    parser->current_token = token;
-   root_code(parser, &(parser->ABT->root));
+
+   TNode** root = &(parser->AST->root);
+
+   root_code(parser, root);
    
-   /*printf("Left of root %d", parser->ABT->root->left->type);
-   printf("Function name starts with %c", *parser->ABT->root->left->data.nodeData.function.identifier);
-   printf("Function type is %d", parser->ABT->root->left->data.nodeData.function.type);
-   printf("Right of root %d", parser->ABT->root->right->type);*/
+   /*printf("Left of root %d", parser->AST->root->left->type);
+   printf("Function name starts with %c", *parser->AST->root->left->data.nodeData.function.identifier);
+   printf("Function type is %d", parser->AST->root->left->data.nodeData.function.type);
+   printf("Right of root %d", parser->AST->root->right->type);*/
    //printf("\n global");
    //debug_print_keys(parser->global_symtable);
 }
@@ -119,7 +123,7 @@ void root_code(Tparser* parser, TNode** current_node){
           case TOKEN_KW_CONST:
               parser->state = STATE_identifier;
               current_data.is_constant = true;
-              import_func(parser, &(parser->ABT->root->right));
+              import_func(parser, &(parser->AST->root->right));
 	      symtable_insert(parser->global_symtable,current_key,current_data);
               if(error)
                 return;

@@ -56,7 +56,7 @@ typedef enum fsm_state_syna {
   token_t current_token;
   TSymtable* global_symtable;
   TSymtable* local_symtable;
-  TBinaryTree* ABT;
+  TBinaryTree* AST;
  } Tparser;
   
 void init_parser(token_t token);
