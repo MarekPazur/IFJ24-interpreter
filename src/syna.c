@@ -230,6 +230,7 @@ void import_func(Tparser* parser, TNode** current_node){
  * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
  */
 void function_header(Tparser* parser, TNode** current_node){
+    int has_qmark = 0;
     if (error) return;
 
     if((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
@@ -270,6 +271,7 @@ void function_header(Tparser* parser, TNode** current_node){
             if(parser->current_token.id == TOKEN_OPTIONAL_TYPE_NULL){
                 if((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
                     return;
+                has_qmark = 1;
             }
             switch(parser->current_token.id){
                 case TOKEN_KW_I32://checking for pub fn name() ->i32<-{
@@ -283,10 +285,15 @@ void function_header(Tparser* parser, TNode** current_node){
                     function_header(parser, current_node);
                     break;
                 case TOKEN_KW_VOID://checking for pub fn name() ->void<-{
-                    (*current_node)->data.nodeData.function.type = VOID_TYPE;
-                    parser->state = STATE_open_body_check;
-                    function_header(parser, current_node);
-                    break;
+                    if (has_qmark != 1){
+                        (*current_node)->data.nodeData.function.type = VOID_TYPE;
+                        parser->state = STATE_open_body_check;
+                        function_header(parser, current_node);
+                        break;
+                    }else{
+                        error = ERR_SYNTAX;
+                        return;
+                    }
                 case TOKEN_BRACKET_SQUARE_LEFT: //checking for pub fn name() ->[<-]u8{
                     (*current_node)->data.nodeData.function.type = U8_SLICE;
                     parser->state = STATE_ls_bracket;
