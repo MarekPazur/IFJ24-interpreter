@@ -34,9 +34,9 @@ int main(void) {
 
 	/* Testing phase, will be rewritten */
 	token_t test = {.id = TOKEN_BRACKET_ROUND_RIGHT};
-	//init_parser(test);
+	init_parser(test);
 
-	precedent(test.id);
+	//precedent(test.id);
 
 	// Btree testing
 	/*	TBinaryTree *AST = BT_init();

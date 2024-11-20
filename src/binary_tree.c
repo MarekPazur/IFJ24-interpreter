@@ -247,22 +247,29 @@ bool BT_get_data_parent(TBinaryTree* BT, node_data* data_out){
 
 const char *node_t_string[] = {
     "ROOT",
+
     "PROLOGUE",
     "FUNCTION",
+
     "COMMAND",
     "METADATA",
     "NULL REPLACEMENT",
+
     "VAR DECLARATION",
     "CONST DECLARATION",
+
     "ASSIGNMENT",
+
     "BODY",
     "WHILE",
     "IF",
     "ELSE",
+
     "I32",
     "F64",
     "STR",
     "VAR/CONST",
+
     "EXPR",
     "+",
     "-",
@@ -271,10 +278,12 @@ const char *node_t_string[] = {
     "==",
     "!=",
     ">",
-    "<"
+    "<",
     ">=",
     "<=",
+
     "FUNCTION CALL",
+
     "RETURN"
 };
 
@@ -340,7 +349,7 @@ void BT_print_subtree(TNode *tree, char *line, side_t side) {
     BT_print_subtree(tree->right, side == LEFT_SIDE ? current_branch : current_space, RIGHT_SIDE);
 
     /* Shape of node according to its children */
-    char* node_type[] = {           /*   Node has:   */
+    char* node_shape[] = {           /*   Node has:   */
         "\033[0;94m┼\033[0;37m",    /* Both children */
         "\033[0;94m┴\033[0;37m",    /* Right children*/
         "\033[0;94m┬\033[0;37m",    /* Left children */
@@ -348,7 +357,7 @@ void BT_print_subtree(TNode *tree, char *line, side_t side) {
     };
 
     /* Prinst node content with its edge and shape */
-    printf("%s%s----%s", line, (side == ROOT ? "\033[0;91m~\033[0;37m" : (side == RIGHT_SIDE ? "┌" : "└")), node_type[get_node_shape(tree)]);
+    printf("%s%s----%s", line, (side == ROOT ? "\033[0;91m~\033[0;37m" : (side == RIGHT_SIDE ? "┌" : "└")), node_shape[get_node_shape(tree)]);
     
     char *content = NULL;
 
