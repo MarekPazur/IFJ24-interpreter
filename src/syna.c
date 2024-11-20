@@ -1140,6 +1140,8 @@ void function_call_params(Tparser* parser, TNode** current_node) {
 /**
  * @brief This function checks that all expressions are written correctly
  *
+ * @Author xpazurm00, Marek Pazúr
+ * 
  * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
  * @param end, holds the symbol that ends the expression (semicolon or right bracket)
  * @param tree, pointer to tree branch pointer (Where will be new node placed to)
@@ -1154,6 +1156,7 @@ void function_call_params(Tparser* parser, TNode** current_node) {
 void expression(Tparser* parser, token_id end, TNode **current_node, bool allow_empty) {
     if (error)
         return;
+    // Potential issues:
     // var x = expr; <-- expr not epsilon (empty expression)
     // var x = fun(param_list);
     // while-if-else (expr) <-- expr not epsilon (empty expression)
