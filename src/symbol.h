@@ -9,6 +9,8 @@
 #define SYMBOL_H
 
 #include "token.h"
+#include <stdbool.h>
+#include "binary_tree.h"
 
 /* Enumeration of specific symbols */
 typedef enum symbol_t {
@@ -49,6 +51,7 @@ typedef struct symbol {
 	symbol_t id;
 	token_t token;
 	datatype_t type;
+	TNode *node;
 } symbol;
 
 /* prints information about symbol */

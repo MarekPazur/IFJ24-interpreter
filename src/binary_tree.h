@@ -9,17 +9,120 @@
 #ifndef BINARY_TREE_H
 #define BINARY_TREE_H
 
-typedef struct binary_tree TBinaryTree;
+#include "symtable.h"
 
-typedef struct data_bt{
-    int temp;
-} TDataBT;
+typedef struct binary_tree TBinaryTree;
+typedef struct node TNode;
+typedef struct node_data node_data;
+
+/***************************/
+/*		AST utilities	   */
+/***************************/
+typedef enum node_type {
+	PROGRAM,			// Root node
+
+	PROLOGUE,			// Import
+	FN,					// Functions
+
+	COMMAND,			// Wrapper for statements
+	METADATA,			// 
+	NULL_REPLACEMENT,	// |not_null_variable|
+	
+	VAR_DECL,			// declaration of a variable
+	CONST_DECL,			// declaration of a constant
+	
+	ASSIG,				// assignment node
+
+	BODY,				// "headless" body {}
+	WHILE,				// while loop
+	IF,					// if condition
+	ELSE,				// else 
+	
+	INT,				// integer i32 datatype
+	FL,					// float f64 datatype
+	STR,				// string datatype
+	VAR_CONST,			// variable/constant 	
+
+	EXPRESSION,			// node containing expression
+	OP_ADD,				// +
+	OP_SUB,				// -
+	OP_MUL,				// *
+	OP_DIV,				// /
+	OP_EQ,				// ==
+	OP_NEQ,				// !=
+	OP_GT,				// >
+	OP_LS,				// <
+	OP_GTE,				// >=
+	OP_LSE,				// <=
+
+	FUNCTION_CALL,		// foo(param_list)
+
+	RETURN 				// return (expression)
+} node_type;
+
+typedef enum return_type {
+	VOID_TYPE,
+	I32,
+	F64,
+	U8_SLICE,
+	NULL_TYPE
+} return_type;
+
+/*************************/
+/*      BINARY TREE      */
+/*************************/
+
+struct node_data {
+    union {
+        struct {
+            TSymtable *globalSymTable;
+        } program;
+
+        struct {
+            char *identifier;
+            return_type type;
+            TSymtable *scope;
+        } function;
+
+        struct {
+            TSymtable *scope;
+            void *parent_scope;
+        } body;
+        
+        struct {
+            char *identifier;
+        } identifier;
+
+        struct {
+            char *literal;
+            int integer_value;
+            double float_value;
+            char *identifier;
+        } value;
+    } nodeData;
+};
+
+struct node{
+    TNode* parent;
+    TNode* left;
+    TNode* right;
+
+    node_type type;
+    node_data data;
+};
+
+struct binary_tree{
+    TNode* root;
+    TNode* active;
+};
 
 /**
  * Allocates memory for binary tree and initializes it
  * \return New binary tree | NULL in case of a memory allocation error
  */
 TBinaryTree* BT_init(void);
+
+TNode* create_node(node_type type);
 
 /**
  * Checks if binary tree is active. Use everytime before using operation with an active node.
@@ -76,7 +179,7 @@ void BT_go_right(TBinaryTree* BT);
  * \param data
  * \return True: Succes, False: Memory allocation error | BT is NULL | BT is not active | Active node has a left node
  */
-bool BT_insert_left(TBinaryTree* BT, TDataBT data);
+bool BT_insert_left(TBinaryTree* BT, node_type type);
 
 /**
  * Inserts node as a right child of the active node.
@@ -84,7 +187,7 @@ bool BT_insert_left(TBinaryTree* BT, TDataBT data);
  * \param data
  * \return True: Succes, False: Memory allocation error | BT is NULL | BT is not active | Active node has a right node
  */
-bool BT_insert_right(TBinaryTree* BT, TDataBT data);
+bool BT_insert_right(TBinaryTree* BT, node_type type);
 
 /**
  * Checks if the binary tree has a root.
@@ -99,7 +202,7 @@ bool BT_has_root(TBinaryTree* BT);
  * \param data
  * \return True: Success, False: Memory allocation error | BT is NULL | BT already has a root node
  */
-bool BT_insert_root(TBinaryTree* BT, TDataBT data);
+bool BT_insert_root(TBinaryTree* BT, node_type type);
 
 /**
  * Frees all nodes
@@ -131,7 +234,7 @@ void BT_free_active_tree(TBinaryTree* BT);
  * \param[out] data_out Data output variable
  * \return True: Success, False: NULL pointer argument | Binary tree is not active
  */
-bool BT_get_data(TBinaryTree* BT, TDataBT* data_out);
+bool BT_get_data(TBinaryTree* BT, node_data* data_out);
 
 /**
  *
@@ -139,7 +242,7 @@ bool BT_get_data(TBinaryTree* BT, TDataBT* data_out);
  * \param[out] data_out Data output variable
  * \return True: Success, False: NULL pointer argument | Binary tree is not active | Active node does not have a left node
  */
-bool BT_get_data_left(TBinaryTree* BT, TDataBT* data_out);
+bool BT_get_data_left(TBinaryTree* BT, node_data* data_out);
 
 /**
  *
@@ -147,7 +250,7 @@ bool BT_get_data_left(TBinaryTree* BT, TDataBT* data_out);
  * \param[out] data_out Data output variable
  * \return True: Success, False: NULL pointer argument | Binary tree is not active | Active node does not have a right node
  */
-bool BT_get_data_right(TBinaryTree* BT, TDataBT* data_out);
+bool BT_get_data_right(TBinaryTree* BT, node_data* data_out);
 
 /**
  *
@@ -155,6 +258,12 @@ bool BT_get_data_right(TBinaryTree* BT, TDataBT* data_out);
  * \param[out] data_out Data output variable
  * \return True: Success, False: NULL pointer argument | Binary tree is not active | Active node does not have a parent node
  */
-bool BT_get_data_parent(TBinaryTree* BT, TDataBT* data_out);
+bool BT_get_data_parent(TBinaryTree* BT, node_data* data_out);
+
+/**
+ * Prints given tree (subtree)
+ * \param tree TNode Pointer to tree
+*/
+void BT_print_tree(TNode *tree);
 
 #endif

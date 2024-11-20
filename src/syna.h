@@ -14,6 +14,7 @@
  
 #include "token.h"
 #include "symtable.h"
+#include "binary_tree.h"
 
 
 typedef enum fsm_state_syna {
@@ -55,30 +56,31 @@ typedef enum fsm_state_syna {
   token_t current_token;
   TSymtable* global_symtable;
   TSymtable* local_symtable;
+  TBinaryTree* AST;
  } Tparser;
   
 void init_parser(token_t token);
  
-void root_code(Tparser* parser);
+void root_code(Tparser* parser, TNode** current_node);
  
-void import_func(Tparser* parser);
+void import_func(Tparser* parser, TNode** current_node);
 
-void function_header(Tparser* parser);
+void function_header(Tparser* parser, TNode** current_node);
 
-void body(Tparser* parser);
+void body(Tparser* parser, TNode** current_node);
 
-void if_while_header(Tparser* parser);
+void if_while_header(Tparser* parser, TNode** current_node, node_type type);
 
 void expression(Tparser* parser, token_id end);
 
-void null_replacement(Tparser* parser);
+void null_replacement(Tparser* parser, TNode** current_node);
  
 void function_params(Tparser* parser);
 
-void var_const_declaration(Tparser* parser);
+void var_const_declaration(Tparser* parser, TNode** current_node, node_type type);
 
-void function_call(Tparser* parser);
+void function_call(Tparser* parser, TNode** current_node);
 
-void function_call_params(Tparser* parser);
+void function_call_params(Tparser* parser, TNode** current_node);
 
 #endif

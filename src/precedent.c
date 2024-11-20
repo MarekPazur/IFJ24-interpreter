@@ -11,8 +11,13 @@
 
 #include "compiler_error.h"
 #include "precedent.h"
+#include "binary_tree.h"
 
 #define PT_SIZE 7
+
+#define OPERATOR 1
+#define OPERAND 2
+
 #define PUSH_SYMBOL(symbol_id) push(&sym_stack, (symbol) {.id = symbol_id, .token = {.id = TOKEN_DEFAULT, .lexeme = {.array = NULL}}, .type = NON_OPERAND})
 
 /* Simple term precedence table
@@ -158,6 +163,64 @@ symbol token_to_symbol(token_t term) {
 	return symbol;
 }
 
+/* Gets node type for AST */
+int get_node_type(int term, int select) {
+	node_type type;
+
+	if (select == OPERAND)
+		switch (term) {
+		case I32_T:
+			type = INT;
+			break;
+		case STRING_T:
+			type = STR;
+			break;
+		case F64_T:
+			type = FL;
+			break;
+		default:
+			type = VAR_CONST;
+			break;
+		}
+	else if (select == OPERATOR)
+		switch (term) {
+		case ADD:
+			type = OP_ADD;
+			break;
+		case SUB:
+			type = OP_SUB;
+			break;
+		case MUL:
+			type = OP_MUL;
+			break;
+		case DIV:
+			type = OP_DIV;
+			break;
+		case EQ:
+			type = OP_EQ;
+			break;
+		case NEQ:
+			type = OP_NEQ;
+			break;
+		case GR:
+			type = OP_GT;
+			break;
+		case GRE:
+			type = OP_GTE;
+			break;
+		case LS:
+			type = OP_LS;
+			break;
+		case LSE:
+			type = OP_LSE;
+			break;
+		default:
+			break;
+		}
+
+	return type;
+}
+
 /* Pushes symbol to stack */
 void equal(stack_t *stack, symbol next_symbol) {
 	push(stack, next_symbol);
@@ -184,21 +247,33 @@ void reduction(stack_t *stack, int expresion_length) {
 		symbol E = pop(stack); // literal, identifier
 		pop(stack); 		   // pop shift
 
+		/* Create operand node */
+		E.node = create_node(get_node_type(E.type, OPERAND));
+		E.node->data.nodeData.value.literal = E.token.lexeme.array;
+
 		E.id = E_OPERAND;
 		push(stack, E);
-	} else if (expresion_length == 3) {
-		/* E1 op E2 OR (E) */
-		symbol E2 = pop(stack); // expression
-		symbol op = pop(stack); // operand
-		symbol E1 = pop(stack); // expression
-		pop(stack);				// pop shift
+	}
+	/* E1 op E2 OR (E) */
+	else if (expresion_length == 3) {
 
-		/* Create new non-term Expression*/
+		symbol E2 = pop(stack); // LHS: expression, can be bracket
+		symbol op = pop(stack); // MID: operand, expression if its in (E) form
+		symbol E1 = pop(stack); // RHS: expression, can be bracket
+		pop(stack);				// pop shift <
+
+		/* Create new non-term E for processed expression */
 		symbol E = {.id = E_EXP,
 		            .token = {.id = TOKEN_DEFAULT, .lexeme = {.array = NULL}},
-		            .type = NON_OPERAND
+		            .type = NON_OPERAND,
+		            .node = NULL
 		           };
-		/* Semantics check */
+
+		/* Create operator node, set operands as children */
+		E.node = create_node(get_node_type(op.id, OPERATOR));
+		E.node->left = E1.node;
+		E.node->right = E2.node;
+
 
 		/* Case when given expression uses E -> (E) rule, otherwise consider thee expression as arithmetic or logic */
 		if (E1.id == LBR && (op.id == E_OPERAND || op.id == E_EXP) && E2.id == RBR) {// E1 = (, OP = E, E2 = )
@@ -218,40 +293,6 @@ void reduction(stack_t *stack, int expresion_length) {
 			printf("error: invalid type used in expression!\n");
 			error = ERR_TYPE_COMPATABILITY;
 			return;
-		}
-
-		/* Further operator and type checking */
-		/* ARITHMETIC OPERATORS */
-		if (op.id == ADD) {
-
-		} else if (op.id == SUB) {
-
-		} else if (op.id == MUL) {
-
-		} else if (op.id == DIV) {
-			if (E2.type == I32_T && E2.token.lexeme.array[0] == '0')
-			{
-				printf("error: division by zero causes undefined behavior!\n");
-				error = ERR_SEMANTIC_OTHER;
-				return;
-			}
-		} /* LOGIC OPERATORS */
-		else if (op.id == LS) {
-
-		} else if (op.id == GR) {
-
-		} else if (op.id == LSE) {
-
-		} else if (op.id == GRE) {
-
-		} else if (op.id == EQ) {
-
-		} else if (op.id == NEQ) {
-
-		}
-		else {
-			printf("error: invalid syntax in expression, rule doesn't exist!\n");
-			error = ERR_SYNTAX;
 		}
 
 		push(stack, E);
@@ -277,7 +318,7 @@ int precedent(token_id end_marker) {
 
 	while (expr_solved == false) { // Repeat until $ = $ -> stack top = input term
 		int precedence = precedence_table[pt_map(top_term)][pt_map(next_term)]; // get term precedence
-		
+
 		switch (precedence) {
 		case '=':
 			/* Pushes input symbol onto stack top*/
@@ -319,6 +360,7 @@ int precedent(token_id end_marker) {
 			expr_solved = true;
 	}
 
+	BT_print_tree(get_top(&sym_stack).node);
 
 	/* DEBUG functions */
 	print_stack_content(&sym_stack);
@@ -337,177 +379,202 @@ int precedent(token_id end_marker) {
 }
 
 
-// symbol stack functions
-/* STACK DEBUG TOGGLE */
+// Symbol stack functions
+/**
+ * Stack debug toggle
+ */
 static bool debug_mode = false; // Using boolean for more clean looking debug function
 
-/* STACK INITIALISATION */
+/**
+ * Initialises the stack
+ */
 void init_stack(stack_t* stack) {
-    stack->top = NULL;
+	stack->top = NULL;
 }
 
-/* CREATE AND INIT NEW ITEM */
+/**
+ * Allocates new item and initialises it
+ */
 struct item* alloc_item(symbol symbol) {
-    struct item *new_item = (struct item *) malloc(sizeof(struct item));
+	struct item *new_item = (struct item *) malloc(sizeof(struct item));
 
-    if (new_item) {
-        new_item->symbol = symbol;
-        new_item->next = NULL;
-    }
+	if (new_item) {
+		new_item->symbol = symbol;
+		new_item->next = NULL;
+	}
 
-    return new_item;
+	return new_item;
 }
 
-/* STACK PUSH PROCEDURE */
+/**
+ * Pushes given item on the top of the stack
+ */
 void push(struct stack *s, symbol symbol) {
-    struct item *new_item = alloc_item(symbol);
+	struct item *new_item = alloc_item(symbol);
 
-    if (new_item) { // Succesful allocation
-        new_item->next = s->top;
-        s->top = new_item;
+	if (new_item) { // Succesful allocation
+		new_item->next = s->top;
+		s->top = new_item;
 
-        if (debug_mode) {
-            printf("[STACK INFO]: Pushed symbol: ");
-            print_symbol_info(symbol);
-            //print_stack_state(s);
-        }
-    } else {
-        fprintf(stderr, "error: stack item allocation has failed!\n");
-        error = ERR_COMPILER_INTERNAL;
-    }
+		if (debug_mode) {
+			printf("[STACK INFO]: Pushed symbol: ");
+			print_symbol_info(symbol);
+			//print_stack_state(s);
+		}
+	} else {
+		fprintf(stderr, "error: stack item allocation has failed!\n");
+		error = ERR_COMPILER_INTERNAL;
+	}
 }
 
-/* STACK POP FUNCTION */
+/**
+ * Removes item from the top of the stack and returns it
+ */
 symbol pop(struct stack *s) {
-    symbol symbol;
+	symbol symbol;
 
-    if (s->top != NULL) {
-        struct item *top_item = s->top;
-        symbol = top_item->symbol;
+	if (s->top != NULL) {
+		struct item *top_item = s->top;
+		symbol = top_item->symbol;
 
-        s->top = top_item->next; // NULL or next item
+		s->top = top_item->next; // NULL or next item
 
-        free(top_item);  // Free item from memory
+		free(top_item);  // Free item from memory
 
-        // Debug output
-        if (debug_mode) {
-            printf("[STACK INFO]: Popped token ID: ");
-            print_symbol_info(symbol);
-            //print_stack_state(s);
-        }
+		// Debug output
+		if (debug_mode) {
+			printf("[STACK INFO]: Popped token ID: ");
+			print_symbol_info(symbol);
+			//print_stack_state(s);
+		}
 
-        return symbol;
-    }
+		return symbol;
+	}
 
-    /* Trying to pop from an empty stack, throws error */
-    fprintf(stderr, "error: trying to pop an empty stack!\n");
-    symbol.id = ERROR;
-    error = ERR_COMPILER_INTERNAL;
-    return symbol;
+	/* Trying to pop from an empty stack, throws error */
+	fprintf(stderr, "error: trying to pop an empty stack!\n");
+	symbol.id = ERROR;
+	error = ERR_COMPILER_INTERNAL;
+	return symbol;
 }
 
-/* Returns top item without removing it */
+/**
+ * Returns top item without removing it
+ */
 symbol get_top(struct stack *s) {
-    return s->top->symbol;
+	return s->top->symbol;
 }
 
+/**
+ * Returns topmost TERM item, doesn't have to be on top of the stack!
+ */
 symbol get_topmost_term(struct stack *s) {
-    item_t *topmost = s->top;
+	item_t *topmost = s->top;
 
-    symbol sym;
-    sym.id = ERROR;
+	symbol sym;
+	sym.id = ERROR;
 
-    while (topmost != NULL) {
-        sym = topmost->symbol;
-        /* symbol = < (reduce) OR symbol = E */
-        if (sym.id == R || sym.id == E_EXP || sym.id == E_OPERAND) {
-            topmost = topmost->next; // if sym is either < or E, go further
-        } else break;
-    }
+	while (topmost != NULL) {
+		sym = topmost->symbol;
+		/* symbol = < (reduce) OR symbol = E */
+		if (sym.id == R || sym.id == E_EXP || sym.id == E_OPERAND) {
+			topmost = topmost->next; // if sym is either < or E, go further
+		} else break;
+	}
 
-    if (sym.id == ERROR) {
-        fprintf(stderr, "error: There is no terminal in this stack!\n");
-        error = ERR_COMPILER_INTERNAL;
-    }
+	if (sym.id == ERROR) {
+		fprintf(stderr, "error: There is no terminal in this stack!\n");
+		error = ERR_COMPILER_INTERNAL;
+	}
 
-    if (debug_mode) {
-        printf("TOPMOST TERMINAL IS --> ");
-        print_symbol_info(sym);
-    }
+	if (debug_mode) {
+		printf("TOPMOST TERMINAL IS --> ");
+		print_symbol_info(sym);
+	}
 
-    return sym;
+	return sym;
 }
 
-/* Count of symbols to be reduced, can be either 1 or 3 */
+/**
+ * Finds the number of characters to determine the type of expression reduction
+ * Can be 1 or 3: E->i, E->(E), E-> E op E
+ */
 int reduction_count(struct stack *s) {
-    int count = 0;
+	int count = 0;
 
-    item_t *top = s->top;
-    symbol sym;
+	item_t *top = s->top;
+	symbol sym;
 
-    while (top != NULL) {
-        sym = top->symbol;
+	while (top != NULL) {
+		sym = top->symbol;
 
-        if (sym.id != R) {
-            top = top->next;
-            ++count;
-        } else break;
-    }
+		if (sym.id != R) {
+			top = top->next;
+			++count;
+		} else break;
+	}
 
-    if (count != 1 && count != 3) {
-        fprintf(stderr, "error: Expression error, invalid count of symbols to reduce!\n");
-        return -1;
-    }
+	if (count != 1 && count != 3) {
+		fprintf(stderr, "error: Expression error, invalid count of symbols to reduce!\n");
+		return -1;
+	}
 
-    return count;
+	return count;
 }
-/* Inserts '<' shift into stack */
+
+/**
+ * Inserts shift symbol BEFORE the topmost TERM
+ */
 void insert_shift(struct stack *s) {
-    /* Shift is inserted BEFORE top non-terminal and AFTER topmost terminal */
-    /* example: '$<(E' --> '$<(<E*' */
-    // Shift symbol to be inserted
-    symbol shift = {
-        .id = R, // '<'
-        .token = {.id = TOKEN_DEFAULT, .lexeme = {.array = NULL}},
-        .type = NON_OPERAND
-    };
-    /* If top item is non-terminal */
-    if (get_top(s).id != get_topmost_term(s).id) { // stack top symbol is topmost terminal
-        item_t *item = alloc_item(shift);
-        if (item) {
-            /* Insert < between T and E (T<E) */
-            item->next = s->top->next; //T <-- '<'
-            s->top->next = item;       //T <-- '<' <-- E
-        } else {
-            /* malloc error */
-            fprintf(stderr, "error: stack item allocation has failed in insert_shift!\n");
-            error = ERR_COMPILER_INTERNAL;
-        }
-    } else push(s, shift);// If top item is terminal
+	/* Shift is inserted BEFORE top non-term and AFTER topmost term */
+	/* example: '$<(E' --> '$<(<E*' */
+	// Shift symbol to be inserted
+	symbol shift = {
+		.id = R, // '<'
+		.token = {.id = TOKEN_DEFAULT, .lexeme = {.array = NULL}},
+		.type = NON_OPERAND
+	};
+	/* If top item is non-term */
+	if (get_top(s).id != get_topmost_term(s).id) { // stack top symbol is topmost terminal
+		item_t *item = alloc_item(shift);
+		if (item) {
+			/* Insert < between T and E (T<E) */
+			item->next = s->top->next; //T <-- '<'
+			s->top->next = item;       //T <-- '<' <-- E
+		} else {
+			/* malloc error */
+			fprintf(stderr, "error: stack item allocation has failed in insert_shift!\n");
+			error = ERR_COMPILER_INTERNAL;
+		}
+	} else push(s, shift);// If top item is terminal
 }
 
-/* Frees stack content from memory */
+/**
+ * Clears stack content, frees allocated memory
+ */
 void free_stack(struct stack *s) {
-    while (s->top) {
-        pop(s);
-    }
+	while (s->top) {
+		pop(s);
+	}
 }
 
-/* Prints stack content */
+/**
+ * Debug function, prints stack content at the time
+ */
 void print_stack_content(struct stack *s) {
-    printf("-----------------------------\n"
-        "[STACK INFO]: Stack content:\n");
+	printf("-----------------------------\n"
+	       "[STACK INFO]: Stack content:\n");
 
-    struct item *top_item = s->top;
+	struct item *top_item = s->top;
 
-    if (top_item == NULL) {
-        printf("Stack is empty!\n");
-    } else {
-        while (top_item) {
-            print_symbol_info(top_item->symbol);
-            top_item = top_item->next;
-            putchar('\n');
-        }
-        putchar('\n');
-    }
+	if (top_item == NULL) {
+		printf("Stack is empty!\n");
+	} else {
+		while (top_item) {
+			print_symbol_info(top_item->symbol);
+			top_item = top_item->next;
+			putchar('\n');
+		}
+		putchar('\n');
+	}
 }
