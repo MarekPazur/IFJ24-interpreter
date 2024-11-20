@@ -725,6 +725,7 @@ void body(Tparser* parser, TNode** current_node) {
             /* Expression */
             expression(parser, TOKEN_SEMICOLON, &(*current_node)->left->left, true);
             if (error) return;
+
             parser->state = STATE_command;
             body(parser, &(*current_node)->right);
             if (error) return;
@@ -841,8 +842,10 @@ void if_while_header(Tparser* parser, TNode** current_node, node_type type) {
             (*current_node) = create_node(type);
 
             parser->state = STATE_operand;
+
             /* Expression */
             expression(parser, TOKEN_BRACKET_ROUND_RIGHT, &(*current_node)->left, false);
+            if (error) return;
 
             parser->state = STATE_pipe;
             if_while_header(parser, current_node, type);
@@ -1078,32 +1081,25 @@ void function_call_params(Tparser* parser, TNode** current_node) {
 
     if ((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
         return;
-    print_token(parser->current_token);
-    printf("hello 1");
 
     switch (parser->state) {
     case STATE_identifier: //something(->param<-,param,...)..
-        printf("hello 2");
         switch (parser->current_token.id) {
         case TOKEN_BRACKET_ROUND_RIGHT:
-            printf("hello 3");
             return;
         case TOKEN_IDENTIFIER:
-            printf("hello 4");
             *current_node = create_node(VAR_CONST);
             (*current_node)->data.nodeData.value.identifier = parser->current_token.lexeme.array;
             parser->state = STATE_coma;
             function_call_params(parser, &(*current_node)->right);
             break;
         case TOKEN_LITERAL_I32:
-            printf("hello 6");
             *current_node = create_node(INT);
             (*current_node)->data.nodeData.value.integer_value = parser->current_token.value.i32;
             parser->state = STATE_coma;
             function_call_params(parser, &(*current_node)->right);
             break;
         case TOKEN_LITERAL_F64:
-            printf("hello 7");
             *current_node = create_node(FL);
             (*current_node)->data.nodeData.value.float_value = parser->current_token.value.f64;
             parser->state = STATE_coma;
@@ -1123,12 +1119,10 @@ void function_call_params(Tparser* parser, TNode** current_node) {
     case STATE_coma: //something(param->,<-param,...)..
         switch (parser->current_token.id) {
         case TOKEN_COMMA:
-            printf("hello 5");
             parser->state = STATE_identifier;
             function_call_params(parser, current_node);
             break;
         case TOKEN_BRACKET_ROUND_RIGHT:
-            printf("hello 8");
             return;
         default:
             error = ERR_SYNTAX;
@@ -1183,13 +1177,16 @@ void expression(Tparser* parser, token_id end, TNode **current_node, bool allow_
 
             parser->state = STATE_identifier;
             function_call_params(parser, &(*current_node)->right);
-            printf("hello 10");
-            print_error(error);
+            
+            GET_TOKEN();
+
+            if(parser->current_token.id != TOKEN_SEMICOLON)
+                error = ERR_SYNTAX;
+
         } else {
             (*current_node) = precedent(&t_buffer, end);
         }
     } else {
         (*current_node) = precedent(&t_buffer, end); // call precedence analysis for expression syntax analysis
     }
-    BT_print_tree(parser->AST->root);
 }
