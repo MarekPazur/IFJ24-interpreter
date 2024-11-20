@@ -76,7 +76,7 @@ void body(Tparser* parser, TNode** current_node);
 
 void if_while_header(Tparser* parser, TNode** current_node, node_type type);
 
-void expression(Tparser* parser, token_id end);
+void expression(Tparser* parser, token_id end, TNode **tree, bool allow_empty);
 
 void null_replacement(Tparser* parser, TNode** current_node);
 

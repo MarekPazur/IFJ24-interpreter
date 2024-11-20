@@ -6,11 +6,14 @@
  * @file precedent.c
  */
 
+#include <stdbool.h>
 #include <string.h>
 #include <ctype.h>
 
 #include "compiler_error.h"
+
 #include "precedent.h"
+#include "token.h"
 #include "binary_tree.h"
 
 #define PT_SIZE 7
@@ -19,6 +22,8 @@
 #define OPERAND 2
 
 #define PUSH_SYMBOL(symbol_id) push(&sym_stack, (symbol) {.id = symbol_id, .token = {.id = TOKEN_DEFAULT, .lexeme = {.array = NULL}}, .type = NON_OPERAND})
+
+bool precedence_debug = false;
 
 /* Simple term precedence table
 * Priority depends on operator type and its association
@@ -240,7 +245,7 @@ void shift(stack_t *stack, symbol next_symbol) {
 	}
 }
 
-/* Expression reduction + semantic checks */
+/* Expression reduction */
 void reduction(stack_t *stack, int expresion_length) {
 	/* E -> i */
 	if (expresion_length == 1) {
@@ -269,18 +274,19 @@ void reduction(stack_t *stack, int expresion_length) {
 		            .node = NULL
 		           };
 
-		/* Create operator node, set operands as children */
-		E.node = create_node(get_node_type(op.id, OPERATOR));
-		E.node->left = E1.node;
-		E.node->right = E2.node;
-
-
 		/* Case when given expression uses E -> (E) rule, otherwise consider thee expression as arithmetic or logic */
 		if (E1.id == LBR && (op.id == E_OPERAND || op.id == E_EXP) && E2.id == RBR) {// E1 = (, OP = E, E2 = )
 			E.type = op.type; // Pass the data type
+			E.node = op.node; // Propagate node
 			push(stack, E);
+
 			return;
 		}
+
+		/* Else Create operator node, set operands as children */
+		E.node = create_node(get_node_type(op.id, OPERATOR));
+		E.node->left = E1.node;
+		E.node->right = E2.node;
 
 		/* If E1 or E2 is not non-term, throw syntax error */
 		if ((E1.id != E_OPERAND && E1.id != E_EXP) || (E2.id != E_OPERAND && E2.id != E_EXP)) {
@@ -302,9 +308,23 @@ void reduction(stack_t *stack, int expresion_length) {
 	}
 }
 
+/** Private function that wraps basic get_token function
+* Fetches a token from the buffer or from input
+* If the token buffer is not empty it retrieves a token from it
+* Otherwise it fetches a token from input
+*/
+token_t fetch_token(t_buf* token_buffer) {
+	/* If the token buffer has tokens, get them from the buffer*/
+	if (!is_empty_t_buf(token_buffer))
+		return get_t_buf(token_buffer);
+
+	/* If the token buffer is empty, get tokens from input */
+	return get_token();
+}
+
 /* Precedent analysis core function */
 /* Checks expression in assignment, condition, return */
-int precedent(token_id end_marker) {
+TNode* precedent(t_buf* token_buffer, token_id end_marker) {
 	stack_t sym_stack;
 	init_stack(&sym_stack);
 	PUSH_SYMBOL(END);
@@ -314,7 +334,7 @@ int precedent(token_id end_marker) {
 	bool read_enable = true, expr_solved = false; // Enable/Disable read when needed during expression reduction, break cycle if the expression is solved
 
 	top_term = get_topmost_term(&sym_stack); // $ at the bottom of the stack
-	next_term = token_to_symbol((token = get_token())); // anything from the input
+	next_term = token_to_symbol((token = fetch_token(token_buffer))); // anything from the input
 
 	while (expr_solved == false) { // Repeat until $ = $ -> stack top = input term
 		int precedence = precedence_table[pt_map(top_term)][pt_map(next_term)]; // get term precedence
@@ -322,19 +342,25 @@ int precedent(token_id end_marker) {
 		switch (precedence) {
 		case '=':
 			/* Pushes input symbol onto stack top*/
-			printf("[=]\n");
+			if (precedence_debug)
+				printf("[=]\n");
+
 			equal(&sym_stack, next_term);
 			read_enable = true;
 			break;
 		case '<':
 			/* Puts SHIFT symbol after topmost TERM, pushes input symbol onto stack top*/
-			printf("[< - SHIFT]\n");
+			if (precedence_debug)
+				printf("[< - SHIFT]\n");
+			
 			shift(&sym_stack, next_term);
 			read_enable = true;
 			break;
 		case '>':
 			/* Reduces the expression between '<' SHIFT symbol and stack top included using given RULE */
-			printf("[> - REDUCTION]\n");
+			if (precedence_debug)
+				printf("[> - REDUCTION]\n");
+			
 			reduction(&sym_stack, reduction_count(&sym_stack));
 			read_enable = false; /* Will reduce until SHIFT or solved expression */
 			break;
@@ -354,28 +380,37 @@ int precedent(token_id end_marker) {
 		top_term = get_topmost_term(&sym_stack);
 
 		if (read_enable)
-			next_term = token_to_symbol((token = get_token()));
+			next_term = token_to_symbol((token = fetch_token(token_buffer)));
 
 		if (end_marker == TOKEN_SEMICOLON ? (top_term.id == END && next_term.id == END) : (top_term.id == END && next_term.id == RBR)) // $ = $ -> topmost term in stack = next term, expression is finally solved $E$
 			expr_solved = true;
 	}
 
-	BT_print_tree(get_top(&sym_stack).node);
+
+	if (error) {
+		printf(RED("error")": Expression syntax error\n");
+		return NULL;
+	}
+
+	/* Final expression tree, to calculate use POST-ORDER TRAVERSAL */
+	TNode *expression_root = get_top(&sym_stack).node;  	
 
 	/* DEBUG functions */
-	print_stack_content(&sym_stack);
-	free_stack(&sym_stack);
-	if (error == 0)
-		printf(GREEN("Expression solved!")"\n");
-	else printf(RED("Unable to solve given expression!")"\n");
+	if (precedence_debug) {
+		print_stack_content(&sym_stack);
+	}
+
+	free_stack(&sym_stack);	
+	
+	//BT_print_tree(expression_root);
 
 	/* Expression can be solved, but can still be incorrect with missing end marker */
 	if (token.id != end_marker) {
-		printf("error: missing semicolon or parenthesis at the end of expression!\n");
+		printf(RED("error")": missing semicolon or parenthesis at the end of expression!\n");
 		error = ERR_SYNTAX;
 	}
 
-	return 0;
+	return expression_root;
 }
 
 

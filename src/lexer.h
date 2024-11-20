@@ -11,7 +11,6 @@
 #define LEXER_H
 
 #include <stdbool.h>
-
 #include "token.h"
 
 /* Set of states for FSM */

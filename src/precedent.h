@@ -14,6 +14,7 @@
 #include "symbol.h"
 #include "token.h"
 #include "lexer.h"
+#include "binary_tree.h"
 
 /* ITEM STRUCTURE */
 typedef struct item {
@@ -51,7 +52,7 @@ void shift(stack_t *stack, symbol next_symbol);			// < SHIFT
 void equal(stack_t *stack, symbol next_symbol);			// = EQUAL
 
 /* Precedent analysis main function */
-int precedent(token_id end_marker);
+TNode* precedent(t_buf* token_buffer, token_id end_marker);
 
 
 // Symbol stack functions
