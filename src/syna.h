@@ -1,21 +1,20 @@
-/** 
+/**
  * Název projektu: Implementace překladače imperativního jazyka IFJ24.
- * 
+ *
  * @author xglosro00, Robert Glos
  * @author xukropj00, Jan Ukropec
  * @author xtomasp00, Patrik Tomaško
  * @author xpazurm00, Marek Pazúr
- * 
+ *
  * @file syna.h
  */
 
 #ifndef SYNA_H
 #define SYNA_H
- 
+
 #include "token.h"
 #include "symtable.h"
 #include "binary_tree.h"
-
 
 typedef enum fsm_state_syna {
     STATE_ROOT, //expecting either a function header or import
@@ -50,19 +49,24 @@ typedef enum fsm_state_syna {
     STATE_assig_must
 } Pfsm_state_syna;
 
+typedef struct parser {
+    Pfsm_state_syna state;      // Automata state
+    token_t current_token;      // processed token
 
- typedef struct parser{
-  Pfsm_state_syna state;
-  token_t current_token;
-  TSymtable* global_symtable;
-  TSymtable* local_symtable;
-  TBinaryTree* AST;
- } Tparser;
-  
+    char *processed_identifier; // function or variable identifier thats being processed
+
+    TSymtable* global_symtable; // global symtable for functions
+
+    TNode* current_scope;       // current scope parser is in
+
+    TBinaryTree* AST;           // Abstract syntax tree thats being assembled
+} Tparser;
+
+// Parser LL analysis functions
 void init_parser(token_t token);
- 
+
 void root_code(Tparser* parser, TNode** current_node);
- 
+
 void import_func(Tparser* parser, TNode** current_node);
 
 void function_header(Tparser* parser, TNode** current_node);
@@ -74,7 +78,7 @@ void if_while_header(Tparser* parser, TNode** current_node, node_type type);
 void expression(Tparser* parser, token_id end);
 
 void null_replacement(Tparser* parser, TNode** current_node);
- 
+
 void function_params(Tparser* parser);
 
 void var_const_declaration(Tparser* parser, TNode** current_node, node_type type);
