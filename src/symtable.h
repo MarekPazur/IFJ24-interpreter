@@ -46,7 +46,7 @@ union data {
 
 /**
  * Initializes symtable
- * \return unitialized symtable or NULL in case of an memory allocation error
+ * \return initialized symtable or NULL in case of an memory allocation error
  */
 TSymtable* symtable_init(void);
 
