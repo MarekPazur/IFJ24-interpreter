@@ -57,7 +57,8 @@ typedef struct parser {
 
     TSymtable* global_symtable; // global symtable for functions
 
-    TNode* current_scope;       // current scope parser is in
+    TSymtable* current_scope;       // current scope parser is in
+    TSymtable* parent_scope;        // parent scope of current scope
 
     TBinaryTree* AST;           // Abstract syntax tree thats being assembled
 } Tparser;

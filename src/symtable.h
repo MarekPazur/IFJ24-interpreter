@@ -13,14 +13,14 @@ typedef struct symtable TSymtable;
 
 typedef char* TKey;
 
-typedef struct data TData;
+typedef union data TData;
 
 typedef enum type {
-    UNKNOWN,    // type unknown when defined, must be updated later else error
-    VOID,       // void
-    INTEGER,    // i32
-    FLOAT,      // f64
-    U8_SLICE,   // u8[]
+    UNKNOWN_T,    // type unknown when defined, must be updated later else error
+    VOID_T,       // void
+    INTEGER_T,    // i32
+    FLOAT_T,      // f64
+    U8_SLICE_T,   // u8[]
 } Type;
 
 union data {
@@ -29,7 +29,7 @@ union data {
         
         dynamic_array argument_types; // Formal parameter types
         Type return_type;             // Return type
-        TSymtable function_scope;     // Local scope of function instance
+        TSymtable* function_scope;     // Local scope of function instance
     } function;
 
     struct {

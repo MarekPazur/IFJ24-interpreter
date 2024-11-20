@@ -86,7 +86,7 @@ struct node_data {
 
         struct {
             TSymtable *scope;
-            void *parent_scope;
+            TNode *parent_scope;
         } body;
         
         struct {
