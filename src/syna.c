@@ -20,6 +20,82 @@
 #include "lexer.h"
 
 /**
+ * @brief This function a data structure for the symtable to insert a variable/constant
+ *
+ * @param parser
+ */
+ TData declaration_data(bool nullable, bool constant, Type type){
+ 
+    TData symtable_data;
+    
+    symtable_data.variable.is_null_type = nullable;
+    symtable_data.variable.is_constant = constant;
+    symtable_data.variable.is_used = false;
+    symtable_data.variable.comp_runtime = false;
+    symtable_data.variable.type = type;
+    
+    return symtable_data;
+ }
+ 
+ TData blank_function(TSymtable* scope){
+ 
+    TData function_data;
+    function_data.function.is_null_type = false;
+    d_array_init((&function_data.function.argument_types), 2);
+    function_data.function.return_type = UNKNOWN_T;
+    function_data.function.function_scope = scope;
+    
+    return function_data;
+ }
+
+/**
+ * @brief This function creates a new symtable when entering a new sub body and sets the parser scope struct to have the new body symtable as the current_scope and the previous in the parent_scope
+ *
+ * @param parser
+ */
+void enter_sub_body(Tparser* parser) {
+    struct TScope* new_scope = (struct TScope*)malloc(sizeof(struct TScope));
+    if (!new_scope) {
+        error = ERR_COMPILER_INTERNAL;
+        return ;
+    }
+
+    new_scope->current_scope = parser->scope.current_scope;
+    new_scope->parent_scope = parser->scope.parent_scope;
+    
+    parser->scope.parent_scope = new_scope;
+    parser->scope.current_scope = symtable_init();
+    
+    if (parser->scope.current_scope == NULL) {
+        error = ERR_COMPILER_INTERNAL;
+        return;
+    }
+    
+    if (parser->scope.current_scope == NULL) {
+        error = ERR_COMPILER_INTERNAL;
+    }
+
+    return ;
+}
+
+/**
+ * @brief This function leaves sets the current_scope back to its parent and the parent_scope to the parent of the parent
+ *
+ * @param parser
+ */
+ void leave_sub_body(Tparser* parser){
+ 
+    //debug_print_keys(parser->scope.current_scope);
+ 
+    if(parser->scope.parent_scope == NULL){
+        error = ERR_COMPILER_INTERNAL;
+        return;
+    }
+    
+    parser->scope = *(parser->scope.parent_scope);
+ }
+
+/**
  * @brief This function initializes the parser
  *
  * @param token, will be used to store the current token
@@ -33,11 +109,6 @@ void init_parser(token_t token) {
         return;
     }
 
-    // Initialising the AST
-    parser->AST = BT_init();
-    BT_insert_root(parser->AST, PROGRAM);
-    parser->AST->root->data.nodeData.program.globalSymTable = parser->global_symtable;
-
     // Malloc and initialisation for the global symtable and checking if it went correctly
     parser->global_symtable = symtable_init();
 
@@ -46,9 +117,14 @@ void init_parser(token_t token) {
         return;
     }
 
+    // Initialising the AST
+    parser->AST = BT_init();
+    BT_insert_root(parser->AST, PROGRAM);
+    parser->AST->root->data.nodeData.program.globalSymTable = parser->global_symtable;
+
     // Pointer to current scope were in, function local scope or its children blocks (while, if-else, headless body)
-    parser->current_scope = NULL;
-    parser->parent_scope = NULL;
+    parser->scope.current_scope = NULL;
+    parser->scope.parent_scope = NULL;
 
     // Initial automata state
     parser->state = STATE_ROOT;
@@ -58,6 +134,8 @@ void init_parser(token_t token) {
 
     TNode** root = &(parser->AST->root);
     root_code(parser, root);
+    
+    //debug_print_keys(parser->global_symtable);
 }
 
 /**
@@ -77,12 +155,12 @@ void root_code(Tparser* parser, TNode** current_node) {
             parser->state = STATE_fn;
 
             function_header(parser, &(*current_node)->left);
-
-            parser->state = STATE_ROOT;
+            //debug_print_keys(parser->scope.current_scope);
 
             if (error)
                 return;
 
+            parser->state = STATE_ROOT;
             root_code(parser, &(*current_node)->left);
 
             if (error)
@@ -197,8 +275,11 @@ void import_func(Tparser* parser, TNode** current_node) {
  * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
  */
 void function_header(Tparser* parser, TNode** current_node) {
-    int has_qmark = 0;
+    
     if (error) return;
+    
+    TData param_data;
+    int has_qmark = 0;
 
     if ((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
         return;
@@ -208,8 +289,6 @@ void function_header(Tparser* parser, TNode** current_node) {
         if (parser->current_token.id == TOKEN_KW_FN) { //checking for pub ->fn<- name() type{
             (*current_node) = create_node(FN);
 
-            /*@TODO (*current_node)->data.nodeData.function.scope = parser->local_symtable;*/
-
             parser->state = STATE_identifier;
             function_header(parser, current_node);
             break;
@@ -218,8 +297,25 @@ void function_header(Tparser* parser, TNode** current_node) {
         break;
     case STATE_identifier:
         if (parser->current_token.id == TOKEN_IDENTIFIER) { //checking for pub fn ->name<-() type{
+        
+            parser->scope.current_scope = symtable_init();
+            
+            if (parser->scope.current_scope == NULL) {
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            
+            parser->processed_identifier = parser->current_token.lexeme.array;
+        
             (*current_node)->data.nodeData.function.identifier = parser->current_token.lexeme.array;
-
+            (*current_node)->data.nodeData.function.scope = parser->scope.current_scope;
+            
+            TData function_data = blank_function(parser->scope.current_scope);
+            if(!symtable_insert(parser->global_symtable, parser->current_token.lexeme.array, function_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+          
             parser->state = STATE_lr_bracket;
             function_header(parser, current_node);
             break;
@@ -229,7 +325,7 @@ void function_header(Tparser* parser, TNode** current_node) {
     case STATE_lr_bracket:
         if (parser->current_token.id == TOKEN_BRACKET_ROUND_LEFT) { //checking for pub fn name->(<-) type{
             parser->state = STATE_first_fn_param;
-            function_params(parser);
+            function_params(parser, current_node);
             parser->state = STATE_type;
             function_header(parser, current_node);
             break;
@@ -237,6 +333,9 @@ void function_header(Tparser* parser, TNode** current_node) {
         error = ERR_SYNTAX;
         break;
     case STATE_type:
+    
+        parser->processed_identifier = (*current_node)->data.nodeData.function.identifier;
+        
         if (parser->current_token.id == TOKEN_OPTIONAL_TYPE_NULL) {
             if ((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
                 return;
@@ -244,30 +343,84 @@ void function_header(Tparser* parser, TNode** current_node) {
         }
         switch (parser->current_token.id) {
         case TOKEN_KW_I32://checking for pub fn name() ->i32<-{
+        
+            if(!symtable_get_data(parser->global_symtable, (*current_node)->data.nodeData.function.identifier, &param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            param_data.function.return_type = INTEGER_T;
+            if(has_qmark == 1)
+                param_data.function.is_null_type = true;
+            if(!symtable_insert(parser->global_symtable, (*current_node)->data.nodeData.function.identifier, param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+        
             (*current_node)->data.nodeData.function.type = I32;
             parser->state = STATE_open_body_check;
             function_header(parser, current_node);
             break;
+            
         case TOKEN_KW_F64://checking for pub fn name() ->f64<-{
+        
+            if(!symtable_get_data(parser->global_symtable, (*current_node)->data.nodeData.function.identifier, &param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            param_data.function.return_type = FLOAT_T;
+            if(has_qmark == 1)
+                param_data.function.is_null_type = true;
+            if(!symtable_insert(parser->global_symtable, (*current_node)->data.nodeData.function.identifier, param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+        
             (*current_node)->data.nodeData.function.type = F64;
             parser->state = STATE_open_body_check;
             function_header(parser, current_node);
             break;
+            
         case TOKEN_KW_VOID://checking for pub fn name() ->void<-{
             if (has_qmark != 1) {
+            
+                if(!symtable_get_data(parser->global_symtable, (*current_node)->data.nodeData.function.identifier, &param_data)){
+                    error = ERR_COMPILER_INTERNAL;
+                    return;
+                }
+                param_data.function.return_type = VOID_T;
+                if(!symtable_insert(parser->global_symtable, (*current_node)->data.nodeData.function.identifier, param_data)){
+                    error = ERR_COMPILER_INTERNAL;
+                    return;
+                }
+            
                 (*current_node)->data.nodeData.function.type = VOID_TYPE;
                 parser->state = STATE_open_body_check;
                 function_header(parser, current_node);
                 break;
+                
             } else {
                 error = ERR_SYNTAX;
                 return;
             }
         case TOKEN_BRACKET_SQUARE_LEFT: //checking for pub fn name() ->[<-]u8{
+            
+            if(!symtable_get_data(parser->global_symtable, (*current_node)->data.nodeData.function.identifier, &param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            param_data.function.return_type = U8_SLICE_T;
+            if(has_qmark == 1)
+                param_data.function.is_null_type = true;
+            if(!symtable_insert(parser->global_symtable, (*current_node)->data.nodeData.function.identifier, param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            
             (*current_node)->data.nodeData.function.type = U8_SLICE;
             parser->state = STATE_ls_bracket;
             function_header(parser, current_node);
             break;
+            
         default:
             error = ERR_SYNTAX;
             return;
@@ -312,9 +465,10 @@ void function_header(Tparser* parser, TNode** current_node) {
  *
  * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
  */
-void function_params(Tparser* parser) {
+void function_params(Tparser* parser, TNode** current_node) {
     if (error) return;
-
+    
+    TData param_data;
 
     if ((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
         return;
@@ -325,9 +479,19 @@ void function_params(Tparser* parser) {
             parser->state = STATE_type;
             break;
         case TOKEN_IDENTIFIER: //checking for pub fn name(->param<- : type) type{
+            
+            parser->processed_identifier = parser->current_token.lexeme.array;
+            
+            param_data = declaration_data(false, true, UNKNOWN_T);
+            if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            
             parser->state = STATE_colon;
-            function_params(parser);
+            function_params(parser, current_node);
             break;
+            
         default:
             error = ERR_SYNTAX;
             return;
@@ -336,7 +500,7 @@ void function_params(Tparser* parser) {
     case STATE_colon:
         if (parser->current_token.id == TOKEN_COLON) { //checking for pub fn name(param ->:<- type) type{
             parser->state = STATE_possible_qmark;
-            function_params(parser);
+            function_params(parser, current_node);
             break;
         }
         error = ERR_SYNTAX;
@@ -345,20 +509,86 @@ void function_params(Tparser* parser) {
         switch (parser->current_token.id) { //checking for pub fn name(param : ?type) type{
         case TOKEN_OPTIONAL_TYPE_NULL:
             parser->state = STATE_type;
-            function_params(parser);
+            function_params(parser, current_node);
             break;
         case TOKEN_KW_I32: //checking for pub fn name(param : ->i32<-) type{
+            
+            if(!symtable_get_data(parser->scope.current_scope, parser->processed_identifier, &param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            param_data.variable.type = INTEGER_T;
+            if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            
+            if(!symtable_get_data(parser->global_symtable, (*current_node)->data.nodeData.function.identifier, &param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            d_array_append(&param_data.function.argument_types, 'i');
+            if(!symtable_insert(parser->global_symtable, (*current_node)->data.nodeData.function.identifier, param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            
             parser->state = STATE_coma;
-            function_params(parser);
+            function_params(parser, current_node);
             break;
+            
         case TOKEN_KW_F64: //checking for pub fn name(param : ->f64<-) type{
+        
+            if(!symtable_get_data(parser->scope.current_scope, parser->processed_identifier, &param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            param_data.variable.type = FLOAT_T;
+            if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            
+            if(!symtable_get_data(parser->global_symtable, (*current_node)->data.nodeData.function.identifier, &param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            d_array_append(&param_data.function.argument_types, 'f');
+            if(!symtable_insert(parser->global_symtable, (*current_node)->data.nodeData.function.identifier, param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+        
             parser->state = STATE_coma;
-            function_params(parser);
+            function_params(parser, current_node);
             break;
+            
         case TOKEN_BRACKET_SQUARE_LEFT: //checking for pub fn name(param : ->[<-]u8) type{
+          
+            if(!symtable_get_data(parser->scope.current_scope, parser->processed_identifier, &param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            param_data.variable.type = U8_SLICE_T;
+            if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            
+            if(!symtable_get_data(parser->global_symtable, (*current_node)->data.nodeData.function.identifier, &param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            d_array_append(&param_data.function.argument_types, 'u');
+            if(!symtable_insert(parser->global_symtable, (*current_node)->data.nodeData.function.identifier, param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+        
             parser->state = STATE_ls_bracket;
-            function_params(parser);
+            function_params(parser, current_node);
             break;
+            
         default:
             error = ERR_SYNTAX;
             break;
@@ -367,17 +597,86 @@ void function_params(Tparser* parser) {
     case STATE_type:
         switch (parser->current_token.id) {
         case TOKEN_KW_I32: //checking for pub fn name(param : ->i32<-) type{
+          
+            if(!symtable_get_data(parser->scope.current_scope, parser->processed_identifier, &param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            param_data.variable.type = INTEGER_T;
+            param_data.variable.is_null_type = true;
+            if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            
+            if(!symtable_get_data(parser->global_symtable, (*current_node)->data.nodeData.function.identifier, &param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            d_array_append(&param_data.function.argument_types, 'i');
+            if(!symtable_insert(parser->global_symtable, (*current_node)->data.nodeData.function.identifier, param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+          
             parser->state = STATE_coma;
-            function_params(parser);
+            function_params(parser, current_node);
             break;
+            
         case TOKEN_KW_F64: //checking for pub fn name(param : ->f64<-) type{
+        
+            if(!symtable_get_data(parser->scope.current_scope, parser->processed_identifier, &param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            param_data.variable.type = FLOAT_T;
+            param_data.variable.is_null_type = true;
+            if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            
+            if(!symtable_get_data(parser->global_symtable, (*current_node)->data.nodeData.function.identifier, &param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            d_array_append(&param_data.function.argument_types, 'f');
+            if(!symtable_insert(parser->global_symtable, (*current_node)->data.nodeData.function.identifier, param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+        
             parser->state = STATE_coma;
-            function_params(parser);
+            function_params(parser, current_node);
             break;
+            
         case TOKEN_BRACKET_SQUARE_LEFT: //checking for pub fn name(param : ->[<-]u8) type{
+        
+            if(!symtable_get_data(parser->scope.current_scope, parser->processed_identifier, &param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            param_data.variable.type = U8_SLICE_T;
+            param_data.variable.is_null_type = true;
+            if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            
+            if(!symtable_get_data(parser->global_symtable, (*current_node)->data.nodeData.function.identifier, &param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            d_array_append(&param_data.function.argument_types, 'u');
+            if(!symtable_insert(parser->global_symtable, (*current_node)->data.nodeData.function.identifier, param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+        
             parser->state = STATE_ls_bracket;
-            function_params(parser);
+            function_params(parser, current_node);
             break;
+            
         default:
             error = ERR_SYNTAX;
             return;
@@ -388,9 +687,20 @@ void function_params(Tparser* parser) {
         case TOKEN_BRACKET_ROUND_RIGHT: //checking for pub fn name(param : type ,->)<- type{
             break;
         case TOKEN_IDENTIFIER: //checking for pub fn name(param : type ,->param<- : type) type{
+        
+            parser->processed_identifier = parser->current_token.lexeme.array;
+            
+            TData param_data;
+            param_data = declaration_data(false, true, UNKNOWN_T);
+            if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, param_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+        
             parser->state = STATE_colon;
-            function_params(parser);
+            function_params(parser, current_node);
             break;
+            
         default:
             error = ERR_SYNTAX;
             return;
@@ -400,9 +710,9 @@ void function_params(Tparser* parser) {
         switch (parser->current_token.id) {
         case TOKEN_COMMA: //checking for pub fn name(param : type ->,<- type) type{
             parser->state = STATE_identifier;
-            function_params(parser);
+            function_params(parser, current_node);
             break;
-        case TOKEN_BRACKET_ROUND_RIGHT: //checking for pub fn name(param : type ->)<- type{7
+        case TOKEN_BRACKET_ROUND_RIGHT: //checking for pub fn name(param : type ->)<- type{
             break;
         default:
             error = ERR_SYNTAX;
@@ -412,7 +722,7 @@ void function_params(Tparser* parser) {
     case STATE_ls_bracket:
         if (parser->current_token.id == TOKEN_BRACKET_SQUARE_RIGHT) { //checking for pub fn name(param : [->]<-u8) type{
             parser->state = STATE_u8;
-            function_params(parser);
+            function_params(parser, current_node);
             break;
         }
         error = ERR_SYNTAX;
@@ -420,7 +730,7 @@ void function_params(Tparser* parser) {
     case STATE_u8:
         if (parser->current_token.id == TOKEN_KW_U8) { //checking for pub fn name(param : []->u8<-) type{
             parser->state = STATE_coma;
-            function_params(parser);
+            function_params(parser, current_node);
             break;
         }
         error = ERR_SYNTAX;
@@ -450,12 +760,19 @@ void body(Tparser* parser, TNode** current_node) {
         (*current_node) = create_node(COMMAND);
         switch (parser->current_token.id) {
         case TOKEN_KW_IF:
+        
             parser->state = STATE_lr_bracket;
             if_while_header(parser, &(*current_node)->left, IF);
             if (error) return;
+            
+            leave_sub_body(parser);
+            if (error) return;
+            
             parser->state = STATE_possible_else;
             body(parser, &(*current_node)->right);
+            if (error) return;
             break;
+            
         case TOKEN_DISCARD_RESULT:
             if ((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
                 return;
@@ -522,39 +839,62 @@ void body(Tparser* parser, TNode** current_node) {
             body(parser, &(*current_node)->right);
             break;
         case TOKEN_BRACKET_CURLY_LEFT:
-            //TODO add the local symtable for the headerless body
+        
+            enter_sub_body(parser);
+            if (error) return;
+
             (*current_node)->left = create_node(BODY);
+            (*current_node)->left->data.nodeData.body.scope = parser->scope.current_scope;
+            (*current_node)->left->data.nodeData.body.parent_scope = parser->scope.parent_scope;
+            
             parser->state = STATE_command;
             body(parser, &(*current_node)->left->right);
             if (error) return;
+            
+            leave_sub_body(parser);
+            if (error) return;
+            
             parser->state = STATE_command;
             body(parser, &(*current_node)->right);
             break;
         case TOKEN_KW_WHILE:
+        
             parser->state = STATE_lr_bracket;
             if_while_header(parser, &(*current_node)->left, WHILE);
             if (error) return;
+            
+            leave_sub_body(parser);
+            if (error) return;
+            
             parser->state = STATE_command;
             body(parser, &(*current_node)->right);
+            if (error) return;
             break;
+            
         case TOKEN_KW_VAR:
+        
             parser->state = STATE_identifier;
             var_const_declaration(parser, &(*current_node)->left, VAR_DECL);
             if (error) return;
+            
             parser->state = STATE_command;
             body(parser, &(*current_node)->right);
             if (error)
                 return;
             break;
+            
         case TOKEN_KW_CONST:
+        
             parser->state = STATE_identifier;
             var_const_declaration(parser, &(*current_node)->left, CONST_DECL);
             if (error) return;
+            
             parser->state = STATE_command;
             body(parser, &(*current_node)->right);
             if (error)
                 return;
             break;
+            
         case TOKEN_IDENTIFIER:
             //TODO add the expression
             temp_identifier = parser->current_token.lexeme.array;
@@ -621,11 +961,22 @@ void body(Tparser* parser, TNode** current_node) {
         (*current_node) = create_node(COMMAND);
         switch (parser->current_token.id) {
         case TOKEN_BRACKET_CURLY_LEFT:
-            //TODO add the local symtable for the headerless body
-            (*current_node)->left = create_node(BODY);
+        
+            enter_sub_body(parser);
+            if (error) return;
+
+            (*current_node)->left = create_node(ELSE);
+            (*current_node)->left->data.nodeData.body.scope = parser->scope.current_scope;
+            (*current_node)->left->data.nodeData.body.parent_scope = parser->scope.parent_scope;
+            
             parser->state = STATE_command;
             body(parser, &(*current_node)->left->right);
             if (error) return;
+            
+            leave_sub_body(parser);
+            if (error) return;
+            
+            
             parser->state = STATE_command;
             body(parser, &(*current_node)->right);
             if (error) return;
@@ -685,30 +1036,53 @@ void body(Tparser* parser, TNode** current_node) {
             if (error) return;
             break;
         case TOKEN_KW_ELSE://checking for ..} ->else<- { ..
-            parser->state = STATE_open_else;
+        
+            enter_sub_body(parser);
+            if (error) return;
+        
             (*current_node)->left = create_node(ELSE);
+            (*current_node)->left->data.nodeData.body.scope = parser->scope.current_scope;
+            (*current_node)->left->data.nodeData.body.parent_scope = parser->scope.parent_scope;
+            
+            parser->state = STATE_open_else;
             body(parser, &(*current_node)->left->right);
             if (error) return;
+            
+            leave_sub_body(parser);
+            if (error) return;
+            
             parser->state = STATE_command;
             body(parser, &(*current_node)->right);
             if (error) return;
             break;
+            
         case TOKEN_KW_IF:
+        
             parser->state = STATE_lr_bracket;
             if_while_header(parser, &(*current_node)->left, IF);
             if (error) return;
+            
+            leave_sub_body(parser);
+            if (error) return;
+            
             parser->state = STATE_possible_else;
             body(parser, &(*current_node)->right);
             if (error) return;
             break;
+            
         case TOKEN_KW_WHILE:
             parser->state = STATE_lr_bracket;
             if_while_header(parser, &(*current_node)->left, WHILE);
             if (error) return;
+            
+            leave_sub_body(parser);
+            if (error) return;
+            
             parser->state = STATE_command;
             body(parser, &(*current_node)->right);
             if (error) return;
             break;
+            
         case TOKEN_KW_RETURN:
             (*current_node)->left = create_node(RETURN);
             //TODO give the expression function the current_node->left->left to make the expression there
@@ -795,16 +1169,10 @@ void body(Tparser* parser, TNode** current_node) {
         }
         break;
     case STATE_open_else:
-        if (parser->current_token.id == TOKEN_BRACKET_CURLY_LEFT) { //checking for ..} else ->{<- ..
-            (*current_node) = create_node(ELSE);
-            //TODO add the local symtable which Robert didn't do
             parser->state = STATE_command;
             body(parser, current_node);
             if (error) return;
             break;
-        }
-        error = ERR_SYNTAX;
-        break;
     default:
         error = ERR_SYNTAX;
         return;
@@ -817,7 +1185,6 @@ void body(Tparser* parser, TNode** current_node) {
  *
  * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
  */
-//TODO local symtable for the if and whiles, and then add it into the ABT structures
 void if_while_header(Tparser* parser, TNode** current_node, node_type type) {
     if (error) return;
     if ((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
@@ -826,7 +1193,16 @@ void if_while_header(Tparser* parser, TNode** current_node, node_type type) {
     switch (parser->state) {
     case STATE_lr_bracket:
         if (parser->current_token.id == TOKEN_BRACKET_ROUND_LEFT) { //checking for if ->(<-expression) |null_replacement| {
+        
+            enter_sub_body(parser);
+            if (error) return;
+        
             (*current_node) = create_node(type);
+            (*current_node)->data.nodeData.body.scope = parser->scope.current_scope;
+            (*current_node)->data.nodeData.body.parent_scope = parser->scope.parent_scope;
+            
+            (*current_node)->left = create_node(METADATA);
+            
             parser->state = STATE_operand;
             expression(parser, TOKEN_BRACKET_ROUND_RIGHT);
             parser->state = STATE_pipe;
@@ -838,11 +1214,14 @@ void if_while_header(Tparser* parser, TNode** current_node, node_type type) {
     case STATE_pipe:
         switch (parser->current_token.id) {
         case TOKEN_PIPE: //checking for if (true_expresssion) ->|<-null_replacement| {
+        
             parser->state = STATE_identifier;
             null_replacement(parser, &(*current_node)->left->left);
+            
             parser->state = STATE_open_body_check;
             if_while_header(parser, current_node, type);
             break;
+            
         case TOKEN_BRACKET_CURLY_LEFT: //checking for if (expression) ->{<-
             parser->state = STATE_command;
             body(parser, &(*current_node)->right);
@@ -874,6 +1253,8 @@ void if_while_header(Tparser* parser, TNode** current_node, node_type type) {
  */
 void null_replacement(Tparser* parser, TNode** current_node) {
     if (error) return;
+    
+    TData nonull_data;
 
     if ((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
         return;
@@ -881,11 +1262,20 @@ void null_replacement(Tparser* parser, TNode** current_node) {
     switch (parser->state) {
     case STATE_identifier:
         if (parser->current_token.id == TOKEN_IDENTIFIER) { //checking for if/while (expression) |->null_replacement<-| {
+        
+            nonull_data = declaration_data(false,true,UNKNOWN_T);
+            if(!symtable_insert(parser->scope.current_scope, parser->current_token.lexeme.array, nonull_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+        
             (*current_node) = create_node(NULL_REPLACEMENT);
             (*current_node)->data.nodeData.identifier.identifier = parser->current_token.lexeme.array;
+            
             parser->state = STATE_pipe;
             null_replacement(parser, current_node);
             break;
+            
         }
         error = ERR_SYNTAX;
         break;
@@ -913,11 +1303,23 @@ void var_const_declaration(Tparser* parser, TNode** current_node, node_type type
     if ((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
         return;
 
+    TData symtable_data;
+    bool constant;
+    if(type == VAR_DECL){
+        constant = false;
+    }else{
+        constant = true;
+    }
+    
     switch (parser->state) {
     case STATE_identifier:
         if (parser->current_token.id == TOKEN_IDENTIFIER) { //checking for var/const ->name<- = expression;
+        
             (*current_node) = create_node(type);
             (*current_node)->data.nodeData.identifier.identifier = parser->current_token.lexeme.array;
+            
+            parser->processed_identifier = parser->current_token.lexeme.array;
+            
             parser->state = STATE_assig;
             var_const_declaration(parser, current_node, type);
             break;
@@ -926,6 +1328,14 @@ void var_const_declaration(Tparser* parser, TNode** current_node, node_type type
         break;
     case STATE_assig:
         if (parser->current_token.id == TOKEN_ASSIGNMENT) { //checking for var/const name ->=<- expression;
+        
+            symtable_data = declaration_data(false, constant, UNKNOWN_T);
+            
+            if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, symtable_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+                
             parser->state = STATE_operand;
             expression(parser, TOKEN_SEMICOLON);
             //something to match the data type of the final expression result
@@ -933,6 +1343,7 @@ void var_const_declaration(Tparser* parser, TNode** current_node, node_type type
                 return;
             }
             break;
+            
         } else if (parser->current_token.id == TOKEN_COLON) { //checking for var/const name ->:<- type = expression;
             parser->state = STATE_possible_qmark;
             var_const_declaration(parser, current_node, type);
@@ -941,39 +1352,94 @@ void var_const_declaration(Tparser* parser, TNode** current_node, node_type type
         error = ERR_SYNTAX;
         break;
     case STATE_possible_qmark:
-        switch (parser->current_token.id) { //checking for pub fn name(param : ?type) type{
-        case TOKEN_OPTIONAL_TYPE_NULL:
+            
+        switch (parser->current_token.id) {
+        case TOKEN_OPTIONAL_TYPE_NULL:  //checking for pub fn name(param : ->?<-type) type{
+        
             parser->state = STATE_type;
             var_const_declaration(parser, current_node, type);
             break;
-        case TOKEN_KW_I32: //checking for pub fn name(param : ->i32<-) type{
-        case TOKEN_KW_F64: //checking for pub fn name(param : ->f64<-) type{
+            
+        case TOKEN_KW_I32: //checking for pub fn name(param : ->i32<-) type
+            
+            symtable_data = declaration_data(false, constant, INTEGER_T);
+            if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, symtable_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            
             parser->state = STATE_assig_must;
             var_const_declaration(parser, current_node, type);
             break;
+            
+        case TOKEN_KW_F64: //checking for pub fn name(param : ->f64<-) type{
+        
+            symtable_data = declaration_data(false, constant, FLOAT_T);
+            if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, symtable_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+        
+            parser->state = STATE_assig_must;
+            var_const_declaration(parser, current_node, type);
+            break;
+            
         case TOKEN_BRACKET_SQUARE_LEFT: //checking for pub fn name(param : ->[<-]u8) type{
+        
+            symtable_data = declaration_data(false, constant, U8_SLICE_T);
+            if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, symtable_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+        
             parser->state = STATE_ls_bracket;
             var_const_declaration(parser, current_node, type);
             break;
+            
         default:
             error = ERR_SYNTAX;
             break;
         }
         break;
     case STATE_type:
+    
         switch (parser->current_token.id) { //checking for pub fn name(param : ?type) type{
         case TOKEN_KW_I32: //checking for pub fn name(param : ->i32<-) type{
-            parser->state = STATE_assig_must;
-            function_params(parser);
-            break;
-        case TOKEN_KW_F64: //checking for pub fn name(param : ->f64<-) type{
+        
+            symtable_data = declaration_data(true, constant, INTEGER_T);
+            if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, symtable_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+        
             parser->state = STATE_assig_must;
             var_const_declaration(parser, current_node, type);
             break;
+            
+        case TOKEN_KW_F64: //checking for pub fn name(param : ->f64<-) type{
+        
+            symtable_data = declaration_data(true, constant, FLOAT_T);
+            if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, symtable_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+        
+            parser->state = STATE_assig_must;
+            var_const_declaration(parser, current_node, type);
+            break;
+            
         case TOKEN_BRACKET_SQUARE_LEFT: //checking for pub fn name(param : ->[<-]u8) type{
+        
+            symtable_data = declaration_data(true, constant, U8_SLICE_T);
+            if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, symtable_data)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+        
             parser->state = STATE_ls_bracket;
             var_const_declaration(parser, current_node, type);
             break;
+            
         default:
             error = ERR_SYNTAX;
             break;
