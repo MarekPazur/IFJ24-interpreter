@@ -82,10 +82,7 @@ typedef enum token_id {
 typedef struct token {
 	token_id id;			// ID of current token (token type)
 	dynamic_array lexeme;	// Dyn. array type containing sequence of alphanumerical + '_' characters  (lexeme)
-		union {					// Union type containing value of integer or decimal number
-		int i32;
-		double f64;
-	} value;
+	// Lexeme containts identifiers, values
 } token_t;
 
 typedef struct token_buffer t_buf; 

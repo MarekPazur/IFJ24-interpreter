@@ -1237,7 +1237,7 @@ void expression(Tparser* parser, token_id end, TNode **current_node, bool allow_
             (*current_node) = precedent(&t_buffer, end); // buffered tokens passed so they dont get lost
         }
 
-    } else { // First token is NOT ID --> expression, at this point, empty expression is Invalid
+    } else { // First token is NOT ID --> expression, at this point, Empty expression is Invalid
         (*current_node) = precedent(&t_buffer, end); // call precedence analysis for expression syntax analysis
     }
 }
