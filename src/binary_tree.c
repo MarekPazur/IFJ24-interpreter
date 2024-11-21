@@ -243,7 +243,7 @@ bool BT_get_data_parent(TBinaryTree* BT, node_data* data_out){
 }
 
 
-// Binary tree debug functions:
+// Binary tree debug functions
 
 const char *node_t_string[] = {
     "ROOT",
