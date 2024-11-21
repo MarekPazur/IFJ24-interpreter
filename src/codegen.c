@@ -167,6 +167,8 @@ void cg_getchar(TTerm dest, TTerm string, TTerm position);
 
 void cg_setchar(TTerm src_str, TTerm dest_str, TTerm position);
 
+void cg_stri2int(TTerm dest, TTerm string, TTerm pos);
+
 // IFJ BUILT-IN
 
 void cg_ifj_readstr(void);
@@ -190,6 +192,8 @@ void cg_ifj_concat(TTerm s1, TTerm s2);
 void cg_ifj_substring(TTerm s, TTerm i, TTerm j);
 
 void cg_ifj_strcmp(TTerm s1, TTerm s2);
+
+void cg_ifj_ord(TTerm s, TTerm i);
 
 // Codegen
 
@@ -442,6 +446,12 @@ void cg_setchar(TTerm src_str, TTerm dest_str, TTerm position){
     cg_three_operands(src_str, dest_str, position);
 }
 
+void cg_stri2int(TTerm dest, TTerm string, TTerm pos){
+    printf("stri2int");
+    cg_three_operands(dest, string, pos);
+}
+
+
 // IFJ BUILT-IN
 
 void cg_ifj_readstr(void){
@@ -567,7 +577,6 @@ void cg_ifj_strcmp(TTerm s1, TTerm s2){
     TTerm index = {.type = VARIABLE_T, .value.var_name = "index", .frame = LOCAL};
     TTerm char1 = {.type = VARIABLE_T, .value.var_name = "char1", .frame = LOCAL};
     TTerm char2 = {.type = VARIABLE_T, .value.var_name = "char2", .frame = LOCAL};
-//    TTerm equal = {.type = VARIABLE_T, .value.var_name = "equal", .frame = LOCAL}; // Equal lengths
     cg_create_var(s1_len);
     cg_create_var(s2_len);
     cg_create_var(len_min);
@@ -627,6 +636,31 @@ void cg_ifj_strcmp(TTerm s1, TTerm s2){
     cg_pop_frame();
 }
 
+void cg_ifj_ord(TTerm s, TTerm i){
+    cg_create_frame();
+    cg_push_frame();
+
+    // Variables
+    TTerm s_len = {.type = VARIABLE_T, .value.var_name = "s_len", .frame = LOCAL};
+    cg_create_var(s_len);
+    // Labels
+    TLabel fun_end = cg_get_new_label();
+    TLabel ret_zer = cg_get_new_label();
+    // Code
+    cg_strlen(s_len, s);
+    // Check bounds
+    cg_jump_lt(ret_zer, i, cg_zero_int_term);
+    cg_jump_gteq(ret_zer, i, s_len);
+    // Find ordinal value
+    cg_stri2int(cg_var_retval, s, i);
+
+    cg_jump(fun_end);
+    cg_create_label(ret_zer);
+    cg_move(cg_var_retval, cg_zero_int_term);
+    cg_create_label(fun_end);
+    cg_pop_frame();
+}
+
 // Codegen
 
 void codegen(void){
@@ -634,17 +668,17 @@ void codegen(void){
     cg_create_frame();
     cg_push_frame();
 
-//    TTerm s = {.type = STRING_T, .value.string = "HelloWorld!"};
+    TTerm s = {.type = STRING_T, .value.string = "HelloWorld!"};
 //    TTerm enter = {.type = STRING_T, .value.string = "\n"};
-    TTerm s1 = {.type = STRING_T, .value.string = "abcde", .frame = GLOBAL};
-    TTerm s2 = {.type = STRING_T, .value.string = "abdce", .frame = GLOBAL};
+//    TTerm s1 = {.type = STRING_T, .value.string = "abcde", .frame = GLOBAL};
+//    TTerm s2 = {.type = STRING_T, .value.string = "abdce", .frame = GLOBAL};
 //    TTerm var = {.type = VARIABLE_T, .value.var_name = "i", .frame = GLOBAL};
 
-//    TTerm i = {.type = INTEGER_T, .value.int_val = 5};
+    TTerm i = {.type = INTEGER_T, .value.int_val = 1};
 //    TTerm j = {.type = INTEGER_T, .value.int_val = 5};
 //    cg_ifj_substring(s, i, j);
 
-    cg_ifj_strcmp(s1, s2);
+    cg_ifj_ord(s, i);
 
     cg_ifj_write(cg_var_retval);
 
