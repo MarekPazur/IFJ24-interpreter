@@ -121,5 +121,6 @@ void enqueue_t_buf (t_buf *buf, token_t token);
 token_t get_t_buf (t_buf *buf);
 void free_t_buf (t_buf *buf);
 void print_t_buf (t_buf *buf);
+char *func_id_concat(char *lex_prefix, char *lex_suffix);
 
 #endif 

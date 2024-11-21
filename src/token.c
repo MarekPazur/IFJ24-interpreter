@@ -6,6 +6,7 @@
  * @file token.h
  */
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 
 #include "token.h"
@@ -113,4 +114,28 @@ void print_t_buf (t_buf *buf) {
 		putchar('\n');
 		ptr = ptr->next;
 	}
+}
+
+/**
+* Concatenates two strings with '.' between: ifj, function --> 'ifj.function'
+* Used for functions composed of two parts with namespace/access operator between
+*/
+char *func_id_concat(char *lex_prefix, char *lex_suffix) {
+	if (lex_prefix == NULL || lex_suffix == NULL)
+		return NULL;
+
+	char *new_lexeme = NULL;
+	size_t size = strlen(lex_prefix) + strlen(".") +strlen(lex_suffix);
+
+	if ((new_lexeme = (char*) malloc(size + 1)) == NULL) {
+		error = ERR_COMPILER_INTERNAL;
+		printf(RED("error")": Lexeme concatenation resource allocation failure\n");
+		return NULL;
+	}
+
+	strcpy(new_lexeme, lex_prefix);
+	strcat(new_lexeme, ".");
+	strcat(new_lexeme, lex_suffix);
+
+	return new_lexeme;
 }

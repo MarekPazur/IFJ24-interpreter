@@ -268,7 +268,7 @@ token_t get_token(void) {
                         }
                     }
 
-                    d_array_remove(&token.lexeme, token.lexeme.length - 1);
+                    //d_array_remove(&token.lexeme, token.lexeme.length - 1);
                     return token;
                 }
                 break;
@@ -396,7 +396,7 @@ token_t get_token(void) {
                         fprintf(stderr, RED_BOLD("error")": invalid builtin function\n");
                     }
 
-                    d_array_remove(&token.lexeme, token.lexeme.length - 1);
+                    //d_array_remove(&token.lexeme, token.lexeme.length - 1);
 
                     return token;
                 }

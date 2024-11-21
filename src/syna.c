@@ -1160,7 +1160,7 @@ void expression(Tparser* parser, token_id end, TNode **current_node, bool allow_
         return;
     // Potential issues:
     // var x = expr; <-- expr not epsilon (empty expression)
-    // var x = fun(param_list);
+    // var x = fun(param_list); OR var x = 'IFJ''.'FUN'();
     // while-if-else (expr) <-- expr not epsilon (empty expression)
     // return (expr); <-- expr can be epsilon (empty expression)
 
@@ -1175,25 +1175,68 @@ void expression(Tparser* parser, token_id end, TNode **current_node, bool allow_
         return;
     } 
     /* Distinction between Expression and Function Call */
-    if (parser->current_token.id == TOKEN_IDENTIFIER) { // 'identifier' <---
-        GET_TOKEN();    // Read second token
-        enqueue_t_buf(&t_buffer, parser->current_token); // Enqueue it into the buffer
+    if (parser->current_token.id == TOKEN_IDENTIFIER) { // First token is 'identifier' <---
+        char *id = parser->current_token.lexeme.array; // Store identifier/namespace of the function
 
-        if (parser->current_token.id  == TOKEN_BRACKET_ROUND_LEFT) { // identifier'(' <---
+        GET_TOKEN();    // Read second token
+        enqueue_t_buf(&t_buffer, parser->current_token); // Enqueue it into the buffer incase its expression
+
+        if (parser->current_token.id  == TOKEN_BRACKET_ROUND_LEFT) { // Second token is lbr '(' <---
             (*current_node) = create_node(FUNCTION_CALL); // Create function call node
-            (*current_node)->data.nodeData.identifier.identifier = parser->current_token.lexeme.array; // Assign function ID to the node property
+            (*current_node)->data.nodeData.identifier.identifier = id; // Assign function ID to the node property
 
             parser->state = STATE_identifier; // ???
             function_call_params(parser, &(*current_node)->right); // Parameter S.A., TODO decide on left or right pointer?
             
-            GET_TOKEN(); // Read third and last token, to ensure the statement is followed by corresponding end marker
+            GET_TOKEN(); // Read third and last token, to ensure the statement is followed by corresponding end marker, no need to enqueue
 
-            if(parser->current_token.id != TOKEN_SEMICOLON) // Statement must be followed by a Semicolon at the end
+            if(parser->current_token.id != TOKEN_SEMICOLON) {// Statement must be followed by a Semicolon at the end
                 error = ERR_SYNTAX;
+                return;
+            }
 
-        } else { // First token was ID, but Second wasn't left bracket, so its an expression, not a function --> pass it to P.A.
-            (*current_node) = precedent(&t_buffer, end);
+        } else if (parser->current_token.id  == TOKEN_ACCESS_OPERATOR) { // Second token is namespace '.' (access operator) ---> 'IFJ''.''ID'
+
+            GET_TOKEN(); // Read third token, must be ID, no need to enqueue
+            char *id_2 = parser->current_token.lexeme.array; // Store second part of the function identifier
+
+            if (parser->current_token.id != TOKEN_IDENTIFIER) { // ifj.'id' namespace must be followed by identifier
+                error = ERR_SYNTAX;
+                return;
+            }
+
+            GET_TOKEN(); // Read fourth token, must be left bracket
+
+            if (parser->current_token.id != TOKEN_BRACKET_ROUND_LEFT) { // ifj.id'(' namespace must be followed by left bracket
+                error = ERR_SYNTAX;
+                return;
+            }
+
+            (*current_node) = create_node(FUNCTION_CALL); // Create function call node
+
+            char *full_id = func_id_concat(id, id_2); // Unite namespace and function id into 'namespace.id'
+
+            if (full_id == NULL) {
+                error = ERR_SYNTAX;
+                return;
+            }
+
+            (*current_node)->data.nodeData.identifier.identifier = full_id; // Assign function ID to the node property
+
+            parser->state = STATE_identifier; // ???
+            function_call_params(parser, &(*current_node)->right); // Parameter S.A., TODO decide on left or right pointer?
+            
+            GET_TOKEN(); // Read third and last token, to ensure the statement is followed by corresponding end marker, no need to enqueue
+
+            if(parser->current_token.id != TOKEN_SEMICOLON) {// Statement must be followed by a Semicolon at the end
+                error = ERR_SYNTAX;
+                return;
+            }
+
+        } else { // First token was ID, but Second wasn't left bracket or '.', so its an expression, not a function --> pass it to P.A.
+            (*current_node) = precedent(&t_buffer, end); // buffered tokens passed so they dont get lost
         }
+
     } else { // First token is NOT ID --> expression, at this point, empty expression is Invalid
         (*current_node) = precedent(&t_buffer, end); // call precedence analysis for expression syntax analysis
     }

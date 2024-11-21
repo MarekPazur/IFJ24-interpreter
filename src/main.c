@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "compiler_error.h"
 #include "lexer.h"
@@ -26,6 +27,8 @@
  *	code generator
 */
 
+
+
 int main (void) {
 	/* Init. of scanner struct */
 	init_scanner();
@@ -34,7 +37,7 @@ int main (void) {
 		print_error(error);
 	}
 
-	token_t test = {.id = TOKEN_BRACKET_ROUND_RIGHT};
+	token_t test = {.id = TOKEN_DEFAULT};
 	init_parser(test);
 
 	if (error) {
