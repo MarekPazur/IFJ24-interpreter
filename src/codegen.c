@@ -12,12 +12,42 @@
 #include "compiler_error.h"
 #include "codegen.h"
 
+typedef enum frame{
+    GLOBAL = 0,
+    LOCAL = 1,
+    TEMPORARY = 2,
+} Frame;
+
+typedef struct term{
+    enum _term_type{
+        VARIABLE_T,
+        INTEGER_T,
+        FLOAT_T,
+        BOOLEAN_T,
+        STRING_T,
+        NULL_T
+    } type;
+    union _term_value{
+        char *var_name;
+        int int_val;
+        double float_val;
+        bool bool_val;
+        char *string;
+    } value;
+    Frame frame; // In case of VARIABLE_T (otherwise can be left uninitialized)
+} TTerm;
+
+typedef unsigned long long TLabel;
+
 // Return value global frame variable
 const TTerm cg_var_retval = {.type = VARIABLE_T, .value.var_name = "retval", .frame = GLOBAL};
 // Global terms
 const TTerm cg_null_term = {.type = NULL_T};
 const TTerm cg_true_term = {.type = BOOLEAN_T, .value.bool_val = true};
 const TTerm cg_zero_int_term = {.type = INTEGER_T, .value.int_val = 0};
+const TTerm cg_one_int_term = {.type = INTEGER_T, .value.int_val = 1};
+const TTerm cg_empty_string_lit = {.type = STRING_T, .value.string = ""};
+
 
 // IFJ24code frame types
 #define GF "GF@"
@@ -82,17 +112,17 @@ void cg_term(TTerm term){
 
 // CG variables and frames
 
-void cg_init(void){
-    printf(".IFJcode24\n");
-    cg_create_var(cg_var_retval);
-}
-
 void cg_create_var(TTerm var){
     if(var.type != VARIABLE_T || var.value.var_name == NULL){
         error = ERR_COMPILER_INTERNAL;
         return;
     }
     printf("defvar %s%s\n", get_frame(var.frame), var.value.var_name);
+}
+
+void cg_init(void){
+    printf(".IFJcode24\n");
+    cg_create_var(cg_var_retval);
 }
 
 void cg_create_frame(void){
@@ -135,16 +165,16 @@ void cg_move(TTerm dest, TTerm src){
 
 // Labels
 
-ull cg_get_new_label_number(void){
-    ull label = 0;
+TLabel cg_get_new_label(void){
+    TLabel label = 0;
     return label++;
 }
 
-void cg_create_label(ull label_number){
+void cg_create_label(TLabel label_number){
     printf("label L%llu\n", label_number);
 }
 
-void cg_label(ull label_number){
+void cg_label(TLabel label_number){
     printf("L%llu\n", label_number);
 }
 
@@ -180,42 +210,101 @@ void cg_greater_than(TTerm result_var, TTerm value1, TTerm value2){
 
 // Jumps
 
-void cg_jump(ull label){
+void cg_jump(TLabel label){
     printf("jump ");
     cg_label(label);
     putchar('\n');
 }
 
-void cg_jump_eq(ull label, TTerm value1, TTerm value2){
+void cg_jump_eq(TLabel label, TTerm value1, TTerm value2){
     printf("jumpifeq ");
     cg_label(label);
     cg_two_operands(value1, value2);
 }
 
-void cg_jump_not_neq(ull label, TTerm value1, TTerm value2){
+void cg_jump_not_neq(TLabel label, TTerm value1, TTerm value2){
     printf("jumpifneq ");
     cg_label(label);
     cg_two_operands(value1, value2);
 }
 
-void cg_jump_lt(ull label, TTerm value1, TTerm value2){
+void cg_jump_lt(TLabel label, TTerm value1, TTerm value2){
     cg_less_than(cg_var_retval, value1, value2);
     cg_jump_eq(label, cg_var_retval, cg_true_term);
 }
 
-void cg_jump_gt(ull label, TTerm value1, TTerm value2){
+void cg_jump_gt(TLabel label, TTerm value1, TTerm value2){
     cg_greater_than(cg_var_retval, value1, value2);
     cg_jump_eq(label, cg_var_retval, cg_true_term);
 }
 
-void cg_jump_lteq(ull label, TTerm value1, TTerm value2){
+void cg_jump_lteq(TLabel label, TTerm value1, TTerm value2){
     cg_jump_eq(label, value1, value2);
     cg_jump_lt(label, value1, value2);
 }
 
-void cg_jump_gteq(ull label, TTerm value1, TTerm value2){
+void cg_jump_gteq(TLabel label, TTerm value1, TTerm value2){
     cg_jump_eq(label, value1, value2);
     cg_jump_gt(label, value1, value2);
+}
+
+// Arithmetic
+
+void cg_add(TTerm dest, TTerm num1, TTerm num2){
+    printf("add ");
+    cg_three_operands(dest, num1, num2);
+}
+
+void cg_sub(TTerm dest, TTerm num1, TTerm num2){
+    printf("sub ");
+    cg_three_operands(dest, num1, num2);
+}
+
+void cg_mul(TTerm dest, TTerm num1, TTerm num2){
+    printf("mul ");
+    cg_three_operands(dest, num1, num2);
+}
+
+void cg_fdiv(TTerm dest, TTerm num1, TTerm num2){
+    printf("div ");
+    cg_three_operands(dest, num1, num2);
+}
+
+void cg_idiv(TTerm dest, TTerm num1, TTerm num2){
+    printf("idiv ");
+    cg_three_operands(dest, num1, num2);
+}
+
+// Increment/Decrement
+
+void cg_int_var_inc_1(TTerm ivar){
+    cg_add(ivar, ivar, cg_one_int_term);
+}
+
+void cg_int_var_dec_1(TTerm ivar){
+    cg_sub(ivar, ivar, cg_one_int_term);
+}
+
+// String
+
+void cg_concat(TTerm dest, TTerm string1, TTerm string2){
+    printf("concat ");
+    cg_three_operands(dest, string1, string2);
+}
+
+void cg_strlen(TTerm dest, TTerm string){
+    printf("strlen ");
+    cg_two_operands(dest, string);
+}
+
+void cg_getchar(TTerm dest, TTerm string, TTerm position){
+    printf("getchar ");
+    cg_three_operands(dest, string, position);
+}
+
+void cg_setchar(TTerm src_str, TTerm dest_str, TTerm position){
+    printf("setchar ");
+    cg_three_operands(src_str, dest_str, position);
 }
 
 // IFJ BUILT-IN
@@ -246,10 +335,7 @@ void cg_ifj_i2f(TTerm term){
         return;
     }
     printf("int2float ");
-    cg_term(cg_var_retval);
-    putchar(' ');
-    cg_term(term);
-    putchar('\n');
+    cg_two_operands(cg_var_retval, term);
 }
 
 void cg_ifj_f2i(TTerm term){
@@ -258,10 +344,7 @@ void cg_ifj_f2i(TTerm term){
         return;
     }
     printf("float2int ");
-    cg_term(cg_var_retval);
-    putchar(' ');
-    cg_term(term);
-    putchar('\n');
+    cg_two_operands(cg_var_retval, term);
 }
 
 void cg_ifj_string(TTerm term){
@@ -276,11 +359,7 @@ void cg_ifj_length(TTerm s){
         error = ERR_COMPILER_INTERNAL;
         return;
     }
-    printf("strlen ");
-    cg_term(cg_var_retval);
-    putchar(' ');
-    cg_term(s);
-    putchar('\n');
+    cg_strlen(cg_var_retval, s);
 }
 
 void cg_ifj_concat(TTerm s1, TTerm s2){
@@ -288,26 +367,21 @@ void cg_ifj_concat(TTerm s1, TTerm s2){
         error = ERR_COMPILER_INTERNAL;
         return;
     }
-    printf("concat ");
-    cg_term(cg_var_retval);
-    putchar(' ');
-    cg_term(s1);
-    putchar(' ');
-    cg_term(s2);
-    putchar('\n');
+    cg_concat(cg_var_retval, s1, s2);
 }
 
-// TODO:
 void cg_ifj_substring(TTerm s, TTerm i, TTerm j){
     cg_create_frame();
     cg_push_frame();
 
     // Label numbers
-    ull ret_null = cg_get_new_label_number();
-    ull finish = cg_get_new_label_number();
+    TLabel ret_null = cg_get_new_label();
+    TLabel finish = cg_get_new_label();
     // Terms
     TTerm str_len = {.type = VARIABLE_T, .value.var_name = "str_len", .frame = LOCAL};
+    TTerm character = {.type = VARIABLE_T, .value.var_name = "character", .frame = LOCAL};
     cg_create_var(str_len);
+    cg_create_var(character);
     // Code
     // i < 0
     cg_jump_lt(ret_null, i, cg_zero_int_term);
@@ -322,11 +396,32 @@ void cg_ifj_substring(TTerm s, TTerm i, TTerm j){
     // j > ifj.length(s)
     cg_jump_gt(ret_null, j, str_len);
 
-    cg_create_label(ret_null);
+    TTerm i_loc = {.type = VARIABLE_T, .value.var_name = "i_loc", .frame = LOCAL};
+    cg_create_var(i_loc);
+    cg_move(i_loc, i);
 
+    // Init return value to empty string
+    cg_move(cg_var_retval, cg_empty_string_lit);
+
+    // while i < j
+    TLabel while_beg = cg_get_new_label();
+    TLabel while_end = cg_get_new_label();
+
+    cg_create_label(while_beg);
+    cg_jump_gteq(while_end, i_loc, j);
+
+    cg_getchar(character, s, i_loc);
+    cg_concat(cg_var_retval, cg_var_retval, character);
+    cg_int_var_inc_1(i_loc);
+
+    cg_jump(while_beg);
+    cg_create_label(while_end);
+
+    // Return
+    cg_jump(finish);
+    cg_create_label(ret_null);
     cg_move(cg_var_retval, cg_null_term);
     cg_create_label(finish);
 
     cg_pop_frame();
 }
-
