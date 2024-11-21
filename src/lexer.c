@@ -290,6 +290,7 @@ token_t get_token(void) {
                 } else {
                     token.id = TOKEN_LITERAL_I32;
                     ungetc(c, stdin);
+                    d_array_append(&token.lexeme, '\0');
                     return token;
                 }
                 break;
@@ -307,6 +308,7 @@ token_t get_token(void) {
                 else {
                     token.id = TOKEN_LITERAL_I32;
                     ungetc(c, stdin);
+                    d_array_append(&token.lexeme, '\0');
                     return token;
                 }
                 break;
@@ -336,6 +338,7 @@ token_t get_token(void) {
                 } else {
                     token.id = TOKEN_LITERAL_F64;
                     ungetc(c, stdin);
+                    d_array_append(&token.lexeme, '\0');
                     return token;
                 }
                 break;
@@ -375,6 +378,7 @@ token_t get_token(void) {
                 } else {
                     token.id = TOKEN_LITERAL_F64;
                     ungetc(c, stdin);
+                    d_array_append(&token.lexeme, '\0');
                     return token;
                 }
                 break;
@@ -404,6 +408,7 @@ token_t get_token(void) {
 
             case STATE_STRING_START:
                 if (c == '"') {
+                    d_array_append(&token.lexeme, '\0');
                     return token;
                 } else if (c == '\\') {
                     c = getc(stdin);
@@ -495,6 +500,7 @@ token_t get_token(void) {
                     }
                 } else if(!isspace(c) || c == EOF){
                     ungetc(c, stdin);
+                    d_array_append(&token.lexeme, '\0');
                     return token;
                 } else {
                     token.id = TOKEN_ERROR;
