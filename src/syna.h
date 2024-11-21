@@ -57,8 +57,10 @@ typedef struct parser {
 
     TSymtable* global_symtable; // global symtable for functions
 
+    struct TScope{
     TSymtable* current_scope;       // current scope parser is in
-    TSymtable* parent_scope;        // parent scope of current scope
+    struct TScope* parent_scope;        // parent scope of current scope
+    }scope;
 
     TBinaryTree* AST;           // Abstract syntax tree thats being assembled
 } Tparser;
@@ -80,7 +82,7 @@ void expression(Tparser* parser, token_id end, TNode **tree, bool allow_empty);
 
 void null_replacement(Tparser* parser, TNode** current_node);
 
-void function_params(Tparser* parser);
+void function_params(Tparser* parser, TNode** current_node);
 
 void var_const_declaration(Tparser* parser, TNode** current_node, node_type type);
 
