@@ -25,6 +25,10 @@
 
 bool precedence_debug = false;
 
+TSymtable* current_symtable = NULL;
+
+TData retrieved_data;
+
 /* Simple term precedence table
 * Priority depends on operator type and its association
 * PT contains basic operators, (), identifiers or literals, $ = end marker
@@ -140,6 +144,26 @@ symbol token_to_symbol(token_t term) {
 		break;
 	/* ID and type literals are i symbol */
 	case TOKEN_IDENTIFIER:			// IDENTIFIER
+	
+	        //Checking the existance of the variable and changing it's is_used value to true
+	        
+	        if (symtable_get_data(current_symtable, term.lexeme.array, &retrieved_data)){
+                    if( retrieved_data.variable.is_constant ){
+                        error = ERR_IDENTIFIER_REDEF_CONST_ASSIGN;
+                        return symbol;
+                    }
+                } else {
+                    error = ERR_UNDEFINED_IDENTIFIER;
+                    return symbol;
+                }
+                
+                retrieved_data.variable.is_used = true;
+                
+                if(!symtable_insert(current_symtable, term.lexeme.array, retrieved_data)){
+                    error = ERR_COMPILER_INTERNAL;
+                    return symbol;
+                }
+	
 		symbol.id = I;
 		symbol.type = CONST_VAR_ID;
 		break;
@@ -328,7 +352,8 @@ token_t fetch_token(t_buf* token_buffer) {
 
 /* Precedent analysis core function */
 /* Checks expression in assignment, condition, return */
-TNode* precedent(t_buf* token_buffer, token_id end_marker) {
+TNode* precedent(t_buf* token_buffer, token_id end_marker, TSymtable* local_symtable) {
+        current_symtable = local_symtable;
 	stack_t sym_stack;
 	init_stack(&sym_stack);
 	PUSH_SYMBOL(END);
@@ -339,6 +364,9 @@ TNode* precedent(t_buf* token_buffer, token_id end_marker) {
 
 	top_term = get_topmost_term(&sym_stack); // $ at the bottom of the stack
 	next_term = token_to_symbol((token = fetch_token(token_buffer))); // anything from the input
+	
+	if(error)
+	    return NULL;
 
 	while (expr_solved == false) { // Repeat until $ = $ -> stack top = input term
 		int precedence = precedence_table[pt_map(top_term)][pt_map(next_term)]; // get term precedence
@@ -385,6 +413,8 @@ TNode* precedent(t_buf* token_buffer, token_id end_marker) {
 
 		if (read_enable)
 			next_term = token_to_symbol((token = fetch_token(token_buffer)));
+		if (error) 
+			break;
 
 		if (end_marker == TOKEN_SEMICOLON ? (top_term.id == END && next_term.id == END) : (top_term.id == END && next_term.id == RBR)) // $ = $ -> topmost term in stack = next term, expression is finally solved $E$
 			expr_solved = true;

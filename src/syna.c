@@ -1765,10 +1765,10 @@ void expression(Tparser* parser, token_id end, TNode **current_node, bool allow_
             }
 
         } else { // First token was ID, but Second wasn't left bracket or '.', so its an expression, not a function --> pass it to P.A.
-            (*current_node) = precedent(&t_buffer, end); // buffered tokens passed so they dont get lost
+            (*current_node) = precedent(&t_buffer, end, parser->scope.current_scope); // buffered tokens passed so they dont get lost
         }
 
     } else { // First token is NOT ID --> expression, at this point, Empty expression is Invalid
-        (*current_node) = precedent(&t_buffer, end); // call precedence analysis for expression syntax analysis
+        (*current_node) = precedent(&t_buffer, end, parser->scope.current_scope); // call precedence analysis for expression syntax analysis
     }
 }
