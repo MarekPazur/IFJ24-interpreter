@@ -356,13 +356,23 @@ void BT_print_subtree(TNode *tree, char *line, side_t side) {
         "\033[0;92m>\033[0;37m"     /* Leaf node     */
     };
 
-    /* Prinst node content with its edge and shape */
+    /* Prints node content with its edge and shape */
     printf("%s%s----%s", line, (side == ROOT ? "\033[0;91m~\033[0;37m" : (side == RIGHT_SIDE ? "┌" : "└")), node_shape[get_node_shape(tree)]);
     
+    /* Select correct node content do print */
     char *content = NULL;
 
+    /* Values in expressions, function call parameters... */
     if (tree->type == INT || tree->type == FL || tree->type == STR || tree->type == VAR_CONST)
         content = tree->data.nodeData.value.literal;
+
+    /* Function declaration */
+    if (tree->type == FN)
+        content = tree->data.nodeData.function.identifier;
+
+    /* Function call, variable declaration or assignment */
+    if (tree->type == FUNCTION_CALL || tree->type == VAR_DECL || tree->type == CONST_DECL || tree->type == ASSIG)
+        content = tree->data.nodeData.identifier.identifier;
 
     printf("\033[1;33m %s %s\033[0;37m\n", node_t_string[tree->type], (content ? content : ""));
 

@@ -1147,6 +1147,8 @@ void function_call_params(Tparser* parser, TNode** current_node) {
  * @param tree, pointer to tree branch pointer (Where will be new node placed to)
  * @param allow_empty, allows empty expression
  */
+
+// Custom macro for getting new token from the input
 #define GET_TOKEN() do { \
     if (((parser)->current_token = get_token()).id == TOKEN_ERROR) { \
         return; \
@@ -1162,34 +1164,37 @@ void expression(Tparser* parser, token_id end, TNode **current_node, bool allow_
     // while-if-else (expr) <-- expr not epsilon (empty expression)
     // return (expr); <-- expr can be epsilon (empty expression)
 
-    t_buf t_buffer;
+    t_buf t_buffer; // Token Queue buffer
     init_t_buf(&t_buffer);
 
-    GET_TOKEN();
-    enqueue_t_buf(&t_buffer, parser->current_token);
+    GET_TOKEN(); // Read first token
+    enqueue_t_buf(&t_buffer, parser->current_token); // Enqueue it into the buffer
 
-    if (allow_empty && parser->current_token.id == TOKEN_SEMICOLON) {
+    /* Empty expression */
+    if (allow_empty && parser->current_token.id == TOKEN_SEMICOLON) { // return ';' <---
         return;
-    } else if (parser->current_token.id == TOKEN_IDENTIFIER) {
-        GET_TOKEN();
-        enqueue_t_buf(&t_buffer, parser->current_token);
+    } 
+    /* Distinction between Expression and Function Call */
+    if (parser->current_token.id == TOKEN_IDENTIFIER) { // 'identifier' <---
+        GET_TOKEN();    // Read second token
+        enqueue_t_buf(&t_buffer, parser->current_token); // Enqueue it into the buffer
 
-        if (parser->current_token.id  == TOKEN_BRACKET_ROUND_LEFT) { //f(
-            (*current_node) = create_node(FUNCTION_CALL);
-            (*current_node)->data.nodeData.identifier.identifier = parser->current_token.lexeme.array;
+        if (parser->current_token.id  == TOKEN_BRACKET_ROUND_LEFT) { // identifier'(' <---
+            (*current_node) = create_node(FUNCTION_CALL); // Create function call node
+            (*current_node)->data.nodeData.identifier.identifier = parser->current_token.lexeme.array; // Assign function ID to the node property
 
-            parser->state = STATE_identifier;
-            function_call_params(parser, &(*current_node)->right);
+            parser->state = STATE_identifier; // ???
+            function_call_params(parser, &(*current_node)->right); // Parameter S.A., TODO decide on left or right pointer?
             
-            GET_TOKEN();
+            GET_TOKEN(); // Read third and last token, to ensure the statement is followed by corresponding end marker
 
-            if(parser->current_token.id != TOKEN_SEMICOLON)
+            if(parser->current_token.id != TOKEN_SEMICOLON) // Statement must be followed by a Semicolon at the end
                 error = ERR_SYNTAX;
 
-        } else {
+        } else { // First token was ID, but Second wasn't left bracket, so its an expression, not a function --> pass it to P.A.
             (*current_node) = precedent(&t_buffer, end);
         }
-    } else {
+    } else { // First token is NOT ID --> expression, at this point, empty expression is Invalid
         (*current_node) = precedent(&t_buffer, end); // call precedence analysis for expression syntax analysis
     }
 }

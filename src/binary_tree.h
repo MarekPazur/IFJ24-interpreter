@@ -38,10 +38,10 @@ typedef enum node_type {
 	IF,					// if condition
 	ELSE,				// else 
 	
-	INT,				// integer i32 datatype
-	FL,					// float f64 datatype
-	STR,				// string datatype
-	VAR_CONST,			// variable/constant 	
+	INT,				// integer i32 datatype LITERAL
+	FL,					// float f64 datatype	LITERAL
+	STR,				// string datatype		LITERAL
+	VAR_CONST,			// variable/constant, u8[] can be only in this form, not on its own
 
 	EXPRESSION,			// node containing expression
 	OP_ADD,				// +
