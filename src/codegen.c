@@ -39,18 +39,19 @@ typedef struct term{
 
 typedef unsigned long long TLabel;
 
-// Return value global frame variable
+// IFJcode24 GF variable for storing function return values
 const TTerm cg_var_retval = {.type = VARIABLE_T, .value.var_name = "retval", .frame = GLOBAL};
+// IFJcode24 GF bool variable for storing results of comparisons
 const TTerm cg_var_cmp = {.type = VARIABLE_T, .value.var_name = "cmp", .frame = GLOBAL};
-// Global terms
+// Often used literals
 const TTerm cg_null_term = {.type = NULL_T};
 const TTerm cg_true_term = {.type = BOOLEAN_T, .value.bool_val = true};
+const TTerm cg_false_term = {.type = BOOLEAN_T, .value.bool_val = false};
 const TTerm cg_zero_int_term = {.type = INTEGER_T, .value.int_val = 0};
 const TTerm cg_one_int_term = {.type = INTEGER_T, .value.int_val = 1};
 const TTerm cg_empty_string_lit = {.type = STRING_T, .value.string = ""};
-const TTerm cg_bool_false_term = {.type = BOOLEAN_T, .value.bool_val = false};
 
-// IFJ24code frame types
+// IFJcode24 frame types
 #define GF "GF@"
 #define LF "LF@"
 #define TF "TF@"
@@ -128,7 +129,7 @@ void cg_jump(TLabel label);
 
 void cg_jump_eq(TLabel label, TTerm value1, TTerm value2);
 
-void cg_jump_not_neq(TLabel label, TTerm value1, TTerm value2);
+void cg_jump_neq(TLabel label, TTerm value1, TTerm value2);
 
 void cg_jump_lt(TLabel label, TTerm value1, TTerm value2);
 
@@ -187,6 +188,8 @@ void cg_ifj_length(TTerm s);
 void cg_ifj_concat(TTerm s1, TTerm s2);
 
 void cg_ifj_substring(TTerm s, TTerm i, TTerm j);
+
+void cg_ifj_strcmp(TTerm s1, TTerm s2);
 
 // Codegen
 
@@ -291,7 +294,7 @@ void cg_move(TTerm dest, TTerm src){
 }
 
 void cg_set_type_bool(TTerm var){
-    cg_move(var, cg_bool_false_term);
+    cg_move(var, cg_false_term);
 }
 
 // Labels
@@ -354,7 +357,7 @@ void cg_jump_eq(TLabel label, TTerm value1, TTerm value2){
     cg_two_operands(value1, value2);
 }
 
-void cg_jump_not_neq(TLabel label, TTerm value1, TTerm value2){
+void cg_jump_neq(TLabel label, TTerm value1, TTerm value2){
     printf("jumpifneq ");
     cg_label(label);
     cg_two_operands(value1, value2);
@@ -554,6 +557,76 @@ void cg_ifj_substring(TTerm s, TTerm i, TTerm j){
     cg_pop_frame();
 }
 
+void cg_ifj_strcmp(TTerm s1, TTerm s2){
+    cg_create_frame();
+    cg_push_frame();
+    // Variables
+    TTerm s1_len = {.type = VARIABLE_T, .value.var_name = "s1_len", .frame = LOCAL};
+    TTerm s2_len = {.type = VARIABLE_T, .value.var_name = "s2_len", .frame = LOCAL};
+    TTerm len_min = {.type = VARIABLE_T, .value.var_name = "len_min", .frame = LOCAL};
+    TTerm index = {.type = VARIABLE_T, .value.var_name = "index", .frame = LOCAL};
+    TTerm char1 = {.type = VARIABLE_T, .value.var_name = "char1", .frame = LOCAL};
+    TTerm char2 = {.type = VARIABLE_T, .value.var_name = "char2", .frame = LOCAL};
+//    TTerm equal = {.type = VARIABLE_T, .value.var_name = "equal", .frame = LOCAL}; // Equal lengths
+    cg_create_var(s1_len);
+    cg_create_var(s2_len);
+    cg_create_var(len_min);
+    cg_create_var(index);
+    cg_create_var(char1);
+    cg_create_var(char2);
+    // Labels
+    TLabel sel_len_2 = cg_get_new_label();
+    TLabel len_sel_end = cg_get_new_label();
+    TLabel while_beg = cg_get_new_label();
+    TLabel while_end = cg_get_new_label();
+    TLabel ret_pos = cg_get_new_label();
+    TLabel ret_neg = cg_get_new_label();
+    TLabel fun_end = cg_get_new_label();
+
+    // Code
+    cg_move(cg_var_retval, cg_zero_int_term);
+
+    cg_strlen(s1_len, s1);
+    cg_strlen(s2_len, s2);
+
+    // Selection of shorter length
+    cg_jump_gt(sel_len_2, s1_len, s2_len);
+    cg_move(len_min, s1_len);
+    cg_jump(len_sel_end);
+    cg_create_label(sel_len_2);
+    cg_move(len_min, s2_len);
+    cg_create_label(len_sel_end);
+
+    // Comparison of strings
+    // BEG WHILE
+    cg_move(index, cg_zero_int_term);
+    cg_create_label(while_beg);
+    cg_jump_gteq(while_end, index, len_min);
+    // WHILE BODY
+    cg_getchar(char1, s1, index);
+    cg_getchar(char2, s2, index);
+
+    cg_jump_lt(ret_neg, char1, char2);
+    cg_jump_gt(ret_pos, char1, char2);
+
+    // END WHILE
+    cg_int_var_inc_1(index);
+    cg_jump(while_beg);
+    cg_create_label(while_end);
+
+    cg_jump_lt(ret_neg, s1_len, s2_len);
+    cg_jump_gt(ret_pos, s1_len, s2_len);
+
+    cg_jump(fun_end);
+    cg_create_label(ret_pos);
+    cg_int_var_inc_1(cg_var_retval);
+    cg_jump(fun_end);
+    cg_create_label(ret_neg);
+    cg_int_var_dec_1(cg_var_retval);
+    cg_create_label(fun_end);
+    cg_pop_frame();
+}
+
 // Codegen
 
 void codegen(void){
@@ -561,16 +634,17 @@ void codegen(void){
     cg_create_frame();
     cg_push_frame();
 
-    TTerm s = {.type = STRING_T, .value.string = "HelloWorld!"};
+//    TTerm s = {.type = STRING_T, .value.string = "HelloWorld!"};
 //    TTerm enter = {.type = STRING_T, .value.string = "\n"};
-//    TTerm s1 = {.type = VARIABLE_T, .value.var_name = "sj", .frame = GLOBAL};
-//    TTerm s2 = {.type = VARIABLE_T, .value.var_name = "sd", .frame = GLOBAL};
+    TTerm s1 = {.type = STRING_T, .value.string = "abcde", .frame = GLOBAL};
+    TTerm s2 = {.type = STRING_T, .value.string = "abdce", .frame = GLOBAL};
 //    TTerm var = {.type = VARIABLE_T, .value.var_name = "i", .frame = GLOBAL};
 
-    TTerm i = {.type = INTEGER_T, .value.int_val = 1};
-    TTerm j = {.type = INTEGER_T, .value.int_val = 5};
+//    TTerm i = {.type = INTEGER_T, .value.int_val = 5};
+//    TTerm j = {.type = INTEGER_T, .value.int_val = 5};
+//    cg_ifj_substring(s, i, j);
 
-    cg_ifj_substring(s, i, j);
+    cg_ifj_strcmp(s1, s2);
 
     cg_ifj_write(cg_var_retval);
 
