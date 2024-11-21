@@ -451,6 +451,11 @@ void cg_stri2int(TTerm dest, TTerm string, TTerm pos){
     cg_three_operands(dest, string, pos);
 }
 
+void cg_int2char(TTerm dest, TTerm num){
+    printf("int2char");
+    cg_two_operands(dest, num);
+}
+
 
 // IFJ BUILT-IN
 
@@ -661,26 +666,12 @@ void cg_ifj_ord(TTerm s, TTerm i){
     cg_pop_frame();
 }
 
+void cg_ifj_chr(TTerm i){
+    cg_int2char(cg_var_retval, i);
+}
+
 // Codegen
 
 void codegen(void){
     cg_init();
-    cg_create_frame();
-    cg_push_frame();
-
-    TTerm s = {.type = STRING_T, .value.string = "HelloWorld!"};
-//    TTerm enter = {.type = STRING_T, .value.string = "\n"};
-//    TTerm s1 = {.type = STRING_T, .value.string = "abcde", .frame = GLOBAL};
-//    TTerm s2 = {.type = STRING_T, .value.string = "abdce", .frame = GLOBAL};
-//    TTerm var = {.type = VARIABLE_T, .value.var_name = "i", .frame = GLOBAL};
-
-    TTerm i = {.type = INTEGER_T, .value.int_val = 1};
-//    TTerm j = {.type = INTEGER_T, .value.int_val = 5};
-//    cg_ifj_substring(s, i, j);
-
-    cg_ifj_ord(s, i);
-
-    cg_ifj_write(cg_var_retval);
-
-    cg_pop_frame();
 }
