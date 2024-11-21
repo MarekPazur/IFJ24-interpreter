@@ -88,6 +88,8 @@ struct node_data {
         struct {
             TSymtable *scope;
             struct TScope *parent_scope;
+            bool is_nullable;
+            char* null_replacement;
         } body;
         
         struct {
