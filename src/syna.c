@@ -305,6 +305,11 @@ void function_header(Tparser* parser, TNode** current_node) {
     case STATE_identifier:
         if (parser->current_token.id == TOKEN_IDENTIFIER) { //checking for pub fn ->name<-() type{
         
+            if (symtable_search(parser->global_symtable, parser->current_token.lexeme.array)) {
+                error = ERR_IDENTIFIER_REDEF_CONST_ASSIGN;
+                return;
+            }
+        
             parser->scope.current_scope = symtable_init();
             
             if (parser->scope.current_scope == NULL) {
@@ -756,6 +761,9 @@ void function_params(Tparser* parser, TNode** current_node) {
  * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
  */
 void body(Tparser* parser, TNode** current_node) {
+
+    TData retrieved_data;
+
     if (error) return;
 
     if ((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
@@ -819,6 +827,7 @@ void body(Tparser* parser, TNode** current_node) {
             }
             
             else if (parser->current_token.id == TOKEN_BRACKET_ROUND_LEFT) {
+            
                 (*current_node)->left = create_node(FUNCTION_CALL);
                 (*current_node)->left->data.nodeData.identifier.identifier = parser->processed_identifier;
                 parser->state = STATE_identifier;
@@ -842,7 +851,7 @@ void body(Tparser* parser, TNode** current_node) {
             break;
         case TOKEN_KW_RETURN:
             (*current_node)->left = create_node(RETURN);
-            //TODO give the expression function the current_node->left->left to make the expression there
+
             parser->state = STATE_operand;
 
             /* Expression */
@@ -918,6 +927,24 @@ void body(Tparser* parser, TNode** current_node) {
             if ((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
                 return;
             if (parser->current_token.id == TOKEN_ASSIGNMENT) {
+            
+                if (symtable_get_data(parser->scope.current_scope, parser->processed_identifier, &retrieved_data)){
+                    if( retrieved_data.variable.is_constant ){
+                        error = ERR_IDENTIFIER_REDEF_CONST_ASSIGN;
+                        return;
+                    }
+                } else {
+                    error = ERR_UNDEFINED_IDENTIFIER;
+                    return;
+                }
+                
+                retrieved_data.variable.is_used = true;
+                
+                if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, retrieved_data)){
+                    error = ERR_COMPILER_INTERNAL;
+                    return;
+                }
+            
                 (*current_node)->left = create_node(ASSIG);
                 (*current_node)->left->data.nodeData.identifier.identifier = parser->processed_identifier;
                 parser->state = STATE_operand;
@@ -1143,6 +1170,24 @@ void body(Tparser* parser, TNode** current_node) {
                 return;
 
             if (parser->current_token.id == TOKEN_ASSIGNMENT) {
+            
+                if (symtable_get_data(parser->scope.current_scope, parser->processed_identifier, &retrieved_data)){
+                    if( retrieved_data.variable.is_constant ){
+                        error = ERR_IDENTIFIER_REDEF_CONST_ASSIGN;
+                        return;
+                    }
+                } else {
+                    error = ERR_UNDEFINED_IDENTIFIER;
+                    return;
+                }
+                
+                retrieved_data.variable.is_used = true;
+                
+                if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, retrieved_data)){
+                    error = ERR_COMPILER_INTERNAL;
+                    return;
+                }
+            
                 (*current_node)->left = create_node(ASSIG);
                 (*current_node)->left->data.nodeData.identifier.identifier = parser->processed_identifier;
 
@@ -1343,6 +1388,11 @@ void var_const_declaration(Tparser* parser, TNode** current_node, node_type type
     switch (parser->state) {
     case STATE_identifier:
         if (parser->current_token.id == TOKEN_IDENTIFIER) { //checking for var/const ->name<- = expression;
+        
+            if (symtable_search(parser->scope.current_scope, parser->current_token.lexeme.array)) {
+                error = ERR_IDENTIFIER_REDEF_CONST_ASSIGN;
+                return;
+            }
         
             (*current_node) = create_node(type);
             (*current_node)->data.nodeData.identifier.identifier = parser->current_token.lexeme.array;
