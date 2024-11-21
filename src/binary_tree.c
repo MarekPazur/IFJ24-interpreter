@@ -363,8 +363,13 @@ void BT_print_subtree(TNode *tree, char *line, side_t side) {
     char *content = NULL;
 
     /* Values in expressions, function call parameters... */
-    if (tree->type == INT || tree->type == FL || tree->type == STR || tree->type == VAR_CONST)
+    if (tree->type == INT || tree->type == FL || tree->type == STR) {
         content = tree->data.nodeData.value.literal;
+    }
+
+    if (tree->type == VAR_CONST) {
+        content = tree->data.nodeData.value.identifier;
+    }
 
     /* Function declaration */
     if (tree->type == FN)

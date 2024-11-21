@@ -95,8 +95,6 @@ struct node_data {
 
         struct {
             char *literal;
-            int integer_value;
-            double float_value;
             char *identifier;
         } value;
     } nodeData;

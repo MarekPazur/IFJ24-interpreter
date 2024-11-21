@@ -254,7 +254,11 @@ void reduction(stack_t *stack, int expresion_length) {
 
 		/* Create operand node */
 		E.node = create_node(get_node_type(E.type, OPERAND));
-		E.node->data.nodeData.value.literal = E.token.lexeme.array;
+
+		if (E.node->type == VAR_CONST)
+			E.node->data.nodeData.value.identifier = E.token.lexeme.array;
+		else
+			E.node->data.nodeData.value.literal = E.token.lexeme.array;
 
 		E.id = E_OPERAND;
 		push(stack, E);

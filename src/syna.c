@@ -1095,13 +1095,13 @@ void function_call_params(Tparser* parser, TNode** current_node) {
             break;
         case TOKEN_LITERAL_I32:
             *current_node = create_node(INT);
-            (*current_node)->data.nodeData.value.integer_value = parser->current_token.value.i32;
+            (*current_node)->data.nodeData.value.literal = parser->current_token.lexeme.array;
             parser->state = STATE_coma;
             function_call_params(parser, &(*current_node)->right);
             break;
         case TOKEN_LITERAL_F64:
             *current_node = create_node(FL);
-            (*current_node)->data.nodeData.value.float_value = parser->current_token.value.f64;
+            (*current_node)->data.nodeData.value.literal = parser->current_token.lexeme.array;
             parser->state = STATE_coma;
             function_call_params(parser, &(*current_node)->right);
             break;
