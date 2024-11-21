@@ -20,6 +20,7 @@
 #include "precedent.h"
 #include "compiler_error.h"
 #include "lexer.h"
+#include "semantic.h"
 
 /**
  * @brief This function a data structure for the symtable to insert a variable/constant
@@ -136,8 +137,13 @@ void init_parser(token_t token) {
 
     TNode** root = &(parser->AST->root);
     root_code(parser, root);
-    
+
+    // debug functions
+    BT_print_tree(parser->AST->root);
     //debug_print_keys(parser->global_symtable);
+
+    /* SEMANTIC ANALYSIS */
+    semantic_analysis(parser->AST);
 }
 
 /**
@@ -186,7 +192,6 @@ void root_code(Tparser* parser, TNode** current_node) {
             break;
 
         case TOKEN_EOF:
-            BT_print_tree(parser->AST->root);
             return;
 
         default:
