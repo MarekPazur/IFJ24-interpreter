@@ -13,8 +13,10 @@
 #include "compiler_error.h"
 
 #include "precedent.h"
+#include "semantic.h"
 #include "token.h"
 #include "binary_tree.h"
+#include "syna.h"
 
 #define PT_SIZE 7
 
@@ -25,9 +27,11 @@
 
 bool precedence_debug = false;
 
-TSymtable* current_symtable = NULL;
+struct TScope current_symtable_scope;
 
 TData retrieved_data;
+
+TSymtable* identifier_residence;
 
 /* Simple term precedence table
 * Priority depends on operator type and its association
@@ -147,22 +151,15 @@ symbol token_to_symbol(token_t term) {
 	
 	        //Checking the existance of the variable and changing it's is_used value to true
 	        
-	        if (symtable_get_data(current_symtable, term.lexeme.array, &retrieved_data)){
-                    if( retrieved_data.variable.is_constant ){
-                        error = ERR_IDENTIFIER_REDEF_CONST_ASSIGN;
-                        return symbol;
-                    }
-                } else {
+	        if((identifier_residence = declaration_var_check(current_symtable_scope, term.lexeme.array)) == NULL){
+	            printf("I broke at the %s", term.lexeme.array);
                     error = ERR_UNDEFINED_IDENTIFIER;
                     return symbol;
                 }
                 
-                retrieved_data.variable.is_used = true;
+                symtable_get_data(identifier_residence, term.lexeme.array, &retrieved_data);
                 
-                if(!symtable_insert(current_symtable, term.lexeme.array, retrieved_data)){
-                    error = ERR_COMPILER_INTERNAL;
-                    return symbol;
-                }
+                retrieved_data.variable.is_used = true;
 	
 		symbol.id = I;
 		symbol.type = CONST_VAR_ID;
@@ -352,8 +349,8 @@ token_t fetch_token(t_buf* token_buffer) {
 
 /* Precedent analysis core function */
 /* Checks expression in assignment, condition, return */
-TNode* precedent(t_buf* token_buffer, token_id end_marker, TSymtable* local_symtable) {
-        current_symtable = local_symtable;
+TNode* precedent(t_buf* token_buffer, token_id end_marker, struct TScope cur_scope) {
+        current_symtable_scope = cur_scope;
 	stack_t sym_stack;
 	init_stack(&sym_stack);
 	PUSH_SYMBOL(END);

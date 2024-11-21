@@ -52,7 +52,7 @@ void shift(stack_t *stack, symbol next_symbol);			// < SHIFT
 void equal(stack_t *stack, symbol next_symbol);			// = EQUAL
 
 /* Precedent analysis main function */
-TNode* precedent(t_buf* token_buffer, token_id end_marker, TSymtable* local_symtable);
+TNode* precedent(t_buf* token_buffer, token_id end_marker, struct TScope cur_scope);
 
 
 // Symbol stack functions

@@ -763,6 +763,8 @@ void function_params(Tparser* parser, TNode** current_node) {
 void body(Tparser* parser, TNode** current_node) {
 
     TData retrieved_data;
+    
+    TSymtable* identifier_residence;
 
     if (error) return;
 
@@ -928,13 +930,14 @@ void body(Tparser* parser, TNode** current_node) {
                 return;
             if (parser->current_token.id == TOKEN_ASSIGNMENT) {
             
-                if (symtable_get_data(parser->scope.current_scope, parser->processed_identifier, &retrieved_data)){
-                    if( retrieved_data.variable.is_constant ){
-                        error = ERR_IDENTIFIER_REDEF_CONST_ASSIGN;
-                        return;
-                    }
-                } else {
+                if((identifier_residence = declaration_var_check(parser->scope, parser->processed_identifier)) == NULL){
                     error = ERR_UNDEFINED_IDENTIFIER;
+                    return;
+                }
+                
+                symtable_get_data(identifier_residence, parser->processed_identifier, &retrieved_data);
+                if( retrieved_data.variable.is_constant ){
+                    error = ERR_IDENTIFIER_REDEF_CONST_ASSIGN;
                     return;
                 }
                 
@@ -1171,13 +1174,14 @@ void body(Tparser* parser, TNode** current_node) {
 
             if (parser->current_token.id == TOKEN_ASSIGNMENT) {
             
-                if (symtable_get_data(parser->scope.current_scope, parser->processed_identifier, &retrieved_data)){
-                    if( retrieved_data.variable.is_constant ){
-                        error = ERR_IDENTIFIER_REDEF_CONST_ASSIGN;
-                        return;
-                    }
-                } else {
+                if((identifier_residence = declaration_var_check(parser->scope, parser->processed_identifier)) == NULL){
                     error = ERR_UNDEFINED_IDENTIFIER;
+                    return;
+                }
+                
+                symtable_get_data(identifier_residence, parser->processed_identifier, &retrieved_data);
+                if( retrieved_data.variable.is_constant ){
+                    error = ERR_IDENTIFIER_REDEF_CONST_ASSIGN;
                     return;
                 }
                 
@@ -1266,9 +1270,6 @@ void if_while_header(Tparser* parser, TNode** current_node, node_type type) {
     case STATE_lr_bracket:
         if (parser->current_token.id == TOKEN_BRACKET_ROUND_LEFT) { //checking for if ->(<-expression) |null_replacement| {
         
-            enter_sub_body(parser);
-            if (error) return;
-        
             (*current_node) = create_node(type);
             (*current_node)->data.nodeData.body.scope = parser->scope.current_scope;
             (*current_node)->data.nodeData.body.parent_scope = parser->scope.parent_scope;
@@ -1277,6 +1278,9 @@ void if_while_header(Tparser* parser, TNode** current_node, node_type type) {
 
             /* Expression */
             expression(parser, TOKEN_BRACKET_ROUND_RIGHT, &(*current_node)->left, false);
+            if (error) return;
+            
+            enter_sub_body(parser);
             if (error) return;
 
             parser->state = STATE_pipe;
@@ -1388,8 +1392,8 @@ void var_const_declaration(Tparser* parser, TNode** current_node, node_type type
     switch (parser->state) {
     case STATE_identifier:
         if (parser->current_token.id == TOKEN_IDENTIFIER) { //checking for var/const ->name<- = expression;
-        
-            if (symtable_search(parser->scope.current_scope, parser->current_token.lexeme.array)) {
+            
+            if (declaration_var_check(parser->scope, parser->current_token.lexeme.array) != NULL) {
                 error = ERR_IDENTIFIER_REDEF_CONST_ASSIGN;
                 return;
             }
@@ -1765,10 +1769,10 @@ void expression(Tparser* parser, token_id end, TNode **current_node, bool allow_
             }
 
         } else { // First token was ID, but Second wasn't left bracket or '.', so its an expression, not a function --> pass it to P.A.
-            (*current_node) = precedent(&t_buffer, end, parser->scope.current_scope); // buffered tokens passed so they dont get lost
+            (*current_node) = precedent(&t_buffer, end, parser->scope); // buffered tokens passed so they dont get lost
         }
 
     } else { // First token is NOT ID --> expression, at this point, Empty expression is Invalid
-        (*current_node) = precedent(&t_buffer, end, parser->scope.current_scope); // call precedence analysis for expression syntax analysis
+        (*current_node) = precedent(&t_buffer, end, parser->scope); // call precedence analysis for expression syntax analysis
     }
 }
