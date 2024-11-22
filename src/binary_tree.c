@@ -466,3 +466,15 @@ bool free_llist(linked_list_t* llist){
     llist->active = NULL;
     return true;
 }
+
+/**
+* Debug function for printing node type
+*/
+void BT_print_node_type (TNode *node) {
+    if (node == NULL) {
+        printf("NULL node\n");
+        return;
+    }
+
+    printf(WHITE_BOLD("NODE TYPE:")" %s\n", node_t_string[node->type]);
+}

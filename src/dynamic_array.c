@@ -23,7 +23,7 @@ void d_array_init(dynamic_array* array, int cap){
         error = ERR_COMPILER_INTERNAL;
         fprintf(stderr, "Error: an empty pointer was given to d_array_init function");
     }else {
-        array->array = (char *) malloc(cap * sizeof(char));
+        array->array = (char *) calloc(cap + 1, sizeof(char));
         if (array->array == NULL) {
             fprintf(stderr, "Error: an error occured during the alocation of the dynamic array");
             error = ERR_COMPILER_INTERNAL;
@@ -48,7 +48,7 @@ void d_array_append(dynamic_array* array, char element){
     }else {
         if (array->capacity == array->length) {
             array->capacity += array->capacity;
-            array->array = (char *) realloc(array->array, array->capacity * sizeof(int));
+            array->array = (char *) realloc(array->array, (array->capacity + 1) * sizeof(char));
         }
         if (array->array == NULL) {
             fprintf(stderr, "Error: an error occured during the realocation of the dynamic array");
@@ -56,6 +56,7 @@ void d_array_append(dynamic_array* array, char element){
         }else {
             array->array[array->length] = element;
             array->length++;
+            array->array[array->length] = '\0';
 
             error = SUCCESS;
         }

@@ -296,4 +296,10 @@ bool BT_get_data_parent(TBinaryTree* BT, node_data* data_out);
 */
 void BT_print_tree(TNode *tree);
 
+/**
+ * Prints given nodes Type
+ * \param Tnode pointer to given node
+*/
+void BT_print_node_type (TNode *node);
+
 #endif
