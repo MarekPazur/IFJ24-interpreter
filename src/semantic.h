@@ -15,4 +15,6 @@
 
 void semantic_analysis(TBinaryTree* AST);
 
+TSymtable* declaration_var_check(struct TScope scope, char* identifier);
+
 #endif
