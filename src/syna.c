@@ -140,7 +140,7 @@ void init_parser(token_t token) {
 
     // debug functions
     BT_print_tree(parser->AST->root);
-    //debug_print_keys(parser->global_symtable);
+    debug_print_keys(parser->global_symtable);
 
     /* SEMANTIC ANALYSIS */
     semantic_analysis(parser->AST);
@@ -287,6 +287,7 @@ void function_header(Tparser* parser, TNode** current_node) {
     
     TData param_data;
     int has_qmark = 0;
+    linked_list_t llist;
 
     if ((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
         return;
@@ -336,11 +337,17 @@ void function_header(Tparser* parser, TNode** current_node) {
         break;
     case STATE_lr_bracket:
         if (parser->current_token.id == TOKEN_BRACKET_ROUND_LEFT) { //checking for pub fn name->(<-) type{
+        
+            init_llist(&llist);
+            (*current_node)->data.nodeData.function.param_identifiers = llist;
+        
             parser->state = STATE_first_fn_param;
             function_params(parser, current_node);
+            
             parser->state = STATE_type;
             function_header(parser, current_node);
             break;
+            
         }
         error = ERR_SYNTAX;
         break;
@@ -486,6 +493,7 @@ void function_params(Tparser* parser, TNode** current_node) {
         return;
     switch (parser->state) {
     case STATE_first_fn_param:
+        
         switch (parser->current_token.id) {
         case TOKEN_BRACKET_ROUND_RIGHT: //checking for pub fn name(->)<- type{
             parser->state = STATE_type;
@@ -493,6 +501,11 @@ void function_params(Tparser* parser, TNode** current_node) {
         case TOKEN_IDENTIFIER: //checking for pub fn name(->param<- : type) type{
             
             parser->processed_identifier = parser->current_token.lexeme.array;
+            
+            if(!insert_llist(&(*current_node)->data.nodeData.function.param_identifiers, parser->processed_identifier)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
             
             param_data = declaration_data(false, true, UNKNOWN_T);
             if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, param_data)){
@@ -701,6 +714,11 @@ void function_params(Tparser* parser, TNode** current_node) {
         case TOKEN_IDENTIFIER: //checking for pub fn name(param : type ,->param<- : type) type{
         
             parser->processed_identifier = parser->current_token.lexeme.array;
+            
+            if(!insert_llist(&(*current_node)->data.nodeData.function.param_identifiers, parser->processed_identifier)){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
             
             TData param_data;
             param_data = declaration_data(false, true, UNKNOWN_T);

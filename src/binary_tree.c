@@ -407,3 +407,62 @@ void BT_print_tree(TNode *tree) {
     else
         printf("Tree is NULL!\n");
 }
+
+void init_llist(linked_list_t* llist){
+    llist->first = NULL;
+    llist->active = NULL;
+}
+
+bool insert_llist(linked_list_t* llist, char* inserted){
+    item_ll_t* new_item = (item_ll_t*)malloc(sizeof(item_ll_t));
+    if (new_item == NULL) {
+        return false;
+    }
+
+    new_item->identifier = inserted;
+    if (!new_item->identifier) {
+        free(new_item);
+        return false;
+    }
+    new_item->next = NULL;
+
+    if (llist->first == NULL) {
+        llist->first = new_item;
+    } else {
+        item_ll_t* current_item = llist->first;
+        while (current_item->next != NULL) {
+            current_item = current_item->next;
+        }
+        current_item->next = new_item;
+    }
+    return true;
+}
+
+bool set_first_llist(linked_list_t* llist){
+    if (llist->first == NULL) {
+        return false;
+    }
+    llist->active = llist->first;
+    return true;
+}
+
+bool next_llist(linked_list_t* llist){
+    if(llist->active == NULL){
+        return false;
+    }
+    llist->active = llist->active->next;
+    return true;
+}
+
+bool free_llist(linked_list_t* llist){
+    item_ll_t* current_item = llist->first;
+    while (current_item != NULL) {
+        item_ll_t* next_item = current_item->next;
+        free(current_item->identifier);
+        free(current_item);
+        current_item = next_item;
+    }
+    llist->first = NULL;
+    llist->active = NULL;
+    return true;
+}

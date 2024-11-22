@@ -69,6 +69,34 @@ typedef enum return_type {
 	NULL_TYPE
 } return_type;
 
+/* LLIST STRUCTURE */
+typedef struct linked_list {
+    struct item_ll *first;
+    struct item_ll *active;
+} linked_list_t;
+
+/* ITEM STRUCTURE */
+typedef struct item_ll {
+    char* identifier;    // Symbol for precedence
+    struct item_ll *next;
+} item_ll_t;
+
+// Llist functions
+/* Initializes llist */
+void init_llist(linked_list_t* llist);
+
+/* Inserts an item into the llist */
+bool insert_llist(linked_list_t* llist, char* inserted);
+
+/* Sets the active item to the first */
+bool set_first_llist(linked_list_t* llist);
+
+/* Sets the active item to the next item */
+bool next_llist(linked_list_t* llist);
+
+/* Frees all the items of the llist */
+bool free_llist(linked_list_t* llist);
+
 /*************************/
 /*      BINARY TREE      */
 /*************************/
@@ -83,6 +111,7 @@ struct node_data {
             char *identifier;
             return_type type;
             TSymtable *scope;
+            linked_list_t param_identifiers;
         } function;
 
         struct {
