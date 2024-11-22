@@ -94,6 +94,9 @@ bool set_first_llist(linked_list_t* llist);
 /* Sets the active item to the next item */
 bool next_llist(linked_list_t* llist);
 
+/* Sets the active item to the next item */
+bool get_value_llist(linked_list_t* llist, char** value);
+
 /* Frees all the items of the llist */
 bool free_llist(linked_list_t* llist);
 

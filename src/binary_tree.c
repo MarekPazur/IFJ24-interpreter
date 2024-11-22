@@ -467,6 +467,14 @@ bool free_llist(linked_list_t* llist){
     return true;
 }
 
+bool get_value_llist(linked_list_t* llist, char** value){
+    if (llist->active == NULL) {
+        return false;
+    }
+    *value = llist->active->identifier;
+    return true;
+}
+
 /**
 * Debug function for printing node type
 */
