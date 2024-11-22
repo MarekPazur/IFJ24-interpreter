@@ -751,8 +751,8 @@ void function_params(Tparser* parser, TNode** current_node) {
     default:
         error = ERR_SYNTAX;
     }
-    return;
 
+    return;
 }
 
 /**

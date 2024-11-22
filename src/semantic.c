@@ -11,6 +11,8 @@
 
 #include "semantic.h"
 #include "compiler_error.h"
+#include "binary_tree.h"
+#include "symtable.h"
 
 /**
 * Functions for Semantic Analysis on assembled Abstract Syntax Tree
@@ -22,7 +24,11 @@ void semantic_analysis(TBinaryTree* AST) {
 		error = ERR_COMPILER_INTERNAL;
 	}
 
-	printf("Hello semantic world!\n");
+	/* Program/Root Node (Starting point of the program) */
+	TNode** program = &(AST->root);
 
-	AST = AST;
+	/* Lze jde zkontrolovat, jestli globalni symtable obsahuje main */
+
+	BT_print_node_type(*program);
+	debug_print_keys((*program)->data.nodeData.program.globalSymTable);
 }
