@@ -15,6 +15,12 @@
 
 void semantic_analysis(TBinaryTree* AST);
 
+void FunctionSemantics(TNode* func);
+
+void CommandSemantics(TNode* Command);
+
 TSymtable* declaration_var_check(struct TScope scope, char* identifier);
+
+
 
 #endif

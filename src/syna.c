@@ -139,8 +139,8 @@ void init_parser(token_t token) {
     root_code(parser, root);
 
     // debug functions
-    BT_print_tree(parser->AST->root);
-    debug_print_keys(parser->global_symtable);
+    //BT_print_tree(parser->AST->root);
+    //debug_print_keys(parser->global_symtable);
 
     /* SEMANTIC ANALYSIS */
     semantic_analysis(parser->AST);
