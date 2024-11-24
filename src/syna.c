@@ -890,9 +890,8 @@ void body(Tparser* parser, TNode** current_node) {
             if (error) return;
 
             (*current_node)->left = create_node(BODY);
-            (*current_node)->left->data.nodeData.body.scope = parser->scope.current_scope;
-            (*current_node)->left->data.nodeData.body.parent_scope = parser->scope.parent_scope;
-            
+            (*current_node)->left->data.nodeData.body.current_scope = &parser->scope;
+           
             parser->state = STATE_command;
             body(parser, &(*current_node)->left->right);
             if (error) return;
@@ -1037,8 +1036,7 @@ void body(Tparser* parser, TNode** current_node) {
             if (error) return;
 
             (*current_node)->left = create_node(ELSE);
-            (*current_node)->left->data.nodeData.body.scope = parser->scope.current_scope;
-            (*current_node)->left->data.nodeData.body.parent_scope = parser->scope.parent_scope;
+            (*current_node)->left->data.nodeData.body.current_scope = &parser->scope;
             
             parser->state = STATE_command;
             body(parser, &(*current_node)->left->right);
@@ -1112,8 +1110,7 @@ void body(Tparser* parser, TNode** current_node) {
             if (error) return;
         
             (*current_node)->left = create_node(ELSE);
-            (*current_node)->left->data.nodeData.body.scope = parser->scope.current_scope;
-            (*current_node)->left->data.nodeData.body.parent_scope = parser->scope.parent_scope;
+            (*current_node)->left->data.nodeData.body.current_scope = &parser->scope;
             
             parser->state = STATE_open_else;
             body(parser, &(*current_node)->left->right);
@@ -1289,8 +1286,7 @@ void if_while_header(Tparser* parser, TNode** current_node, node_type type) {
         if (parser->current_token.id == TOKEN_BRACKET_ROUND_LEFT) { //checking for if ->(<-expression) |null_replacement| {
         
             (*current_node) = create_node(type);
-            (*current_node)->data.nodeData.body.scope = parser->scope.current_scope;
-            (*current_node)->data.nodeData.body.parent_scope = parser->scope.parent_scope;
+            (*current_node)->data.nodeData.body.current_scope = &parser->scope;
             
             parser->state = STATE_operand;
 
