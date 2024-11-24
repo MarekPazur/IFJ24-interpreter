@@ -19,6 +19,8 @@ void FunctionSemantics(TNode* func);
 
 void CommandSemantics(TNode* Command);
 
+void FunctionCallSemantics(TNode *functionCall);
+
 TSymtable* declaration_var_check(struct TScope scope, char* identifier);
 
 

@@ -106,10 +106,12 @@ bool free_llist(linked_list_t* llist);
 
 struct node_data {
     union {
+    	/* ROOT/PROGRAM */
         struct {
             TSymtable *globalSymTable;
         } program;
 
+        /* FUNCTION DEFINITION */
         struct {
             char *identifier;
             return_type type;
@@ -117,6 +119,7 @@ struct node_data {
             linked_list_t param_identifiers;
         } function;
 
+        /* WHILE-IF-ELSE-BODY */
         struct {
             TSymtable *scope;
             struct TScope *parent_scope;
@@ -124,10 +127,12 @@ struct node_data {
             char* null_replacement;
         } body;
         
+        /* FUN. CALL, VAR/CONST DECL., ASSIGNMENT */
         struct {
             char *identifier;
         } identifier;
 
+        /* LITERALS OR USAGE OF VARIABLE AS VALUE */
         struct {
             char *literal;
             char *identifier;
