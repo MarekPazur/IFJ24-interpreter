@@ -8,39 +8,45 @@
 
 #ifndef SYMTABLE_H
 #define SYMTABLE_H
-
+#include "dynamic_array.h"
 typedef struct symtable TSymtable;
 
 typedef char* TKey;
 
-typedef struct data TData;
+typedef union data TData;
 
-typedef enum type{
-    INTEGER,
-    FLOAT,
-    STRING,
-    BOOLEAN
+typedef enum type {
+    UNKNOWN_T,    // type unknown when defined, must be updated later else error
+    VOID_T,       // void
+    INTEGER_T,    // i32
+    FLOAT_T,      // f64
+    U8_SLICE_T,   // u8[]
 } Type;
 
-typedef union value{
-    long int int_val;
-    double float_val;
-    char* string_var;
-    bool bool_val;
-} Value;
+union data {
+    struct {
+        bool is_null_type;            // Return type can be nullable '?type'
+        
+        dynamic_array argument_types; // Formal parameter types
+        Type return_type;             // Return type
+        TSymtable* function_scope;     // Local scope of function instance
+    } function;
 
-struct data{
-    Type type;
-    Value value;
-    bool is_null;
-    bool is_constant;
+    struct {
+        bool is_null_type;            // Variable type can be nullable '?type'
+        bool is_constant;             // Variable is constant
+        bool is_used;                 // Variable has to be used in its life
+        bool comp_runtime;            // Variable or value that is known and evaluated during compilation
+
+        Type type;                    // Variable data type
+    } variable;
 };
 
 // SYMTABLE OPERATIONS
 
 /**
  * Initializes symtable
- * \return unitialized symtable or NULL in case of an memory allocation error
+ * \return initialized symtable or NULL in case of an memory allocation error
  */
 TSymtable* symtable_init(void);
 

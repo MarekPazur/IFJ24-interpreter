@@ -9,13 +9,153 @@
 #ifndef BINARY_TREE_H
 #define BINARY_TREE_H
 
+#include "symtable.h"
+
 typedef struct binary_tree TBinaryTree;
+typedef struct node TNode;
+typedef struct node_data node_data;
+
+/***************************/
+/*		AST utilities	   */
+/***************************/
+typedef enum node_type {
+	PROGRAM,			// Root node
+
+	PROLOGUE,			// Import
+	FN,					// Functions
+
+	COMMAND,			// Wrapper for statements
+	METADATA,			// 
+	NULL_REPLACEMENT,	// |not_null_variable|
+	
+	VAR_DECL,			// declaration of a variable
+	CONST_DECL,			// declaration of a constant
+	
+	ASSIG,				// assignment node
+
+	BODY,				// "headless" body {}
+	WHILE,				// while loop
+	IF,					// if condition
+	ELSE,				// else 
+	
+	INT,				// integer i32 datatype LITERAL
+	FL,					// float f64 datatype	LITERAL
+	U8,					// U8 SLICE
+	STR,				// string datatype		LITERAL
+	VAR_CONST,			// variable/constant, u8[] can be only in this form, not on its own
+
+	EXPRESSION,			// node containing expression
+	OP_ADD,				// +
+	OP_SUB,				// -
+	OP_MUL,				// *
+	OP_DIV,				// /
+	OP_EQ,				// ==
+	OP_NEQ,				// !=
+	OP_GT,				// >
+	OP_LS,				// <
+	OP_GTE,				// >=
+	OP_LSE,				// <=
+
+	FUNCTION_CALL,		// foo(param_list)
+
+	RETURN 				// return (expression)
+} node_type;
+
+typedef enum return_type {
+	VOID_TYPE,
+	I32,
+	F64,
+	U8_SLICE,
+	NULL_TYPE
+} return_type;
+
+/* LLIST STRUCTURE */
+typedef struct linked_list {
+    struct item_ll *first;
+    struct item_ll *active;
+} linked_list_t;
+
+/* ITEM STRUCTURE */
+typedef struct item_ll {
+    char* identifier;    // Symbol for precedence
+    struct item_ll *next;
+} item_ll_t;
+
+// Llist functions
+/* Initializes llist */
+void init_llist(linked_list_t* llist);
+
+/* Inserts an item into the llist */
+bool insert_llist(linked_list_t* llist, char* inserted);
+
+/* Sets the active item to the first */
+bool set_first_llist(linked_list_t* llist);
+
+/* Sets the active item to the next item */
+bool next_llist(linked_list_t* llist);
+
+/* Sets the active item to the next item */
+bool get_value_llist(linked_list_t* llist, char** value);
+
+/* Frees all the items of the llist */
+bool free_llist(linked_list_t* llist);
+
+/*************************/
+/*      BINARY TREE      */
+/*************************/
+
+struct node_data {
+    union {
+        struct {
+            TSymtable *globalSymTable;
+        } program;
+
+        struct {
+            char *identifier;
+            return_type type;
+            TSymtable *scope;
+            linked_list_t param_identifiers;
+        } function;
+
+        struct {
+            TSymtable *scope;
+            struct TScope *parent_scope;
+            bool is_nullable;
+            char* null_replacement;
+        } body;
+        
+        struct {
+            char *identifier;
+        } identifier;
+
+        struct {
+            char *literal;
+            char *identifier;
+        } value;
+    } nodeData;
+};
+
+struct node{
+    TNode* parent;
+    TNode* left;
+    TNode* right;
+
+    node_type type;
+    node_data data;
+};
+
+struct binary_tree{
+    TNode* root;
+    TNode* active;
+};
 
 /**
  * Allocates memory for binary tree and initializes it
  * \return New binary tree | NULL in case of a memory allocation error
  */
 TBinaryTree* BT_init(void);
+
+TNode* create_node(node_type type);
 
 /**
  * Checks if binary tree is active. Use everytime before using operation with an active node.
@@ -72,7 +212,7 @@ void BT_go_right(TBinaryTree* BT);
  * \param data
  * \return True: Succes, False: Memory allocation error | BT is NULL | BT is not active | Active node has a left node
  */
-bool BT_insert_left(TBinaryTree* BT, token_t data);
+bool BT_insert_left(TBinaryTree* BT, node_type type);
 
 /**
  * Inserts node as a right child of the active node.
@@ -80,7 +220,7 @@ bool BT_insert_left(TBinaryTree* BT, token_t data);
  * \param data
  * \return True: Succes, False: Memory allocation error | BT is NULL | BT is not active | Active node has a right node
  */
-bool BT_insert_right(TBinaryTree* BT, token_t data);
+bool BT_insert_right(TBinaryTree* BT, node_type type);
 
 /**
  * Checks if the binary tree has a root.
@@ -95,7 +235,7 @@ bool BT_has_root(TBinaryTree* BT);
  * \param data
  * \return True: Success, False: Memory allocation error | BT is NULL | BT already has a root node
  */
-bool BT_insert_root(TBinaryTree* BT, token_t data);
+bool BT_insert_root(TBinaryTree* BT, node_type type);
 
 /**
  * Frees all nodes
@@ -127,7 +267,7 @@ void BT_free_active_tree(TBinaryTree* BT);
  * \param[out] data_out Data output variable
  * \return True: Success, False: NULL pointer argument | Binary tree is not active
  */
-bool BT_get_data(TBinaryTree* BT, token_t* data_out);
+bool BT_get_data(TBinaryTree* BT, node_data* data_out);
 
 /**
  *
@@ -135,7 +275,7 @@ bool BT_get_data(TBinaryTree* BT, token_t* data_out);
  * \param[out] data_out Data output variable
  * \return True: Success, False: NULL pointer argument | Binary tree is not active | Active node does not have a left node
  */
-bool BT_get_data_left(TBinaryTree* BT, token_t* data_out);
+bool BT_get_data_left(TBinaryTree* BT, node_data* data_out);
 
 /**
  *
@@ -143,7 +283,7 @@ bool BT_get_data_left(TBinaryTree* BT, token_t* data_out);
  * \param[out] data_out Data output variable
  * \return True: Success, False: NULL pointer argument | Binary tree is not active | Active node does not have a right node
  */
-bool BT_get_data_right(TBinaryTree* BT, token_t* data_out);
+bool BT_get_data_right(TBinaryTree* BT, node_data* data_out);
 
 /**
  *
@@ -151,6 +291,18 @@ bool BT_get_data_right(TBinaryTree* BT, token_t* data_out);
  * \param[out] data_out Data output variable
  * \return True: Success, False: NULL pointer argument | Binary tree is not active | Active node does not have a parent node
  */
-bool BT_get_data_parent(TBinaryTree* BT, token_t* data_out);
+bool BT_get_data_parent(TBinaryTree* BT, node_data* data_out);
+
+/**
+ * Prints given tree (subtree)
+ * \param tree TNode Pointer to tree
+*/
+void BT_print_tree(TNode *tree);
+
+/**
+ * Prints given nodes Type
+ * \param Tnode pointer to given node
+*/
+void BT_print_node_type (TNode *node);
 
 #endif

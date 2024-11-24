@@ -268,7 +268,7 @@ token_t get_token(void) {
                         }
                     }
 
-                    d_array_remove(&token.lexeme, token.lexeme.length - 1);
+                    //d_array_remove(&token.lexeme, token.lexeme.length - 1);
                     return token;
                 }
                 break;
@@ -290,6 +290,7 @@ token_t get_token(void) {
                 } else {
                     token.id = TOKEN_LITERAL_I32;
                     ungetc(c, stdin);
+                    d_array_append(&token.lexeme, '\0');
                     return token;
                 }
                 break;
@@ -307,6 +308,7 @@ token_t get_token(void) {
                 else {
                     token.id = TOKEN_LITERAL_I32;
                     ungetc(c, stdin);
+                    d_array_append(&token.lexeme, '\0');
                     return token;
                 }
                 break;
@@ -336,6 +338,7 @@ token_t get_token(void) {
                 } else {
                     token.id = TOKEN_LITERAL_F64;
                     ungetc(c, stdin);
+                    d_array_append(&token.lexeme, '\0');
                     return token;
                 }
                 break;
@@ -375,6 +378,7 @@ token_t get_token(void) {
                 } else {
                     token.id = TOKEN_LITERAL_F64;
                     ungetc(c, stdin);
+                    d_array_append(&token.lexeme, '\0');
                     return token;
                 }
                 break;
@@ -396,7 +400,7 @@ token_t get_token(void) {
                         fprintf(stderr, RED_BOLD("error")": invalid builtin function\n");
                     }
 
-                    d_array_remove(&token.lexeme, token.lexeme.length - 1);
+                    //d_array_remove(&token.lexeme, token.lexeme.length - 1);
 
                     return token;
                 }
@@ -404,6 +408,7 @@ token_t get_token(void) {
 
             case STATE_STRING_START:
                 if (c == '"') {
+                    d_array_append(&token.lexeme, '\0');
                     return token;
                 } else if (c == '\\') {
                     c = getc(stdin);
@@ -495,6 +500,7 @@ token_t get_token(void) {
                     }
                 } else if(!isspace(c) || c == EOF){
                     ungetc(c, stdin);
+                    d_array_append(&token.lexeme, '\0');
                     return token;
                 } else {
                     token.id = TOKEN_ERROR;
@@ -534,6 +540,9 @@ bool is_identifier(char c){
     return false;
 }
 
+/**
+ *  Prints information about processed token
+ */
 void print_token(token_t token) {
     char *token_info[] = {
     "DEFAULT",
@@ -566,7 +575,7 @@ void print_token(token_t token) {
 
     /* Binary operators */
     "TOKEN_ADDITION",
-    "TOKEN_SUBSTRACTION,",
+    "TOKEN_SUBSTRACTION",
     "TOKEN_MULTIPLICATION",
     "TOKEN_DIVISION",
     
@@ -600,12 +609,12 @@ void print_token(token_t token) {
     
     printf(WHITE_BOLD("TOKEN: %s"), token_info[token.id]);
     
-    if(token.lexeme.length > 0){
+    if(token.lexeme.length > 0 && token.lexeme.array != NULL){
         printf(WHITE_BOLD(" <LEXEME>: "));
         printf("\033[1;33m'");
         d_array_print(&token.lexeme);
         printf("'\033[0;37m");
     }
 
-    putchar('\n');
+    //putchar('\n');
 }

@@ -11,7 +11,6 @@
 
 #include "dynamic_array.h"
 
-//@TODO finish and maybe rework
 typedef enum token_id {
 	TOKEN_DEFAULT,			// Default state
 	TOKEN_ERROR,			// Invalid token
@@ -77,14 +76,48 @@ typedef enum token_id {
 	TOKEN_COMMA 				// ,
 } token_id;
 
-/* Structure containing data about tokens */
+/*
+* Structure containing data about tokens
+*/
 typedef struct token {
 	token_id id;			// ID of current token (token type)
 	dynamic_array lexeme;	// Dyn. array type containing sequence of alphanumerical + '_' characters  (lexeme)
-	union {					// Union type containing value of integer or decimal number
-		int i32;
-		double f64;
-	} value;
+	// Lexeme containts identifiers, values
 } token_t;
+
+typedef struct token_buffer t_buf; 
+typedef struct t_buf_item t_buf_item;
+
+/**
+* Item of the queue
+*/
+struct t_buf_item {
+	token_t token;
+	t_buf_item *next;
+};
+
+/*
+* Token buffer implemented as Queue (FIFO)
+*/
+struct token_buffer {
+	t_buf_item *head;
+	t_buf_item *tail;
+};
+
+/*
+* Prints information about current token (debug info)
+*/
+void print_token(token_t token);
+
+/*
+* Token Queue Buffer (FIFO) functions
+*/
+void init_t_buf (t_buf *buf);
+int is_empty_t_buf (t_buf *buf);
+void enqueue_t_buf (t_buf *buf, token_t token);
+token_t get_t_buf (t_buf *buf);
+void free_t_buf (t_buf *buf);
+void print_t_buf (t_buf *buf);
+char *func_id_concat(char *lex_prefix, char *lex_suffix);
 
 #endif 
