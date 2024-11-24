@@ -41,11 +41,9 @@ void semantic_analysis(TBinaryTree* AST) {
     /* Get global symtable from Program/Root Node */
     globalSymTable = (*program)->data.nodeData.program.globalSymTable;
 
-    /* Check existence of main function */
-    if(symtable_search(globalSymTable, "main") == false) {
-        error = ERR_SEMANTIC_OTHER;
-        return;
-    }
+
+    main_function_check(globalSymTable);
+    check_error();
 
     /* Check functions with semantic rules */
     TNode* func = (*program)->left;
@@ -189,6 +187,31 @@ void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope) {
     }
 
     check_error();
+}
+
+
+/**
+* Main function semantic checks 
+*/
+void main_function_check(TSymtable* globalSymTable) {
+    /* Check existence of main function */
+    if(symtable_search(globalSymTable, "main") == false) {
+        error = ERR_UNDEFINED_IDENTIFIER;
+        return;
+    }
+
+    TData function_data;
+    /* Get main function metadata */
+    if (symtable_get_data(globalSymTable, "main", &function_data) == false) {
+        error = ERR_COMPILER_INTERNAL;
+        return;
+    }
+
+    /* Check defined Parameters and Return value */
+    if (function_data.function.argument_types.length != 0 || function_data.function.return_type != VOID_T) {
+        error = ERR_PARAM_TYPE_RETURN_VAL;
+        return;
+    }
 }
 
 
