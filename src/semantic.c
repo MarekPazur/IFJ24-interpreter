@@ -68,6 +68,12 @@ void FunctionSemantics(TNode* func) {
 
     /* Once we arrive at a return in CommandSemantics we set the global variable has Return to true*/
     CommandSemantics(Command, &function_scope); // Pass first command with functions symtable
+
+    /* Check return statement missing if its not void function */
+    if (hasReturn == false && func->data.nodeData.function.type != VOID_TYPE) {
+        error = ERR_RETURN_VALUE_EXPRESSION;
+        return;
+    }
 }
 
 void CommandSemantics(TNode* Command, scope_t* current_scope) {
@@ -110,6 +116,11 @@ void CommandSemantics(TNode* Command, scope_t* current_scope) {
             FunctionCallSemantics(command_instance, current_scope);
             check_error();
             break;
+
+        case RETURN:
+            //ExpressionSemantics(command_instance->left);
+            hasReturn = true;
+            break;    
 
         default:
             break;
