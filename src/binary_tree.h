@@ -121,8 +121,7 @@ struct node_data {
 
         /* WHILE-IF-ELSE-BODY */
         struct {
-            TSymtable *scope;
-            struct TScope *parent_scope;
+            struct TScope *current_scope;
             bool is_nullable;
             char* null_replacement;
         } body;
