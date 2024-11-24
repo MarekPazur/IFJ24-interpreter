@@ -129,6 +129,7 @@ struct node_data {
         /* FUN. CALL, VAR/CONST DECL., ASSIGNMENT */
         struct {
             char *identifier;
+            bool is_disposeable;
         } identifier;
 
         /* LITERALS OR USAGE OF VARIABLE AS VALUE */
