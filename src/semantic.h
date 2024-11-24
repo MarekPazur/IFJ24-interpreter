@@ -10,6 +10,7 @@
 #define SEMANTIC_H
 
 #include "token.h"
+#include "syna.h"
 #include "symtable.h"
 #include "binary_tree.h"
 
@@ -25,5 +26,6 @@ TSymtable* declaration_var_check(struct TScope scope, char* identifier);
 
 // Helper functions
 int formal_param_count(TNode *formal_param);
+bool id_defined(struct TScope* scope, char* identifier);
 
 #endif

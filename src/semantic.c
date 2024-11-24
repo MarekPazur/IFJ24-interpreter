@@ -61,7 +61,7 @@ void semantic_analysis(TBinaryTree* AST) {
 void FunctionSemantics(TNode* func) {
     TNode* Command = func->right; // Get first command wrapper of the function
 
-    scope_t function_scope = func->data.nodeData.function.scope;
+    scope_t function_scope = {.current_scope = func->data.nodeData.function.scope, .parent_scope = NULL};
 
     /* Once we arrive at a return in CommandSemantics we set the global variable has Return to true*/
     CommandSemantics(Command, &function_scope); // Pass first command with functions symtable
@@ -79,7 +79,7 @@ void CommandSemantics(TNode* Command, scope_t* current_scope) {
         }
 
         BT_print_node_type(command_instance);
-        scope_t *scope;
+        scope_t *sub_scope; // sub-scope of current scope, used when WHEN,IF,ELSE,{} encountered, since they have its own local symtable
 
         switch (command_instance->type) {
         case WHILE:
@@ -87,8 +87,8 @@ void CommandSemantics(TNode* Command, scope_t* current_scope) {
         case ELSE:
         case BODY:
             //ExpressionSemantics(command_instance->left);
-            scope = command_instance->data.nodeData.body.current_scope;
-            CommandSemantics(command_instance->right, scope); // Recursively call so we can return to original node as soon as we explore the branch on the left side caused by a while or if
+            sub_scope = command_instance->data.nodeData.body.current_scope;
+            CommandSemantics(command_instance->right, sub_scope); // Recursively call so we can return to original node as soon as we explore the branch on the left side caused by a while or if
             check_error();
             break;
 
@@ -151,11 +151,19 @@ void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope) {
     int param_position = 0;
 
     while (formal_param) {
-        char *variable_id;
+        char *variable_id, type;
+
+        type = real_param[param_position]; type = type;
 
         if (formal_param->type == VAR_CONST) {
             variable_id = formal_param->data.nodeData.value.identifier;
-        }
+
+            if (id_defined(current_scope, variable_id) == false) {
+                error = ERR_UNDEFINED_IDENTIFIER;
+                break;
+            }
+
+        } 
 /*
         //if (real_param[param_position] == 'i' );
 
@@ -209,3 +217,18 @@ int formal_param_count(TNode *formal_param) {
 
     return param_count;
 }
+
+/**
+* Checks if var/const is defined in given scope
+*/
+bool id_defined(struct TScope* scope, char* identifier) {
+    while(scope) {
+         if (symtable_search(scope->current_scope, identifier)) {
+            return true;
+         }
+
+         scope = scope->parent_scope;
+    }
+
+    return false;
+} 
