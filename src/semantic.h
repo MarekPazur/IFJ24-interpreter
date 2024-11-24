@@ -26,6 +26,8 @@ TSymtable* declaration_var_check(struct TScope scope, char* identifier);
 
 // Helper functions
 int formal_param_count(TNode *formal_param);
-bool id_defined(struct TScope* scope, char* identifier);
+bool id_defined(struct TScope* scope, char* identifier,  TSymtable** out_sym);
+char get_var_type(Type type);
+char get_literal_type(int type);
 
 #endif
