@@ -18,7 +18,7 @@ void semantic_analysis(TBinaryTree* AST);
 
 void FunctionSemantics(TNode* func);
 
-void CommandSemantics(TNode* Command, scope_t* current_scope);
+void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func);
 
 void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope);
 

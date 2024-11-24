@@ -67,7 +67,7 @@ void FunctionSemantics(TNode* func) {
     scope_t function_scope = {.current_scope = func->data.nodeData.function.scope, .parent_scope = NULL};
 
     /* Once we arrive at a return in CommandSemantics we set the global variable has Return to true*/
-    CommandSemantics(Command, &function_scope); // Pass first command with functions symtable
+    CommandSemantics(Command, &function_scope, func); // Pass first command with functions symtable
 
     /* Check return statement missing if its not void function */
     if (hasReturn == false && func->data.nodeData.function.type != VOID_TYPE) {
@@ -76,7 +76,10 @@ void FunctionSemantics(TNode* func) {
     }
 }
 
-void CommandSemantics(TNode* Command, scope_t* current_scope) {
+void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
+
+    TData function_data;
+
     while (Command) {
 
         TNode* command_instance = Command->left; // Get real command from the wrapper
@@ -97,7 +100,7 @@ void CommandSemantics(TNode* Command, scope_t* current_scope) {
         case BODY:
             //ExpressionSemantics(command_instance->left);
             sub_scope = command_instance->data.nodeData.body.current_scope;
-            CommandSemantics(command_instance->right, sub_scope); // Recursively call so we can return to original node as soon as we explore the branch on the left side caused by a while or if
+            CommandSemantics(command_instance->right, sub_scope, func); // Recursively call so we can return to original node as soon as we explore the branch on the left side caused by a while or if
             check_error();
             break;
 
@@ -108,7 +111,24 @@ void CommandSemantics(TNode* Command, scope_t* current_scope) {
                 FunctionCallSemantics(command_instance->left, current_scope);
             check_error();
             break;
-
+        
+        case ASSIG:
+            if (command_instance->left->type == FUNCTION_CALL) {
+                if ( command_instance->data.nodeData.identifier.is_disposeable ) {
+                    /* Get functions metadata */
+                    if (symtable_get_data(globalSymTable, command_instance->left->data.nodeData.identifier.identifier, &function_data) == false) {
+                        error = ERR_COMPILER_INTERNAL;
+                        return;
+                    }
+                    
+                    if ( function_data.function.return_type == VOID_T ) {
+                        error = ERR_PARAM_TYPE_RETURN_VAL;
+                        return;
+                    }
+                }
+            }
+            break;
+        
         case FUNCTION_CALL:
             /* while this approach would probably work to some extent, we need to check other things that I believe we'll be able to check further on function call, arguments, etc.
             if(symtable_search(command.instance.function.id) == false)
@@ -118,6 +138,10 @@ void CommandSemantics(TNode* Command, scope_t* current_scope) {
             break;
 
         case RETURN:
+            if ( (command_instance->left == NULL && func->data.nodeData.function.type != VOID_TYPE) || (command_instance->left != NULL && func->data.nodeData.function.type == VOID_TYPE) ){
+                error = ERR_RETURN_VALUE_EXPRESSION;
+                return;
+            }
             //ExpressionSemantics(command_instance->left);
             hasReturn = true;
             break;    
