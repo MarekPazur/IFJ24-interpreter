@@ -78,8 +78,6 @@ void FunctionSemantics(TNode* func) {
 
 void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
 
-    TData function_data;
-
     while (Command) {
 
         TNode* command_instance = Command->left; // Get real command from the wrapper
@@ -113,20 +111,8 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
             break;
         
         case ASSIG:
-            if (command_instance->left->type == FUNCTION_CALL) {
-                if ( command_instance->data.nodeData.identifier.is_disposeable ) {
-                    /* Get functions metadata */
-                    if (symtable_get_data(globalSymTable, command_instance->left->data.nodeData.identifier.identifier, &function_data) == false) {
-                        error = ERR_COMPILER_INTERNAL;
-                        return;
-                    }
-                    
-                    if ( function_data.function.return_type == VOID_T ) {
-                        error = ERR_PARAM_TYPE_RETURN_VAL;
-                        return;
-                    }
-                }
-            }
+            assig_check(command_instance);
+            check_error();
             break;
         
         case FUNCTION_CALL:
@@ -224,6 +210,24 @@ void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope) {
     check_error();
 }
 
+void assig_check(TNode* command_instance){
+    TData function_data;
+    
+    if (command_instance->left->type == FUNCTION_CALL) {
+        if ( command_instance->data.nodeData.identifier.is_disposeable ) {
+            /* Get functions metadata */
+            if (symtable_get_data(globalSymTable, command_instance->left->data.nodeData.identifier.identifier, &function_data) == false) {
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+                    
+            if ( function_data.function.return_type == VOID_T ) {
+                error = ERR_PARAM_TYPE_RETURN_VAL;
+                return;
+            }
+        }
+    }
+}
 
 /**
 * Main function semantic checks 

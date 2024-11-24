@@ -24,6 +24,8 @@ void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope);
 
 void main_function_check(TSymtable* globalSymTable);
 
+void assig_check(TNode* command_instance);
+
 TSymtable* declaration_var_check(struct TScope scope, char* identifier);
 
 // Helper functions
