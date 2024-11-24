@@ -17,12 +17,13 @@ void semantic_analysis(TBinaryTree* AST);
 
 void FunctionSemantics(TNode* func);
 
-void CommandSemantics(TNode* Command);
+void CommandSemantics(TNode* Command, scope_t* current_scope);
 
-void FunctionCallSemantics(TNode *functionCall);
+void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope);
 
 TSymtable* declaration_var_check(struct TScope scope, char* identifier);
 
-
+// Helper functions
+int formal_param_count(TNode *formal_param);
 
 #endif
