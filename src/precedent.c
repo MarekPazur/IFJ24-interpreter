@@ -204,6 +204,9 @@ int get_node_type(int term, int select) {
 		case F64_T:
 			type = FL;
 			break;
+		case NULL_T:
+			type = NULL_LITERAL;
+			break;
 		default:
 			type = VAR_CONST;
 			break;
@@ -320,11 +323,11 @@ void reduction(stack_t *stack, int expresion_length) {
 		}
 
 		/* Operators can't be applied on string, []u8, null type  */
-		if ((E1.type == STRING_T || E2.type == STRING_T) || (E1.type == U8_T || E2.type == U8_T) || (E1.type == NULL_T || E2.type == NULL_T)) {
+/*		if ((E1.type == STRING_T || E2.type == STRING_T) || (E1.type == U8_T || E2.type == U8_T) || (E1.type == NULL_T || E2.type == NULL_T)) {
 			printf("error: invalid type used in expression!\n");
 			error = ERR_TYPE_COMPATABILITY;
 			return;
-		}
+		}*/
 
 		push(stack, E);
 	} else {
