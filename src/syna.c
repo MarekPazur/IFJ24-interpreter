@@ -119,6 +119,9 @@ void init_parser(token_t token) {
         error = ERR_COMPILER_INTERNAL;
         return;
     }
+    
+    // Inserting the built-in functions into the global symtable
+    populate_builtin_functions(parser->global_symtable);
 
     // Initialising the AST
     parser->AST = BT_init();
@@ -140,7 +143,7 @@ void init_parser(token_t token) {
 
     // debug functions
     //BT_print_tree(parser->AST->root);
-    //debug_print_keys(parser->global_symtable);
+    debug_print_keys(parser->global_symtable);
 
     /* SEMANTIC ANALYSIS */
     semantic_analysis(parser->AST);
@@ -1221,6 +1224,9 @@ void if_while_header(Tparser* parser, TNode** current_node, node_type type) {
     case STATE_lr_bracket:
         if (parser->current_token.id == TOKEN_BRACKET_ROUND_LEFT) { //checking for if ->(<-expression) |null_replacement| {
         
+            enter_sub_body(parser);
+            if (error) return;
+        
             (*current_node) = create_node(type);
             (*current_node)->data.nodeData.body.current_scope = &parser->scope;
             
@@ -1228,9 +1234,6 @@ void if_while_header(Tparser* parser, TNode** current_node, node_type type) {
 
             /* Expression */
             expression(parser, TOKEN_BRACKET_ROUND_RIGHT, &(*current_node)->left, false);
-            if (error) return;
-            
-            enter_sub_body(parser);
             if (error) return;
 
             parser->state = STATE_pipe;
@@ -1725,4 +1728,49 @@ void expression(Tparser* parser, token_id end, TNode **current_node, bool allow_
     } else { // First token is NOT ID --> expression, at this point, Empty expression is Invalid
         (*current_node) = precedent(&t_buffer, end, parser->scope); // call precedence analysis for expression syntax analysis
     }
+}
+
+
+/**
+ * @brief This function adds the built-in functions into the symtable it is given
+ *
+ * @Author xtomasp00, Patrik Tomasko
+ * 
+ * @param global_symtable, pointer to the symtable which is to get filled by the built-in function
+ *
+ * @return true if the symtable was filled succesfully, false if there was some error like seqfault
+ */
+bool populate_builtin_functions(TSymtable* global_symtable){
+
+    char* function_names[] = {"ifj.readstr", "ifj.readi32", "ifj.readf64", "ifj.write", "ifj.i2f", "ifj.f2i", "ifj.string", "ifj.length", "ifj.concat", "ifj.substring", "pub fn ifj.strcmp", "ifj.ord", "ifj.chr"};
+    char function_input[] = {'n','i','f','n','u','u', 'u','u', 'i', 'i', 'u', 'u', 'u', 'i', 'i'};
+    int param_ammounts[] = {0,0,0,1,1,1,1,1,2,3,2,2,1};
+    Type return_types[] = {U8_SLICE_T, INTEGER_T, FLOAT_T, VOID_T, FLOAT_T, INTEGER_T, U8_SLICE_T, INTEGER_T, U8_SLICE_T, U8_SLICE_T, INTEGER_T, INTEGER_T, U8_SLICE_T};
+    bool is_nullable[] = {true, true, true, false, false, false, false, false, false, true, false, false, false};
+    
+    int param_type_index = 0;
+    
+    for(int index = 0; index < 13; index++){
+    
+        TData function_data;
+        function_data.function.is_null_type = is_nullable[index];
+        d_array_init((&function_data.function.argument_types), 2);
+        for(int index_adder = 0; index_adder < param_ammounts[index]; index_adder++){
+            if((param_type_index++)>14){
+                error = ERR_COMPILER_INTERNAL;
+                return false;
+            }
+            d_array_append(&function_data.function.argument_types, function_input[param_type_index]);
+        }
+        function_data.function.return_type = return_types[index];
+        function_data.function.function_scope = NULL;
+        
+        if(!symtable_insert(global_symtable, function_names[index], function_data)){
+            error = ERR_COMPILER_INTERNAL;
+            return false;
+        }
+        
+    }
+    
+    return true;
 }
