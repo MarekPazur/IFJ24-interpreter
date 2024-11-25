@@ -94,6 +94,6 @@ void function_call(Tparser* parser, TNode** current_node);
 
 void function_call_params(Tparser* parser, TNode** current_node);
 
-bool populate_builtin_functions(TSymtable* global_symtable);
+void populate_builtin_functions(TSymtable* global_symtable);
 
 #endif

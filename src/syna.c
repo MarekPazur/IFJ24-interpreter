@@ -122,6 +122,8 @@ void init_parser(token_t token) {
     
     // Inserting the built-in functions into the global symtable
     populate_builtin_functions(parser->global_symtable);
+    if(error)
+        return;
 
     // Initialising the AST
     parser->AST = BT_init();
@@ -1772,7 +1774,7 @@ void expression(Tparser* parser, token_id end, TNode **current_node, bool allow_
  *
  * @return true if the symtable was filled succesfully, false if there was some error like seqfault
  */
-bool populate_builtin_functions(TSymtable* global_symtable){
+void populate_builtin_functions(TSymtable* global_symtable){
 
     char* function_names[] = {"ifj.readstr", "ifj.readi32", "ifj.readf64", "ifj.write", "ifj.i2f", "ifj.f2i", "ifj.string", "ifj.length", "ifj.concat", "ifj.substring", "pub fn ifj.strcmp", "ifj.ord", "ifj.chr"};
     char function_input[] = {'n','i','f','n','u','u', 'u','u', 'i', 'i', 'u', 'u', 'u', 'i', 'i'};
@@ -1790,7 +1792,7 @@ bool populate_builtin_functions(TSymtable* global_symtable){
         for(int index_adder = 0; index_adder < param_ammounts[index]; index_adder++){
             if((param_type_index++)>14){
                 error = ERR_COMPILER_INTERNAL;
-                return false;
+                return;
             }
             d_array_append(&function_data.function.argument_types, function_input[param_type_index]);
         }
@@ -1799,10 +1801,10 @@ bool populate_builtin_functions(TSymtable* global_symtable){
         
         if(!symtable_insert(global_symtable, function_names[index], function_data)){
             error = ERR_COMPILER_INTERNAL;
-            return false;
+            return;
         }
         
     }
     
-    return true;
+    return;
 }
