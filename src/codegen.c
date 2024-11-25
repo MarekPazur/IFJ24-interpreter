@@ -10,6 +10,7 @@
 #include <stdbool.h>
 
 #include "compiler_error.h"
+#include "binary_tree.h"
 #include "codegen.h"
 
 typedef enum frame{
@@ -20,12 +21,12 @@ typedef enum frame{
 
 typedef struct term{
     enum _term_type{
-        VARIABLE_T,
-        INTEGER_T,
-        FLOAT_T,
-        BOOLEAN_T,
-        STRING_T,
-        NULL_T
+        CG_VARIABLE_T,
+        CG_INTEGER_T,
+        CG_FLOAT_T,
+        CG_BOOLEAN_T,
+        CG_STRING_T,
+        CG_NULL_T
     } type;
     union _term_value{
         char *var_name;
@@ -34,22 +35,22 @@ typedef struct term{
         bool bool_val;
         char *string;
     } value;
-    Frame frame; // In case of VARIABLE_T (otherwise can be left uninitialized)
+    Frame frame; // In case of CG_VARIABLE_T (otherwise can be left uninitialized)
 } TTerm;
 
 typedef unsigned long long TLabel;
 
 // IFJcode24 GF variable for storing function return values
-const TTerm cg_var_retval = {.type = VARIABLE_T, .value.var_name = "retval", .frame = GLOBAL};
+const TTerm cg_var_retval = {.type = CG_VARIABLE_T, .value.var_name = "retval", .frame = GLOBAL};
 // IFJcode24 GF bool variable for storing results of comparisons
-const TTerm cg_var_cmp = {.type = VARIABLE_T, .value.var_name = "cmp", .frame = GLOBAL};
+const TTerm cg_var_cmp = {.type = CG_VARIABLE_T, .value.var_name = "cmp", .frame = GLOBAL};
 // Often used literals
-const TTerm cg_null_term = {.type = NULL_T};
-const TTerm cg_true_term = {.type = BOOLEAN_T, .value.bool_val = true};
-const TTerm cg_false_term = {.type = BOOLEAN_T, .value.bool_val = false};
-const TTerm cg_zero_int_term = {.type = INTEGER_T, .value.int_val = 0};
-const TTerm cg_one_int_term = {.type = INTEGER_T, .value.int_val = 1};
-const TTerm cg_empty_string_lit = {.type = STRING_T, .value.string = ""};
+const TTerm cg_null_term = {.type = CG_NULL_T};
+const TTerm cg_true_term = {.type = CG_BOOLEAN_T, .value.bool_val = true};
+const TTerm cg_false_term = {.type = CG_BOOLEAN_T, .value.bool_val = false};
+const TTerm cg_zero_int_term = {.type = CG_INTEGER_T, .value.int_val = 0};
+const TTerm cg_one_int_term = {.type = CG_INTEGER_T, .value.int_val = 1};
+const TTerm cg_empty_string_lit = {.type = CG_STRING_T, .value.string = ""};
 
 // IFJcode24 frame types
 #define GF "GF@"
@@ -93,9 +94,13 @@ void cg_pop_frame(void);
 
 // Function calling
 
-void cg_call(char* label);
+void cg_call(char* function);
 
 void cg_return(void);
+
+void cg_create_fun(char* function);
+
+// Assigning to variables
 
 void cg_move(TTerm dest, TTerm src);
 
@@ -169,6 +174,14 @@ void cg_setchar(TTerm src_str, TTerm dest_str, TTerm position);
 
 void cg_stri2int(TTerm dest, TTerm string, TTerm pos);
 
+// Stack
+
+void cg_stack_push(TTerm value);
+
+void cg_stack_pop(TTerm variable);
+
+void cg_stack_clear(void);
+
 // IFJ BUILT-IN
 
 void cg_ifj_readstr(void);
@@ -195,10 +208,6 @@ void cg_ifj_strcmp(TTerm s1, TTerm s2);
 
 void cg_ifj_ord(TTerm s, TTerm i);
 
-// Codegen
-
-void codegen(void);
-
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------- DEFINITIONS ----------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
@@ -206,20 +215,20 @@ void codegen(void);
 void cg_term(TTerm term){
     char* bool_str;
     switch(term.type){
-        case VARIABLE_T:
+        case CG_VARIABLE_T:
             printf("%s%s", get_frame(term.frame), term.value.var_name);
             break;
-        case INTEGER_T:
+        case CG_INTEGER_T:
             printf("int@%d", term.value.int_val);
             break;
-        case FLOAT_T:
+        case CG_FLOAT_T:
             printf("float@%a", term.value.float_val);
             break;
-        case BOOLEAN_T:
+        case CG_BOOLEAN_T:
             bool_str = term.value.bool_val ? "true" : "false";
             printf("bool@%s", bool_str);
             break;
-        case STRING_T:
+        case CG_STRING_T:
             printf("string@");
             int i = 0;
             while(term.value.string[i] != '\0'){
@@ -233,7 +242,7 @@ void cg_term(TTerm term){
                 i++;
             }
             break;
-        case NULL_T:
+        case CG_NULL_T:
             printf("nil@nil");
             break;
         default:
@@ -245,7 +254,7 @@ void cg_term(TTerm term){
 // CG variables and frames
 
 void cg_create_var(TTerm var){
-    if(var.type != VARIABLE_T || var.value.var_name == NULL){
+    if(var.type != CG_VARIABLE_T || var.value.var_name == NULL){
         error = ERR_COMPILER_INTERNAL;
         return;
     }
@@ -273,20 +282,28 @@ void cg_pop_frame(void){
 
 // Function calling
 
-void cg_call(char* label){
-    if(label == NULL){
+void cg_call(char* function){
+    if(function == NULL){
         error = ERR_COMPILER_INTERNAL;
         return;
     }
-    printf("call %s\n", label);
+    printf("call FUN_%s\n", function);
 }
 
 void cg_return(void){
     printf("return\n");
 }
 
+void cg_create_fun(char* function){
+    if(function == NULL){
+        error = ERR_COMPILER_INTERNAL;
+        return;
+    }
+    printf("label FUN_%s\n", function);
+}
+
 void cg_move(TTerm dest, TTerm src){
-    if(dest.type != VARIABLE_T){
+    if(dest.type != CG_VARIABLE_T){
         error = ERR_COMPILER_INTERNAL;
         return;
     }
@@ -456,6 +473,23 @@ void cg_int2char(TTerm dest, TTerm num){
     cg_two_operands(dest, num);
 }
 
+// Stack
+
+void cg_stack_push(TTerm value){
+    printf("pushs ");
+    cg_term(value);
+    putchar('\n');
+}
+
+void cg_stack_pop(TTerm variable){
+    printf("pops ");
+    cg_term(variable);
+    putchar('\n');
+}
+
+void cg_stack_clear(void){
+    printf("clears\n");
+}
 
 // IFJ BUILT-IN
 
@@ -480,7 +514,7 @@ void cg_ifj_write(TTerm term){
 }
 
 void cg_ifj_i2f(TTerm term){
-    if(term.type != VARIABLE_T && term.type != INTEGER_T){
+    if(term.type != CG_VARIABLE_T && term.type != CG_INTEGER_T){
         error = ERR_COMPILER_INTERNAL;
         return;
     }
@@ -489,7 +523,7 @@ void cg_ifj_i2f(TTerm term){
 }
 
 void cg_ifj_f2i(TTerm term){
-    if(term.type != VARIABLE_T && term.type != FLOAT_T){
+    if(term.type != CG_VARIABLE_T && term.type != CG_FLOAT_T){
         error = ERR_COMPILER_INTERNAL;
         return;
     }
@@ -498,7 +532,7 @@ void cg_ifj_f2i(TTerm term){
 }
 
 void cg_ifj_string(TTerm term){
-    if(term.type != VARIABLE_T && term.type != STRING_T){
+    if(term.type != CG_VARIABLE_T && term.type != CG_STRING_T){
         error = ERR_COMPILER_INTERNAL;
     }
     cg_move(cg_var_retval, term);
@@ -509,7 +543,7 @@ void cg_ifj_length(TTerm s){
 }
 
 void cg_ifj_concat(TTerm s1, TTerm s2){
-    if(s1.type != VARIABLE_T || s2.type != VARIABLE_T){
+    if(s1.type != CG_VARIABLE_T || s2.type != CG_VARIABLE_T){
         error = ERR_COMPILER_INTERNAL;
         return;
     }
@@ -524,8 +558,8 @@ void cg_ifj_substring(TTerm s, TTerm i, TTerm j){
     TLabel ret_null = cg_get_new_label();
     TLabel finish = cg_get_new_label();
     // Terms
-    TTerm str_len = {.type = VARIABLE_T, .value.var_name = "str_len", .frame = LOCAL};
-    TTerm character = {.type = VARIABLE_T, .value.var_name = "character", .frame = LOCAL};
+    TTerm str_len = {.type = CG_VARIABLE_T, .value.var_name = "str_len", .frame = LOCAL};
+    TTerm character = {.type = CG_VARIABLE_T, .value.var_name = "character", .frame = LOCAL};
     cg_create_var(str_len);
     cg_create_var(character);
     // Code
@@ -542,7 +576,7 @@ void cg_ifj_substring(TTerm s, TTerm i, TTerm j){
     // j > ifj.length(s)
     cg_jump_gt(ret_null, j, str_len);
 
-    TTerm i_loc = {.type = VARIABLE_T, .value.var_name = "i_loc", .frame = LOCAL};
+    TTerm i_loc = {.type = CG_VARIABLE_T, .value.var_name = "i_loc", .frame = LOCAL};
     cg_create_var(i_loc);
     cg_move(i_loc, i);
 
@@ -576,12 +610,12 @@ void cg_ifj_strcmp(TTerm s1, TTerm s2){
     cg_create_frame();
     cg_push_frame();
     // Variables
-    TTerm s1_len = {.type = VARIABLE_T, .value.var_name = "s1_len", .frame = LOCAL};
-    TTerm s2_len = {.type = VARIABLE_T, .value.var_name = "s2_len", .frame = LOCAL};
-    TTerm len_min = {.type = VARIABLE_T, .value.var_name = "len_min", .frame = LOCAL};
-    TTerm index = {.type = VARIABLE_T, .value.var_name = "index", .frame = LOCAL};
-    TTerm char1 = {.type = VARIABLE_T, .value.var_name = "char1", .frame = LOCAL};
-    TTerm char2 = {.type = VARIABLE_T, .value.var_name = "char2", .frame = LOCAL};
+    TTerm s1_len = {.type = CG_VARIABLE_T, .value.var_name = "s1_len", .frame = LOCAL};
+    TTerm s2_len = {.type = CG_VARIABLE_T, .value.var_name = "s2_len", .frame = LOCAL};
+    TTerm len_min = {.type = CG_VARIABLE_T, .value.var_name = "len_min", .frame = LOCAL};
+    TTerm index = {.type = CG_VARIABLE_T, .value.var_name = "index", .frame = LOCAL};
+    TTerm char1 = {.type = CG_VARIABLE_T, .value.var_name = "char1", .frame = LOCAL};
+    TTerm char2 = {.type = CG_VARIABLE_T, .value.var_name = "char2", .frame = LOCAL};
     cg_create_var(s1_len);
     cg_create_var(s2_len);
     cg_create_var(len_min);
@@ -646,7 +680,7 @@ void cg_ifj_ord(TTerm s, TTerm i){
     cg_push_frame();
 
     // Variables
-    TTerm s_len = {.type = VARIABLE_T, .value.var_name = "s_len", .frame = LOCAL};
+    TTerm s_len = {.type = CG_VARIABLE_T, .value.var_name = "s_len", .frame = LOCAL};
     cg_create_var(s_len);
     // Labels
     TLabel fun_end = cg_get_new_label();
@@ -672,6 +706,37 @@ void cg_ifj_chr(TTerm i){
 
 // Codegen
 
-void codegen(void){
+void generate_comment(char* string){
+    printf("# %s\n", string);
+}
+
+// Function generation
+
+void generate_parameters(linked_list_t parameters){
+    set_first_llist(&parameters);
+
+}
+
+void generate_function(TBinaryTree* tree){
+    node_data data;
+    BT_get_data(tree, &data);
+
+    cg_create_fun(data.nodeData.function.identifier);
+    cg_push_frame();
+
+    // Assign arguments to parameters
+
+
+    cg_pop_frame();
+    cg_return();
+}
+
+
+void codegen(TBinaryTree* tree){
     cg_init();
+    BT_set_root(tree);
+    while(BT_has_left(tree)){
+        BT_go_left(tree);
+        generate_function(tree);
+    }
 }
