@@ -36,7 +36,7 @@ void semantic_analysis(TBinaryTree* AST) {
 
     /* Program/Root Node (Starting point of the program) */
     TNode** program = &(AST->root);
-    //BT_print_tree(*program); //debug print
+    BT_print_tree(*program); //debug print
 
     /* Get global symtable from Program/Root Node */
     globalSymTable = (*program)->data.nodeData.program.globalSymTable;
