@@ -45,8 +45,9 @@ typedef unsigned long long TLabel;
 const TTerm cg_var_retval = {.type = CG_VARIABLE_T, .value.var_name = "retval", .frame = GLOBAL};
 // IFJcode24 GF bool variable for storing results of comparisons
 const TTerm cg_var_cmp = {.type = CG_VARIABLE_T, .value.var_name = "cmp", .frame = GLOBAL};
-// IFJcode24 GF temp variable
+// IFJcode24 GF temp variables
 const TTerm cg_var_temp = {.type = CG_VARIABLE_T, .value.var_name = "temp", .frame = GLOBAL};
+const TTerm cg_var_temp2 = {.type = CG_VARIABLE_T, .value.var_name = "temp2", .frame = GLOBAL};
 // Often used literals
 const TTerm cg_null_term = {.type = CG_NULL_T};
 const TTerm cg_true_term = {.type = CG_BOOLEAN_T, .value.bool_val = true};
@@ -132,6 +133,16 @@ void cg_equal(TTerm value1, TTerm value2);
 void cg_less_than(TTerm value1, TTerm value2);
 
 void cg_greater_than(TTerm value1, TTerm value2);
+
+void cg_eq_stack(void);
+
+void cg_lt_stack(void);
+
+void cg_gt_stack(void);
+
+void cg_lteq_stack(void);
+
+void cg_gteq_stack(void);
 
 // Jumps
 
@@ -394,6 +405,42 @@ void cg_greater_than(TTerm value1, TTerm value2){
     cg_three_operands(cg_var_cmp, value1, value2);
 }
 
+void cg_eq_stack(void){
+    printf("eqs\n");
+}
+
+void cg_lt_stack(void){
+    printf("lts\n");
+}
+
+void cg_gt_stack(void){
+    printf("gts\n");
+}
+
+void cg_lteq_stack(void){
+    cg_stack_pop(cg_var_temp2);
+    cg_stack_pop(cg_var_temp);
+    cg_stack_push(cg_var_temp);
+    cg_stack_push(cg_var_temp2);
+    cg_lt_stack();
+    cg_stack_push(cg_var_temp);
+    cg_stack_push(cg_var_temp2);
+    cg_eq_stack();
+    printf("ors\n");
+}
+
+void cg_gteq_stack(void){
+    cg_stack_pop(cg_var_temp2);
+    cg_stack_pop(cg_var_temp);
+    cg_stack_push(cg_var_temp);
+    cg_stack_push(cg_var_temp2);
+    cg_gt_stack();
+    cg_stack_push(cg_var_temp);
+    cg_stack_push(cg_var_temp2);
+    cg_eq_stack();
+    printf("ors\n");
+}
+
 // Jumps
 
 void cg_jump(TLabel label){
@@ -481,6 +528,23 @@ void cg_fdiv_stack(void){
 
 void cg_idiv_stack(void){
     printf("idivs\n");
+}
+
+void cg_div_stack(void){
+    TTerm float_type = {.type = CG_STRING_T, .value.string = "float"};
+    cg_stack_pop(cg_var_temp);
+    printf("type ");
+    cg_two_operands(cg_var_temp2, cg_var_temp);
+    cg_stack_push(cg_var_temp);
+    TLabel is_float = cg_get_new_label();
+    TLabel end = cg_get_new_label();
+
+    cg_jump_eq(is_float, cg_var_temp2, float_type);
+    cg_idiv_stack();
+    cg_jump(end);
+    cg_create_label(is_float);
+    cg_fdiv_stack();
+    cg_create_label(end);
 }
 
 // Increment/Decrement
@@ -780,12 +844,90 @@ void generate_function_parameters(linked_list_t parameters){
 }
 
 void calculate_expression(TBinaryTree* tree){
-    cg_stack_clear();
-
+    static bool float_expression = false;
+    if(BT_has_left(tree)){
+        BT_go_left(tree);
+        calculate_expression(tree);
+    }
+    if(BT_has_right(tree)){
+        BT_go_right(tree);
+        calculate_expression(tree);
+    }
+    node_type type;
+    node_data data;
+    if(!BT_get_node_type(tree, &type) || !BT_get_data(tree, &data)){
+        error = ERR_COMPILER_INTERNAL;
+        return;
+    }
+    TTerm literal;
+    switch(type){
+        case INT:
+             literal.type = CG_INTEGER_T;
+             literal.value.int_val = (int)strtol(data.nodeData.value.literal, NULL, 0);
+             cg_stack_push(literal);
+             break;
+        case FL:
+            literal.type = CG_FLOAT_T;
+            literal.value.float_val = strtod(data.nodeData.value.literal, NULL);
+            cg_stack_push(literal);
+            break;
+        case STR:
+            literal.type = CG_STRING_T;
+            literal.value.string = data.nodeData.value.literal;
+            cg_stack_push(literal);
+            break;
+        case VAR_CONST:
+            literal.type = CG_VARIABLE_T;
+            literal.value.var_name = data.nodeData.value.identifier;
+            cg_stack_push(literal);
+            break;
+        case OP_ADD:
+            cg_add_stack();
+            break;
+        case OP_SUB:
+            cg_sub_stack();
+            break;
+        case OP_MUL:
+            cg_mul_stack();
+            break;
+        case OP_DIV:
+            cg_div_stack();
+            break;
+            break;
+        case OP_EQ:
+            cg_eq_stack();
+            break;
+        case OP_NEQ:
+            cg_eq_stack();
+            printf("nots\n");
+            break;
+        case OP_GT:
+            cg_gt_stack();
+            break;
+        case OP_LS:
+            cg_lt_stack();
+            break;
+        case OP_GTE:
+            cg_gteq_stack();
+            break;
+        case OP_LSE:
+            cg_lteq_stack();
+            break;
+        default:
+            error = ERR_COMPILER_INTERNAL;
+            break;
+    }
 }
 
 void generate_return(TBinaryTree* tree){
-    
+    if(BT_has_left(tree)){
+        BT_go_left(tree);
+        cg_stack_clear();
+        calculate_expression(tree);
+        cg_stack_pop(cg_var_retval);
+    }
+    cg_pop_frame();
+    cg_return();
 }
 
 void generate_body_command(TBinaryTree* tree){
