@@ -426,3 +426,40 @@ void debug_print_keys(TSymtable* symtable){
     }
     bst_print_keys(symtable->root);
 }
+
+/**
+ * @brief This function is used to itterate through a symtable and check wether all it's elements are used
+ *
+ * @param root, the root of the symtable
+ */
+bool check_is_used_iter(TNode* root){
+    if ( root == NULL ) {
+        return true;
+    }
+    if (!check_is_used_iter(root->left))
+        return false;
+    
+    if( !root->data.variable.is_used ){
+        return false;
+    }
+
+    if (!check_is_used_iter(root->right))
+        return false;
+    return true;
+}
+
+/**
+ * @brief This function checks that all the variables in a given are used
+ * The symtable given to the function has to be local, it calls the check_is_used_iter function to check the elements of the symtable
+ *
+ * @param symtable, has the instances to check
+ * @return True if there was no element with the flas is_used set to false, returns false otherwise
+ */
+bool check_is_used(TSymtable* symtable){
+    if( symtable == NULL ){
+        return true;
+    }
+    if(!check_is_used_iter(symtable->root))
+        return false;
+    return true;
+}

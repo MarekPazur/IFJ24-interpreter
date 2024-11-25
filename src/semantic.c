@@ -141,6 +141,10 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
         Command = Command->right;
     }
     /* Scope ends here  */
+    /*if(!check_is_used(current_scope->current_scope)){
+        error = ERR_UNUSED_VAR;
+        return;
+    }*/
     printf("------------\n");debug_print_keys(current_scope->current_scope); // debug print of current scopes variables stored in symtable and their properties
 }
 
@@ -309,7 +313,11 @@ bool id_defined(struct TScope* scope, char* identifier, TSymtable** out_sym) {
     *out_sym = NULL;
 
     return false;
-}
+}/**
+ * @brief This function initializes the parser
+ *
+ * @param token, will be used to store the current token
+ */
 
 /**
 * Returns variables data type in char format 'i','u','f' 

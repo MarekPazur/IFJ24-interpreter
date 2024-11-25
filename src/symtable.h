@@ -94,4 +94,6 @@ void symtable_free(TSymtable* symtable);
 
 void debug_print_keys(TSymtable* symtable);
 
+bool check_is_used(TSymtable* symtable);
+
 #endif
