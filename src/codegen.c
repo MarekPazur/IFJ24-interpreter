@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 #include "compiler_error.h"
 #include "binary_tree.h"
@@ -91,6 +92,8 @@ void cg_create_frame(void);
 void cg_push_frame(void);
 
 void cg_pop_frame(void);
+
+void cg_exit(TTerm number);
 
 // Function calling
 
@@ -208,6 +211,10 @@ void cg_ifj_strcmp(TTerm s1, TTerm s2);
 
 void cg_ifj_ord(TTerm s, TTerm i);
 
+// Codegen
+
+void generate_comment(char* string);
+
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------- DEFINITIONS ----------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
@@ -216,7 +223,7 @@ void cg_term(TTerm term){
     char* bool_str;
     switch(term.type){
         case CG_VARIABLE_T:
-            printf("%s%s", get_frame(term.frame), term.value.var_name);
+            printf("%sVAR_%s", get_frame(term.frame), term.value.var_name);
             break;
         case CG_INTEGER_T:
             printf("int@%d", term.value.int_val);
@@ -258,7 +265,9 @@ void cg_create_var(TTerm var){
         error = ERR_COMPILER_INTERNAL;
         return;
     }
-    printf("defvar %s%s\n", get_frame(var.frame), var.value.var_name);
+    printf("defvar ");
+    cg_term(var);
+    putchar('\n');
 }
 
 void cg_init(void){
@@ -278,6 +287,12 @@ void cg_push_frame(void){
 
 void cg_pop_frame(void){
     printf("popframe\n");
+}
+
+void cg_exit(TTerm number){
+    printf("exit ");
+    cg_term(number);
+    putchar('\n');
 }
 
 // Function calling
@@ -712,19 +727,38 @@ void generate_comment(char* string){
 
 // Function generation
 
-void generate_parameters(linked_list_t parameters){
-    set_first_llist(&parameters);
+void generate_function_parameters(linked_list_t parameters){
+    set_last_llist(&parameters);
+    char** param_name_ptr = malloc(sizeof(char*));
+    if(param_name_ptr == NULL){
+        error = ERR_COMPILER_INTERNAL;
+        return;
+    }
+    while(get_value_llist(&parameters, param_name_ptr)){
+        TTerm variable = {.type = CG_VARIABLE_T, .value.var_name = *param_name_ptr, .frame = LOCAL};
+        cg_create_var(variable);
+        cg_stack_pop(variable);
+        prev_llist(&parameters);
+    }
+}
 
+void generate_function_body(TBinaryTree* tree){
+    while(BT_has_right(tree)){
+        
+    }
+    BT_go_parent(tree);
 }
 
 void generate_function(TBinaryTree* tree){
     node_data data;
     BT_get_data(tree, &data);
-
+    // Creating function label and memory frame
+    generate_comment(data.nodeData.function.identifier); // Comment
     cg_create_fun(data.nodeData.function.identifier);
+    cg_create_frame();
     cg_push_frame();
-
-    // Assign arguments to parameters
+    // Creating variables for the parameters, moving arguments to the variables
+    generate_function_parameters(data.nodeData.function.param_identifiers);
 
 
     cg_pop_frame();
@@ -733,7 +767,17 @@ void generate_function(TBinaryTree* tree){
 
 
 void codegen(TBinaryTree* tree){
+    if(tree == NULL){
+        error = ERR_COMPILER_INTERNAL;
+        return;
+    }
+    generate_comment("Init:");
     cg_init();
+    generate_comment("Generating program:");
+    generate_comment("Main function call:");
+    cg_call("main");
+    cg_exit(cg_zero_int_term);
+    generate_comment("Function definitions:");
     BT_set_root(tree);
     while(BT_has_left(tree)){
         BT_go_left(tree);
