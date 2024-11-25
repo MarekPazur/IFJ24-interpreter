@@ -72,6 +72,7 @@ typedef enum return_type {
 /* LLIST STRUCTURE */
 typedef struct linked_list {
     struct item_ll *first;
+    struct item_ll *last;
     struct item_ll *active;
 } linked_list_t;
 
@@ -79,6 +80,7 @@ typedef struct linked_list {
 typedef struct item_ll {
     char* identifier;    // Symbol for precedence
     struct item_ll *next;
+    struct item_ll *prev;
 } item_ll_t;
 
 // Llist functions
@@ -91,14 +93,20 @@ bool insert_llist(linked_list_t* llist, char* inserted);
 /* Sets the active item to the first */
 bool set_first_llist(linked_list_t* llist);
 
+/* Sets the active item to the last */
+bool set_last_llist(linked_list_t* llist);
+
 /* Sets the active item to the next item */
 bool next_llist(linked_list_t* llist);
+
+/* Sets the active item to the previous item */
+bool prev_llist(linked_list_t* llist);
 
 /* Sets the active item to the next item */
 bool get_value_llist(linked_list_t* llist, char** value);
 
 /* Frees all the items of the llist */
-bool free_llist(linked_list_t* llist);
+void free_llist(linked_list_t* llist);
 
 /*************************/
 /*      BINARY TREE      */

@@ -410,6 +410,7 @@ void BT_print_tree(TNode *tree) {
 
 void init_llist(linked_list_t* llist){
     llist->first = NULL;
+    llist->last = NULL;
     llist->active = NULL;
 }
 
@@ -425,16 +426,20 @@ bool insert_llist(linked_list_t* llist, char* inserted){
         return false;
     }
     new_item->next = NULL;
+    new_item->prev = NULL;
 
     if (llist->first == NULL) {
         llist->first = new_item;
-    } else {
+    }
+    else {
         item_ll_t* current_item = llist->first;
         while (current_item->next != NULL) {
             current_item = current_item->next;
         }
         current_item->next = new_item;
+        new_item->prev = current_item;
     }
+    llist->last = new_item;
     return true;
 }
 
@@ -446,6 +451,14 @@ bool set_first_llist(linked_list_t* llist){
     return true;
 }
 
+bool set_last_llist(linked_list_t* llist){
+    if (llist->last == NULL) {
+        return false;
+    }
+    llist->active = llist->last;
+    return true;
+}
+
 bool next_llist(linked_list_t* llist){
     if(llist->active == NULL){
         return false;
@@ -454,7 +467,15 @@ bool next_llist(linked_list_t* llist){
     return true;
 }
 
-bool free_llist(linked_list_t* llist){
+bool prev_llist(linked_list_t* llist){
+    if(llist->active == NULL){
+        return false;
+    }
+    llist->active = llist->active->prev;
+    return true;
+}
+
+void free_llist(linked_list_t* llist){
     item_ll_t* current_item = llist->first;
     while (current_item != NULL) {
         item_ll_t* next_item = current_item->next;
@@ -464,7 +485,6 @@ bool free_llist(linked_list_t* llist){
     }
     llist->first = NULL;
     llist->active = NULL;
-    return true;
 }
 
 bool get_value_llist(linked_list_t* llist, char** value){
