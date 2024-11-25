@@ -141,7 +141,7 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
         Command = Command->right;
     }
     /* Scope ends here  */
-    //printf("------------\n");debug_print_keys(current_scope->current_scope); // debug print of current scopes variables stored in symtable and their properties
+    printf("------------\n");debug_print_keys(current_scope->current_scope); // debug print of current scopes variables stored in symtable and their properties
 }
 
 /**
