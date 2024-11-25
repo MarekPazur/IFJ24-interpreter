@@ -161,6 +161,18 @@ void cg_fdiv(TTerm dest, TTerm num1, TTerm num2);
 
 void cg_idiv(TTerm dest, TTerm num1, TTerm num2);
 
+// Arithmetic stack
+
+void cg_add_stack(void);
+
+void cg_sub_stack(void);
+
+void cg_mul_stack(void);
+
+void cg_fdiv_stack(void);
+
+void cg_idiv_stack(void);
+
 // Increment/Decrement
 
 void cg_int_var_inc_1(TTerm ivar);
@@ -447,6 +459,28 @@ void cg_fdiv(TTerm dest, TTerm num1, TTerm num2){
 void cg_idiv(TTerm dest, TTerm num1, TTerm num2){
     printf("idiv");
     cg_three_operands(dest, num1, num2);
+}
+
+// Arithmetic stack
+
+void cg_add_stack(void){
+    printf("adds\n");
+}
+
+void cg_sub_stack(void){
+    printf("subs\n");
+}
+
+void cg_mul_stack(void){
+    printf("muls\n");
+}
+
+void cg_fdiv_stack(void){
+    printf("divs\n");
+}
+
+void cg_idiv_stack(void){
+    printf("idivs\n");
 }
 
 // Increment/Decrement
@@ -745,6 +779,11 @@ void generate_function_parameters(linked_list_t parameters){
     }
 }
 
+void calculate_expression(TBinaryTree* tree){
+    cg_stack_clear();
+
+}
+
 void generate_return(TBinaryTree* tree){
     
 }
@@ -761,7 +800,8 @@ void generate_body_command(TBinaryTree* tree){
     }
     switch(type){
         case RETURN:
-
+            generate_return(tree);
+            break;
         case CONST_DECL:
         case VAR_DECL:
         case ASSIG:
@@ -770,6 +810,9 @@ void generate_body_command(TBinaryTree* tree){
         case IF:
         case ELSE:
         case FUNCTION_CALL:
+        default:
+            error = ERR_COMPILER_INTERNAL;
+            break;
     }
     BT_go_parent(tree);
 }
