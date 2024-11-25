@@ -42,7 +42,7 @@ void semantic_analysis(TBinaryTree* AST) {
     globalSymTable = (*program)->data.nodeData.program.globalSymTable;
 
 
-    main_function_check(globalSymTable);
+    main_function_semantics(globalSymTable);
     check_error();
 
     /* Check functions with semantic rules */
@@ -105,8 +105,7 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
         case VAR_DECL:
         case CONST_DECL:
             //ExpressionSemantics(command_instance->left);
-            if (command_instance->left->type == FUNCTION_CALL)
-                FunctionCallSemantics(command_instance->left, current_scope);
+            declaration_semantics(command_instance, current_scope);
             check_error();
             break;
         
@@ -119,7 +118,7 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
             /* while this approach would probably work to some extent, we need to check other things that I believe we'll be able to check further on function call, arguments, etc.
             if(symtable_search(command.instance.function.id) == false)
                 error();*/
-            FunctionCallSemantics(command_instance, current_scope);
+            FunctionCallSemantics(command_instance, current_scope, NULL);
             check_error();
             break;
 
@@ -134,8 +133,6 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
 
         default:
             break;
-            /*case ...:
-                break;*/
         }
 
         Command = Command->right;
@@ -148,7 +145,7 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
 * Function call semantics checks (definition, formal parameters)
 * TODO CHECK NULLABLE TYPES
 */
-void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope) {
+void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope, int* type_out) {
     char *function_id = functionCall->data.nodeData.identifier.identifier; // Get function ID
     TData function_data;
     TNode *formal_param = functionCall->right; // Right pointer for some unknown reason
@@ -183,7 +180,7 @@ void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope) {
         if (formal_param->type == VAR_CONST) {
             variable_id = formal_param->data.nodeData.value.identifier;
 
-            TSymtable* local = NULL; // Local symtable where variable id might be defined
+            TSymtable* local = NULL; // Local symtable where variable 'id' might be defined
 
             if (id_defined(current_scope, variable_id, &local) == false) {
                 error = ERR_UNDEFINED_IDENTIFIER;
@@ -194,6 +191,8 @@ void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope) {
                 error = ERR_COMPILER_INTERNAL;
                 break;
             }
+
+            set_to_used(local, variable_id); // Set this variables used property to true
 
             formal_param_type = get_var_type(var_data.variable.type);
         } else {
@@ -208,6 +207,9 @@ void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope) {
         ++param_position;
         formal_param = formal_param->right;
     }
+
+    if (type_out) // If asked for type, return called functions return type
+        *type_out = function_data.function.return_type;
 
     check_error();
 }
@@ -234,7 +236,7 @@ void assig_check(TNode* command_instance){
 /**
 * Main function semantic checks 
 */
-void main_function_check(TSymtable* globalSymTable) {
+void main_function_semantics(TSymtable* globalSymTable) {
     /* Check existence of main function */
     if(symtable_search(globalSymTable, "main") == false) {
         error = ERR_UNDEFINED_IDENTIFIER;
@@ -255,6 +257,38 @@ void main_function_check(TSymtable* globalSymTable) {
     }
 }
 
+void declaration_semantics(TNode* declaration, scope_t* current_scope) {
+    char *variable_id = declaration->data.nodeData.identifier.identifier; // Get LHS var id
+    TData var_data;
+    int datatype = 0;
+
+    if (symtable_get_data(current_scope->current_scope, variable_id, &var_data) == false) { // Get LHS var 'id' metadata from current symtable
+        error = ERR_COMPILER_INTERNAL;
+        return;
+    }
+    
+    if (declaration->left->type == FUNCTION_CALL) { // var/const 'id' (:type) = function(param_list);
+        FunctionCallSemantics(declaration->left, current_scope, &datatype);
+    
+    check_error();
+
+    /* Variable type resolution */
+    if (var_data.variable.type == UNKNOWN_T) { // Type was unknown (var/const without specified type)
+        var_data.variable.type = datatype;
+
+        if (symtable_insert(current_scope->current_scope, variable_id, var_data) == false) {
+            error = ERR_COMPILER_INTERNAL;
+            return;
+        }
+    } 
+
+    if ((int) var_data.variable.type != datatype) {
+        error = ERR_PARAM_TYPE_RETURN_VAL;
+        return;
+    }
+}
+
+}
 
 /* Helper functions */
 
@@ -362,4 +396,23 @@ char get_literal_type(int type) {
     } 
 
     return formal_type;
+}
+
+/**
+* Sets given variable property is_used to true
+*/
+void set_to_used(TSymtable* symtable, char* identifier) {
+    TData data;
+
+    if (symtable_get_data(symtable, identifier, &data) == false) {
+        error = ERR_COMPILER_INTERNAL;
+        return;
+    }
+
+    data.variable.is_used = true;
+
+    if (symtable_insert(symtable, identifier, data) == false) {
+        error = ERR_COMPILER_INTERNAL;
+        return;
+    }
 }

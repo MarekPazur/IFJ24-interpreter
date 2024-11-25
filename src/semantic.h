@@ -20,18 +20,21 @@ void FunctionSemantics(TNode* func);
 
 void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func);
 
-void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope);
+void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope, int* type_out);
 
-void main_function_check(TSymtable* globalSymTable);
+void main_function_semantics(TSymtable* globalSymTable);
 
 void assig_check(TNode* command_instance);
 
-TSymtable* declaration_var_check(struct TScope scope, char* identifier);
+void declaration_semantics(TNode* declaration, scope_t* current_scope);
 
 // Helper functions
+TSymtable* declaration_var_check(struct TScope scope, char* identifier);
+
 int formal_param_count(TNode *formal_param);
 bool id_defined(struct TScope* scope, char* identifier,  TSymtable** out_sym);
 char get_var_type(Type type);
 char get_literal_type(int type);
+void set_to_used(TSymtable* symtable, char* identifier);
 
 #endif
