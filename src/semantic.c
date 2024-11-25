@@ -325,6 +325,9 @@ void expression_semantics(TNode *expression, scope_t* scope, int* type_out) {
         case FL:  // F64 LITERAL
             *type_out = FLOAT_T;
             break;
+        case NULL_LITERAL:
+            *type_out = UNKNOWN_T;
+            break;    
         case U8:  // INVALID LITERAL TYPES
         case STR:
             error = ERR_TYPE_COMPATABILITY;
@@ -351,7 +354,6 @@ void expression_semantics(TNode *expression, scope_t* scope, int* type_out) {
         default:
             break;        
     }
-
 }
 
 /* Helper functions */
@@ -484,3 +486,8 @@ void set_to_used(TSymtable* symtable, char* identifier) {
         return;
     }
 }
+
+void add_sub_mul_semantic(TNode* operator, scope_t* scope, int* type_out);
+/*void div_semantic();
+void equal_semantic();
+void relation_semantic();*/

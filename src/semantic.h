@@ -39,4 +39,6 @@ char get_var_type(Type type);
 char get_literal_type(int type);
 void set_to_used(TSymtable* symtable, char* identifier);
 
+void add_sub_mul_semantic(TNode* operator, scope_t* scope, int* type_out);
+
 #endif
