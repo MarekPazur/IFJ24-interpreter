@@ -139,8 +139,8 @@ void init_parser(token_t token) {
     root_code(parser, root);
 
     // debug functions
-    BT_print_tree(parser->AST->root);
-    debug_print_keys(parser->global_symtable);
+    //BT_print_tree(parser->AST->root);
+    //debug_print_keys(parser->global_symtable);
 
     /* SEMANTIC ANALYSIS */
     semantic_analysis(parser->AST);
@@ -813,57 +813,20 @@ void body(Tparser* parser, TNode** current_node) {
             if (parser->current_token.id != TOKEN_ASSIGNMENT) {
                 error = ERR_SYNTAX;
                 return;
-            }
-            if ((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
-                return;
-            if (parser->current_token.id != TOKEN_IDENTIFIER) {
-                error = ERR_SYNTAX;
-                return;
-            }
+            } else {
             
-            parser->processed_identifier = parser->current_token.lexeme.array;
-            (*current_node)->left = create_node(FUNCTION_CALL);
-            (*current_node)->left->data.nodeData.identifier.identifier = parser->processed_identifier;
-            
-            if ((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
-                return;
-                
-            if (parser->current_token.id == TOKEN_ACCESS_OPERATOR) {
-                (*current_node)->left = create_node(FUNCTION_CALL);
-                parser->state = STATE_identifier;
-                function_call(parser, &(*current_node)->left);
-                
-                if (error)
-                    return;
-                    
-                if ((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
-                    return;
-                    
-                if (parser->current_token.id != TOKEN_SEMICOLON) {
-                    error = ERR_SYNTAX;
-                    return;
-                    
-                }
-            }
-            
-            else if (parser->current_token.id == TOKEN_BRACKET_ROUND_LEFT) {
-            
-                (*current_node)->left = create_node(FUNCTION_CALL);
-                (*current_node)->left->data.nodeData.identifier.identifier = parser->processed_identifier;
-                parser->state = STATE_identifier;
-                function_call_params(parser, &(*current_node)->left->right);
-                if (error)
-                    return;
-                if ((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
-                    return;
-                if (parser->current_token.id != TOKEN_SEMICOLON) {
-                    error = ERR_SYNTAX;
+                (*current_node)->left = create_node(ASSIG);
+                (*current_node)->left->data.nodeData.identifier.identifier = "_";
+                (*current_node)->left->data.nodeData.identifier.is_disposeable = true;
+                parser->state = STATE_operand;
+
+                /* Expression */
+                expression(parser, TOKEN_SEMICOLON, &(*current_node)->left->left, false);
+
+                //set data type for local_databased on expression result
+                if (error) {
                     return;
                 }
-            }
-            else {
-                error = ERR_SYNTAX;
-                return;
             }
             parser->state = STATE_command;
             body(parser, &(*current_node)->right);
@@ -890,9 +853,8 @@ void body(Tparser* parser, TNode** current_node) {
             if (error) return;
 
             (*current_node)->left = create_node(BODY);
-            (*current_node)->left->data.nodeData.body.scope = parser->scope.current_scope;
-            (*current_node)->left->data.nodeData.body.parent_scope = parser->scope.parent_scope;
-            
+            (*current_node)->left->data.nodeData.body.current_scope = &parser->scope;
+           
             parser->state = STATE_command;
             body(parser, &(*current_node)->left->right);
             if (error) return;
@@ -967,6 +929,7 @@ void body(Tparser* parser, TNode** current_node) {
                 }
             
                 (*current_node)->left = create_node(ASSIG);
+                (*current_node)->left->data.nodeData.identifier.is_disposeable = false;
                 (*current_node)->left->data.nodeData.identifier.identifier = parser->processed_identifier;
                 parser->state = STATE_operand;
 
@@ -1037,8 +1000,7 @@ void body(Tparser* parser, TNode** current_node) {
             if (error) return;
 
             (*current_node)->left = create_node(ELSE);
-            (*current_node)->left->data.nodeData.body.scope = parser->scope.current_scope;
-            (*current_node)->left->data.nodeData.body.parent_scope = parser->scope.parent_scope;
+            (*current_node)->left->data.nodeData.body.current_scope = &parser->scope;
             
             parser->state = STATE_command;
             body(parser, &(*current_node)->left->right);
@@ -1058,49 +1020,20 @@ void body(Tparser* parser, TNode** current_node) {
             if (parser->current_token.id != TOKEN_ASSIGNMENT) {
                 error = ERR_SYNTAX;
                 return;
-            }
-            if ((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
-                return;
-            if (parser->current_token.id != TOKEN_IDENTIFIER) {
-                error = ERR_SYNTAX;
-                return;
-            }
-            parser->processed_identifier = parser->current_token.lexeme.array;
-            (*current_node)->left = create_node(FUNCTION_CALL);
+            } else {
             
-            if ((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
-                return;
-                
-            if (parser->current_token.id == TOKEN_ACCESS_OPERATOR) {
-                (*current_node)->left = create_node(FUNCTION_CALL);
-                parser->state = STATE_identifier;
-                function_call(parser, &(*current_node)->left);
-                if (error)
-                    return;
-                if ((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
-                    return;
-                if (parser->current_token.id != TOKEN_SEMICOLON) {
-                    error = ERR_SYNTAX;
+                (*current_node)->left = create_node(ASSIG);
+                (*current_node)->left->data.nodeData.identifier.is_disposeable = true;
+                (*current_node)->left->data.nodeData.identifier.identifier = "_";
+                parser->state = STATE_operand;
+
+                /* Expression */
+                expression(parser, TOKEN_SEMICOLON, &(*current_node)->left->left, false);
+
+                //set data type for local_databased on expression result
+                if (error) {
                     return;
                 }
-            }
-            else if (parser->current_token.id == TOKEN_BRACKET_ROUND_LEFT) {
-                (*current_node)->left = create_node(FUNCTION_CALL);
-                (*current_node)->left->data.nodeData.identifier.identifier = parser->processed_identifier;
-                parser->state = STATE_identifier;
-                function_call_params(parser, &(*current_node)->left->right);
-                if (error)
-                    return;
-                if ((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
-                    return;
-                if (parser->current_token.id != TOKEN_SEMICOLON) {
-                    error = ERR_SYNTAX;
-                    return;
-                }
-            }
-            else {
-                error = ERR_SYNTAX;
-                return;
             }
             parser->state = STATE_command;
             body(parser, &(*current_node)->right);
@@ -1112,8 +1045,7 @@ void body(Tparser* parser, TNode** current_node) {
             if (error) return;
         
             (*current_node)->left = create_node(ELSE);
-            (*current_node)->left->data.nodeData.body.scope = parser->scope.current_scope;
-            (*current_node)->left->data.nodeData.body.parent_scope = parser->scope.parent_scope;
+            (*current_node)->left->data.nodeData.body.current_scope = &parser->scope;
             
             parser->state = STATE_open_else;
             body(parser, &(*current_node)->left->right);
@@ -1211,6 +1143,7 @@ void body(Tparser* parser, TNode** current_node) {
                 }
             
                 (*current_node)->left = create_node(ASSIG);
+                (*current_node)->left->data.nodeData.identifier.is_disposeable = false;
                 (*current_node)->left->data.nodeData.identifier.identifier = parser->processed_identifier;
 
                 parser->state = STATE_operand;
@@ -1289,8 +1222,7 @@ void if_while_header(Tparser* parser, TNode** current_node, node_type type) {
         if (parser->current_token.id == TOKEN_BRACKET_ROUND_LEFT) { //checking for if ->(<-expression) |null_replacement| {
         
             (*current_node) = create_node(type);
-            (*current_node)->data.nodeData.body.scope = parser->scope.current_scope;
-            (*current_node)->data.nodeData.body.parent_scope = parser->scope.parent_scope;
+            (*current_node)->data.nodeData.body.current_scope = &parser->scope;
             
             parser->state = STATE_operand;
 

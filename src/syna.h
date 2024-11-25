@@ -49,6 +49,12 @@ typedef enum fsm_state_syna {
     STATE_assig_must
 } Pfsm_state_syna;
 
+
+typedef struct TScope{
+        TSymtable* current_scope;       // current scope parser is in
+        struct TScope* parent_scope;    // parent scope of current scope
+} scope_t;
+
 typedef struct parser {
     Pfsm_state_syna state;      // Automata state
     token_t current_token;      // processed token
@@ -57,13 +63,11 @@ typedef struct parser {
 
     TSymtable* global_symtable; // global symtable for functions
 
-    struct TScope{
-    TSymtable* current_scope;       // current scope parser is in
-    struct TScope* parent_scope;        // parent scope of current scope
-    }scope;
+    scope_t scope; // current scope parser is in, parent scope of current scope
 
     TBinaryTree* AST;           // Abstract syntax tree thats being assembled
 } Tparser;
+
 
 // Parser LL analysis functions
 void init_parser(token_t token);
