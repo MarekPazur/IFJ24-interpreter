@@ -844,7 +844,6 @@ void generate_function_parameters(linked_list_t parameters){
 }
 
 void calculate_expression(TBinaryTree* tree){
-    static bool float_expression = false;
     if(BT_has_left(tree)){
         BT_go_left(tree);
         calculate_expression(tree);
@@ -917,6 +916,7 @@ void calculate_expression(TBinaryTree* tree){
             error = ERR_COMPILER_INTERNAL;
             break;
     }
+    BT_go_parent(tree);
 }
 
 void generate_return(TBinaryTree* tree){
