@@ -406,16 +406,16 @@ void bst_print_keys(TNode* root){
     data = root->data;
     
     //used for debuging the global symtable
-    printf("is_null_type: %d\n", data.function.is_null_type);
+    /*printf("is_null_type: %d\n", data.function.is_null_type);
     printf("argument_types: %s\n", data.function.argument_types.array);
-    printf("return_type: %d\n", data.function.return_type);
+    printf("return_type: %d\n", data.function.return_type);*/
     
     //used for debuging local symtables
-    /*printf("is_null_type: %d\n", data.variable.is_null_type);
+    printf("is_null_type: %d\n", data.variable.is_null_type);
     printf("is_constant: %d\n", data.variable.is_constant);
     printf("is_used: %d\n", data.variable.is_used);
     printf("comp_runtime: %d\n", data.variable.comp_runtime);
-    printf("type: %d\n\n", data.variable.type);*/
+    printf("type: %d\n\n", data.variable.type);
     bst_print_keys(root->right);
 }
 

@@ -36,7 +36,7 @@ void semantic_analysis(TBinaryTree* AST) {
 
     /* Program/Root Node (Starting point of the program) */
     TNode** program = &(AST->root);
-    BT_print_tree(*program); //debug print
+    //BT_print_tree(*program); //debug print
 
     /* Get global symtable from Program/Root Node */
     globalSymTable = (*program)->data.nodeData.program.globalSymTable;
@@ -140,6 +140,8 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
 
         Command = Command->right;
     }
+    /* Scope ends here  */
+    //printf("------------\n");debug_print_keys(current_scope->current_scope); // debug print of current scopes variables stored in symtable and their properties
 }
 
 /**

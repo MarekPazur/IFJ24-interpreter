@@ -853,7 +853,15 @@ void body(Tparser* parser, TNode** current_node) {
             if (error) return;
 
             (*current_node)->left = create_node(BODY);
-            (*current_node)->left->data.nodeData.body.current_scope = &parser->scope;
+
+            (*current_node)->left->data.nodeData.body.current_scope = (scope_t*) malloc(sizeof(scope_t));
+
+            if ((*current_node)->left->data.nodeData.body.current_scope == NULL) {
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+
+            *(*current_node)->left->data.nodeData.body.current_scope = parser->scope;
            
             parser->state = STATE_command;
             body(parser, &(*current_node)->left->right);
@@ -1000,7 +1008,15 @@ void body(Tparser* parser, TNode** current_node) {
             if (error) return;
 
             (*current_node)->left = create_node(ELSE);
-            (*current_node)->left->data.nodeData.body.current_scope = &parser->scope;
+
+            (*current_node)->left->data.nodeData.body.current_scope = (scope_t*) malloc(sizeof(scope_t));
+
+            if ((*current_node)->left->data.nodeData.body.current_scope == NULL) {
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+
+            *(*current_node)->left->data.nodeData.body.current_scope = parser->scope;
             
             parser->state = STATE_command;
             body(parser, &(*current_node)->left->right);
@@ -1045,8 +1061,16 @@ void body(Tparser* parser, TNode** current_node) {
             if (error) return;
         
             (*current_node)->left = create_node(ELSE);
-            (*current_node)->left->data.nodeData.body.current_scope = &parser->scope;
             
+            (*current_node)->left->data.nodeData.body.current_scope = (scope_t*) malloc(sizeof(scope_t));
+
+            if ((*current_node)->left->data.nodeData.body.current_scope == NULL) {
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+
+            *(*current_node)->left->data.nodeData.body.current_scope = parser->scope;
+
             parser->state = STATE_open_else;
             body(parser, &(*current_node)->left->right);
             if (error) return;
@@ -1220,19 +1244,26 @@ void if_while_header(Tparser* parser, TNode** current_node, node_type type) {
     switch (parser->state) {
     case STATE_lr_bracket:
         if (parser->current_token.id == TOKEN_BRACKET_ROUND_LEFT) { //checking for if ->(<-expression) |null_replacement| {
+
+            enter_sub_body(parser);
+            if (error) return;
         
             (*current_node) = create_node(type);
-            (*current_node)->data.nodeData.body.current_scope = &parser->scope;
-            
+
+            (*current_node)->data.nodeData.body.current_scope = (scope_t*) malloc(sizeof(scope_t));
+
+            if ((*current_node)->data.nodeData.body.current_scope == NULL) {
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+
+            *(*current_node)->data.nodeData.body.current_scope = parser->scope;
             parser->state = STATE_operand;
 
             /* Expression */
             expression(parser, TOKEN_BRACKET_ROUND_RIGHT, &(*current_node)->left, false);
             if (error) return;
             
-            enter_sub_body(parser);
-            if (error) return;
-
             parser->state = STATE_pipe;
             if_while_header(parser, current_node, type);
             break;
@@ -1271,6 +1302,7 @@ void if_while_header(Tparser* parser, TNode** current_node, node_type type) {
         error = ERR_SYNTAX;
         return;
     }
+
     return;
 }
 
