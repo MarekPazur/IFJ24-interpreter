@@ -204,6 +204,7 @@ int get_node_type(int term, int select) {
 		case F64_T:
 			type = FL;
 			break;
+			
 		default:
 			type = VAR_CONST;
 			break;

@@ -257,6 +257,9 @@ void main_function_semantics(TSymtable* globalSymTable) {
     }
 }
 
+/**
+* Declaration: var/const 'id' = semantic checks
+*/
 void declaration_semantics(TNode* declaration, scope_t* current_scope) {
     char *variable_id = declaration->data.nodeData.identifier.identifier; // Get LHS var id
     TData var_data;
@@ -269,7 +272,7 @@ void declaration_semantics(TNode* declaration, scope_t* current_scope) {
     
     if (declaration->left->type == FUNCTION_CALL) { // var/const 'id' (:type) = function(param_list);
         FunctionCallSemantics(declaration->left, current_scope, &datatype);
-    
+
     check_error();
 
     /* Variable type resolution */
@@ -286,7 +289,64 @@ void declaration_semantics(TNode* declaration, scope_t* current_scope) {
         error = ERR_PARAM_TYPE_RETURN_VAL;
         return;
     }
+    } else
+        expression_semantics(declaration->left, current_scope, &datatype);
+        
+    printf("%d", datatype);
+
+    check_error();
+
 }
+
+/**
+* Expression semantic checks
+*/
+void expression_semantics(TNode *expression, scope_t* scope, int* type_out) {
+    if (expression == NULL)
+        return;
+
+    /* POST-ORDER-TRAVERSAL */
+    expression_semantics(expression->left, scope, type_out);
+    check_error();
+    expression_semantics(expression->right, scope, type_out);
+    check_error();
+
+    BT_print_node_type(expression);
+
+    switch(expression->type) {
+        /* LITERALS */
+        case INT: // I32 LITERAL
+            *type_out = INTEGER_T;
+            break;
+        case FL:  // F64 LITERAL
+            *type_out = FLOAT_T;
+            break;
+        case U8:  // INVALID LITERAL TYPES
+        case STR:
+            error = ERR_TYPE_COMPATABILITY;
+            break;
+
+        case OP_ADD:
+        case OP_SUB:
+        case OP_MUL:
+            break;
+
+        case OP_DIV:
+            break;
+
+        case OP_EQ:
+            break;
+
+        case OP_NEQ:
+        case OP_GT:
+        case OP_LS:
+        case OP_GTE:
+        case OP_LSE:
+            break;    
+
+        default:
+            break;        
+    }
 
 }
 

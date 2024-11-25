@@ -28,6 +28,8 @@ void assig_check(TNode* command_instance);
 
 void declaration_semantics(TNode* declaration, scope_t* current_scope);
 
+void expression_semantics(TNode *expression, scope_t* scope, int* type_out);
+
 // Helper functions
 TSymtable* declaration_var_check(struct TScope scope, char* identifier);
 

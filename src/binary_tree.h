@@ -137,6 +137,12 @@ struct node_data {
             char *literal;
             char *identifier;
         } value;
+
+        /* (SUB)EXPRESSION RESULT DATA TYPE */
+        struct {
+        	int data_type;
+        } expression;
+
     } nodeData;
 };
 
