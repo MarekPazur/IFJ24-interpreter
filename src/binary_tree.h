@@ -285,6 +285,14 @@ bool BT_get_data(TBinaryTree* BT, node_data* data_out);
 /**
  *
  * \param BT Binary tree
+ * \param[out] type Type output variable
+ * \return True: Success, False: NULL pointer argument | Binary tree is not active
+ */
+bool BT_get_node_type(TBinaryTree* BT, node_type* type);
+
+/**
+ *
+ * \param BT Binary tree
  * \param[out] data_out Data output variable
  * \return True: Success, False: NULL pointer argument | Binary tree is not active | Active node does not have a left node
  */

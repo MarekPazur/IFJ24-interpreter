@@ -45,6 +45,8 @@ typedef unsigned long long TLabel;
 const TTerm cg_var_retval = {.type = CG_VARIABLE_T, .value.var_name = "retval", .frame = GLOBAL};
 // IFJcode24 GF bool variable for storing results of comparisons
 const TTerm cg_var_cmp = {.type = CG_VARIABLE_T, .value.var_name = "cmp", .frame = GLOBAL};
+// IFJcode24 GF temp variable
+const TTerm cg_var_temp = {.type = CG_VARIABLE_T, .value.var_name = "temp", .frame = GLOBAL};
 // Often used literals
 const TTerm cg_null_term = {.type = CG_NULL_T};
 const TTerm cg_true_term = {.type = CG_BOOLEAN_T, .value.bool_val = true};
@@ -274,6 +276,7 @@ void cg_init(void){
     printf(".IFJcode24\n");
     cg_create_var(cg_var_retval);
     cg_create_var(cg_var_cmp);
+    cg_create_var(cg_var_temp);
     cg_set_type_bool(cg_var_cmp);
 }
 
@@ -742,10 +745,43 @@ void generate_function_parameters(linked_list_t parameters){
     }
 }
 
-void generate_function_body(TBinaryTree* tree){
-    while(BT_has_right(tree)){
-        
+void generate_return(TBinaryTree* tree){
+    
+}
+
+void generate_body_command(TBinaryTree* tree){
+    if(!BT_has_left(tree)){
+        return;
     }
+    BT_go_left(tree);
+    node_type type;
+    if(!BT_get_node_type(tree, &type)){
+        error = ERR_COMPILER_INTERNAL;
+        return;
+    }
+    switch(type){
+        case RETURN:
+
+        case CONST_DECL:
+        case VAR_DECL:
+        case ASSIG:
+        case BODY:
+        case WHILE:
+        case IF:
+        case ELSE:
+        case FUNCTION_CALL:
+    }
+    BT_go_parent(tree);
+}
+
+void generate_function_body(TBinaryTree* tree){
+    if(!BT_has_right(tree)){
+        return;
+    }
+    BT_go_right(tree);
+    generate_body_command(tree);
+
+    generate_function_body(tree);
     BT_go_parent(tree);
 }
 
@@ -759,7 +795,7 @@ void generate_function(TBinaryTree* tree){
     cg_push_frame();
     // Creating variables for the parameters, moving arguments to the variables
     generate_function_parameters(data.nodeData.function.param_identifiers);
-
+    generate_function_body(tree);
 
     cg_pop_frame();
     cg_return();

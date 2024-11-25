@@ -209,6 +209,14 @@ bool BT_get_data(TBinaryTree* BT, node_data* data_out){
     return true;
 }
 
+bool BT_get_node_type(TBinaryTree* BT, node_type* type){
+    if(!BT_is_active(BT)){
+        return false;
+    }
+    *type = BT->active->type;
+    return true;
+}
+
 bool BT_get_data_left(TBinaryTree* BT, node_data* data_out){
     if(!BT_has_left(BT)){
         return false;
