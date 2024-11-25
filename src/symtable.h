@@ -36,6 +36,7 @@ union data {
         bool is_null_type;            // Variable type can be nullable '?type'
         bool is_constant;             // Variable is constant
         bool is_used;                 // Variable has to be used in its life
+        bool is_mutated;              // Variable was changed in its life
         bool comp_runtime;            // Variable or value that is known and evaluated during compilation
 
         Type type;                    // Variable data type

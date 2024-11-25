@@ -34,6 +34,7 @@
     symtable_data.variable.is_null_type = nullable;
     symtable_data.variable.is_constant = constant;
     symtable_data.variable.is_used = false;
+    symtable_data.variable.is_mutated = false;
     symtable_data.variable.comp_runtime = false;
     symtable_data.variable.type = type;
     
@@ -935,6 +936,7 @@ void body(Tparser* parser, TNode** current_node) {
                 }
                 
                 retrieved_data.variable.is_used = true;
+                retrieved_data.variable.is_mutated = true;
                 
                 if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, retrieved_data)){
                     error = ERR_COMPILER_INTERNAL;
@@ -1165,6 +1167,7 @@ void body(Tparser* parser, TNode** current_node) {
                 }
                 
                 retrieved_data.variable.is_used = true;
+                retrieved_data.variable.is_mutated = true;
                 
                 if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, retrieved_data)){
                     error = ERR_COMPILER_INTERNAL;
@@ -1630,6 +1633,11 @@ void function_call_params(Tparser* parser, TNode** current_node) {
         case TOKEN_LITERAL_STRING:
             *current_node = create_node(STR);
             (*current_node)->data.nodeData.value.literal = parser->current_token.lexeme.array;
+            parser->state = STATE_coma;
+            function_call_params(parser, &(*current_node)->right);
+            break;
+        case TOKEN_KW_NULL:
+            *current_node = create_node(NULL_LITERAL);
             parser->state = STATE_coma;
             function_call_params(parser, &(*current_node)->right);
             break;

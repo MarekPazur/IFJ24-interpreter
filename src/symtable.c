@@ -442,6 +442,9 @@ bool check_is_used_iter(TNode* root){
     if( !root->data.variable.is_used ){
         return false;
     }
+    if ( (!root->data.variable.is_constant) && (!root->data.variable.is_mutated)) {
+        return false;
+    }
 
     if (!check_is_used_iter(root->right))
         return false;
