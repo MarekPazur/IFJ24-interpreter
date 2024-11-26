@@ -138,13 +138,8 @@ struct node_data {
         struct {
             char *literal;
             char *identifier;
+            char *const_value;
         } value;
-
-        /* (SUB)EXPRESSION RESULT DATA TYPE */
-        struct {
-        	int data_type;
-        } expression;
-
     } nodeData;
 };
 

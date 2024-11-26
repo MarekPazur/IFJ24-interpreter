@@ -296,7 +296,7 @@ void declaration_semantics(TNode* declaration, scope_t* current_scope) {
             return;
         }
     } else {
-        expr_info exp_res = {.type = UNKNOWN_T, .is_constant_exp = true};
+        expr_info exp_res = {.type = UNKNOWN_T, .is_constant_exp = true, .is_optional_null = false};
 
         expression_semantics(declaration->left, current_scope, &exp_res);
         check_error();
@@ -318,8 +318,8 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
         return;
 
     /* POST-ORDER-TRAVERSAL */
-    expr_info left = {.type = UNKNOWN_T, .is_constant_exp = true};
-    expr_info right = {.type = UNKNOWN_T, .is_constant_exp = true};
+    expr_info left = {.type = UNKNOWN_T, .is_constant_exp = true, .is_optional_null = false};
+    expr_info right = {.type = UNKNOWN_T, .is_constant_exp = true, .is_optional_null = false};
 
     expression_semantics(expression->left, scope, &left);
     check_error();
@@ -338,7 +338,7 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
             info->type = FLOAT_T;
             break;
         case NULL_LITERAL:
-            info->type = UNKNOWN_T;
+            info->type = NIL_T;
             break;
         case U8:  // INVALID LITERAL TYPES
         case STR:
@@ -365,6 +365,9 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
 
             info->type = info->data.variable.type;
 
+            if (info->data.variable.is_null_type)
+                info->is_optional_null = true;
+
             if (!info->data.variable.is_constant) // var encountered
                 info->is_constant_exp = false;
         }
@@ -373,12 +376,17 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
         case OP_ADD:
         case OP_SUB:
         case OP_MUL:
-            //add_sub_mul_semantic(expression, scope, type_out);
+            if (left.is_optional_null || right.is_optional_null) {
+                printf(RED_BOLD("error")": type mismatch, trying to use null type in arithmethics\n");
+                error = ERR_TYPE_COMPATABILITY;
+                return;
+            }
+
             if (left.type == right.type) { // i32 = i32, f64 = f64
                 info->type = left.type;
             } else if ((left.type == INTEGER_T && right.type == FLOAT_T) || (left.type == FLOAT_T && right.type == INTEGER_T)) {
                 /* type conversion here */
-                if (left.is_constant_exp && right.is_constant_exp) {
+                if (left.is_constant_exp && right.is_constant_exp) { // made out of literals and constants
                     /* left op literal */
                     if (expression->left->type == INT) {
                         char **literal = &expression->left->data.nodeData.value.literal;
@@ -394,15 +402,44 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
                         expression->right->type = FL;
                     }
                     /* left op const */
+                    if(expression->left->type == VAR_CONST) {
+                        TSymtable* local;
+                        TData var_data;
+                        char *variable_id = expression->left->data.nodeData.value.identifier;
+
+                        if (id_defined(scope, variable_id, &local) == false) {
+                            error = ERR_UNDEFINED_IDENTIFIER;
+                            break;
+                        }
+
+                        if (symtable_get_data(local, variable_id, &var_data) == false) {
+                            error = ERR_COMPILER_INTERNAL;
+                            break;
+                        }
+
+                        if (var_data.variable.type == INTEGER_T) {
+                            char *const_value = var_data.variable.value_pointer->data.nodeData.value.literal;
+
+                            
+                            if(var_data.variable.value_pointer->left && var_data.variable.value_pointer->right) {
+                                error = ERR_SYNTAX;
+                                return;
+                            }
+
+                            const_value = literal_convert_i32_to_f64(const_value);
+                            expression->left->type = FL;
+                            expression->left->data.nodeData.value.literal = const_value;
+                        }
+                    }
                     /* right op const */
 
                     info->type = FLOAT_T;
-                } else {
-                    printf(RED_BOLD("error")":var type mismatch\n");
+                } else { // var must be the same type
+                    printf(RED_BOLD("error")": var type mismatch\n");
                     error = ERR_TYPE_COMPATABILITY;
                     return;
                 }
-            } else { // UNKNOWN_T, NULL_LITERAL, 
+            } else { // UNKNOWN_T, NULL_T 
                 printf(RED_BOLD("error")": expression type mismatch\n");
                 error = ERR_TYPE_COMPATABILITY;
                 return;
@@ -410,11 +447,36 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
             break;
 
         case OP_DIV:
-            // 10.0 --> 10 conversion 
+            // Same type
             if (left.type == right.type) {
                     info->type = left.type;
-            }
+            } // type mismatch
+            else if ((left.type == INTEGER_T && right.type == FLOAT_T) || (left.type == FLOAT_T && right.type == INTEGER_T)) {
+                if (left.is_constant_exp && right.is_constant_exp) {
+                    if (expression->left->type == FL) {
 
+                    }
+                    if (expression->right->type == FL) {
+
+                    }
+                    if (expression->left->type == VAR_CONST) {
+
+                    }
+                    if (expression->right->type == VAR_CONST) {
+
+                    }
+
+                } else { // var must be the same type
+                    printf(RED_BOLD("error")": var type mismatch\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+            } else { // UNKNOWN_T, NULL_T 
+                printf(RED_BOLD("error")": expression type mismatch\n");
+                error = ERR_TYPE_COMPATABILITY;
+                return;
+            }
             break;
 
         case OP_EQ:
@@ -568,22 +630,6 @@ void set_to_used(TSymtable* symtable, char* identifier) {
 }
 
 /*void add_sub_mul_semantic(TNode* operator, scope_t* scope, int* type_out) {
-    if (operator->left->type == INT && operator->right->type == INT) {
-        *type_out = INTEGER_T;
-        return;
-    }
-
-    if (operator->left->type == FL && operator->right->type == FL) {
-        *type_out = FLOAT_T;
-        return;
-    }
-
-    if (operator->left->type == NULL_LITERAL || operator->left->type == NULL_LITERAL) {
-        error = ERR_TYPE_COMPATABILITY;
-        return;
-    }
-
-    scope = scope;
 }*/
 /*void div_semantic();
 void equal_semantic();
@@ -600,3 +646,7 @@ char *literal_convert_i32_to_f64(char *literal) {
 
     return converted;
 }
+
+/*char *literal_convert_f64_to_i32(char *literal) {
+
+}*/

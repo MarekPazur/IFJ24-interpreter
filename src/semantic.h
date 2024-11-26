@@ -19,6 +19,7 @@ typedef struct {
     int type;	// result type
     TData data;	// data about variable/constant
     bool is_constant_exp; // is result of (sub)expression constant
+    bool is_optional_null;
 } expr_info;
 
 void semantic_analysis(TBinaryTree* AST);
