@@ -7,6 +7,8 @@
  */
 
 #include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 
 #include "semantic.h"
@@ -377,6 +379,23 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
             } else if ((left.type == INTEGER_T && right.type == FLOAT_T) || (left.type == FLOAT_T && right.type == INTEGER_T)) {
                 /* type conversion here */
                 if (left.is_constant_exp && right.is_constant_exp) {
+                    /* left op literal */
+                    if (expression->left->type == INT) {
+                        char **literal = &expression->left->data.nodeData.value.literal;
+
+                        *literal = literal_convert_i32_to_f64(*literal);
+                        expression->left->type = FL;
+                    }
+                    /* right op literal */
+                    if(expression->right->type == INT) {
+                        char **literal = &expression->right->data.nodeData.value.literal;
+
+                        *literal = literal_convert_i32_to_f64(*literal);
+                        expression->right->type = FL;
+                    }
+                    /* left op const */
+                    /* right op const */
+
                     info->type = FLOAT_T;
                 } else {
                     printf(RED_BOLD("error")":var type mismatch\n");
@@ -395,7 +414,7 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
             if (left.type == right.type) {
                     info->type = left.type;
             }
-            
+
             break;
 
         case OP_EQ:
@@ -413,6 +432,8 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
         default:
             break;
     }
+
+    BT_print_tree(expression);
 }
 
 /* Helper functions */
@@ -567,3 +588,15 @@ void set_to_used(TSymtable* symtable, char* identifier) {
 /*void div_semantic();
 void equal_semantic();
 void relation_semantic();*/
+
+char *literal_convert_i32_to_f64(char *literal) {
+    size_t new_size = strlen(literal) + 3; // '.''0''\0'
+
+    char *converted = (char*) malloc(sizeof(char)*new_size);
+    memset(converted, 0, new_size);
+
+    strcpy(converted, literal);
+    strcat(converted, ".0");
+
+    return converted;
+}
