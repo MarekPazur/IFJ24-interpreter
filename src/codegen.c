@@ -1094,7 +1094,6 @@ void generate_call(TBinaryTree* tree){
         error = ERR_COMPILER_INTERNAL;
         return;
     }
-    cg_call(fun_data.nodeData.identifier.identifier);
     int arg_count = 0;
     while(BT_has_right(tree)){
         BT_go_right(tree);
@@ -1105,6 +1104,7 @@ void generate_call(TBinaryTree* tree){
         BT_go_parent(tree);
         arg_count--;
     }
+    cg_call(fun_data.nodeData.identifier.identifier);
 }
 
 void generate_var_declaration(TBinaryTree* tree){
@@ -1217,6 +1217,7 @@ void generate_function(TBinaryTree* tree){
 }
 
 void generate_builtin(void){
+    generate_comment("____IFJ BUILT-IN____");
     cg_ifj_readstr();
     cg_ifj_readi32();
     cg_ifj_readf64();
