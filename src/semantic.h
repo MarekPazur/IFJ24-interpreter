@@ -36,6 +36,8 @@ void assig_check(TNode* command_instance);
 
 void declaration_semantics(TNode* declaration, scope_t* current_scope);
 
+void check_head_type(TNode* body);
+
 void expression_semantics(TNode *expression, scope_t* scope, expr_info* info);
 
 // Helper functions

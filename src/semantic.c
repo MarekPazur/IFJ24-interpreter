@@ -96,6 +96,15 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
         switch (command_instance->type) {
         case WHILE:
         case IF:
+        
+            check_head_type(command_instance);
+            check_error();
+            
+            sub_scope = command_instance->data.nodeData.body.current_scope;
+            CommandSemantics(command_instance->right, sub_scope, func); // Recursively call so we can return to original node as soon as we explore the branch on the left side caused by a while or if
+            check_error();
+            break;
+            
         case ELSE:
         case BODY:
             //ExpressionSemantics(command_instance->left);
@@ -145,6 +154,29 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
         return;
     }*/
     printf("------------\n"); debug_print_keys(current_scope->current_scope); // debug print of current scopes variables stored in symtable and their properties
+}
+
+/**
+* @brief this function checks that there is a bool expression inside the if and while header, also checks that if the header has |this| it is nullable
+* @param the node of the if or while
+*/
+void check_head_type(TNode* body){
+
+    expr_info expr_data;
+    
+    expression_semantics(body->left, body->data.nodeData.body.current_scope->parent_scope, &expr_data);
+    
+    if ( body->data.nodeData.body.is_nullable ){
+        if( !expr_data.is_optional_null ){
+            error = ERR_SEMANTIC_OTHER;
+            return;
+        }
+    } else {
+        if( expr_data.type!=BOOL_T ){
+            error = ERR_TYPE_COMPATABILITY;
+            return;
+        }
+    }
 }
 
 /**
