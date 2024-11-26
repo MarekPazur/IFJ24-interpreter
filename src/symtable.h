@@ -23,6 +23,8 @@ typedef enum type {
     U8_SLICE_T,   // u8[]
 } Type;
 
+struct node;
+
 union data {
     struct {
         bool is_null_type;            // Return type can be nullable '?type'
@@ -38,6 +40,8 @@ union data {
         bool is_used;                 // Variable has to be used in its life
         bool is_mutated;              // Variable was changed in its life
         bool comp_runtime;            // Variable or value that is known and evaluated during compilation
+        
+        struct node* value_pointer;
 
         Type type;                    // Variable data type
     } variable;

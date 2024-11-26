@@ -152,7 +152,6 @@ symbol token_to_symbol(token_t term) {
 	        //Checking the existance of the variable and changing it's is_used value to true
 	        
 	        if((identifier_residence = declaration_var_check(current_symtable_scope, term.lexeme.array)) == NULL){
-	            printf("I broke at the %s", term.lexeme.array);
                     error = ERR_UNDEFINED_IDENTIFIER;
                     return symbol;
                 }
@@ -160,6 +159,11 @@ symbol token_to_symbol(token_t term) {
                 symtable_get_data(identifier_residence, term.lexeme.array, &retrieved_data);
                 
                 retrieved_data.variable.is_used = true;
+                
+                if(!symtable_insert(identifier_residence, term.lexeme.array, retrieved_data)){
+                    error = ERR_COMPILER_INTERNAL;
+                    return symbol;
+                }
 	
 		symbol.id = I;
 		symbol.type = CONST_VAR_ID;
