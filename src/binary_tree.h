@@ -326,4 +326,6 @@ void BT_print_tree(TNode *tree);
 */
 void BT_print_node_type (TNode *node);
 
+void BT_assign_parents(TBinaryTree* tree);
+
 #endif

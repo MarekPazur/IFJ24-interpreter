@@ -44,6 +44,15 @@ void free_nodes(TNode* root){
     free(root);
 }
 
+void assign_parents(TNode* root, TNode* parent){
+    if(root == NULL){
+        return;
+    }
+    root->parent = parent;
+    assign_parents(root->left, root);
+    assign_parents(root->right, root);
+}
+
 // Binary tree public functions
 
 TBinaryTree* BT_init(void){
@@ -513,4 +522,11 @@ void BT_print_node_type (TNode *node) {
     }
 
     printf(WHITE_BOLD("NODE TYPE:")" %s\n", node_t_string[node->type]);
+}
+
+void BT_assign_parents(TBinaryTree* tree){
+    if(tree == NULL){
+        return;
+    }
+    assign_parents(tree->root, NULL);
 }

@@ -847,10 +847,12 @@ void calculate_expression(TBinaryTree* tree){
     if(BT_has_left(tree)){
         BT_go_left(tree);
         calculate_expression(tree);
+        BT_go_parent(tree);
     }
     if(BT_has_right(tree)){
         BT_go_right(tree);
         calculate_expression(tree);
+        BT_go_parent(tree);
     }
     node_type type;
     node_data data;
@@ -892,7 +894,6 @@ void calculate_expression(TBinaryTree* tree){
         case OP_DIV:
             cg_div_stack();
             break;
-            break;
         case OP_EQ:
             cg_eq_stack();
             break;
@@ -916,7 +917,6 @@ void calculate_expression(TBinaryTree* tree){
             error = ERR_COMPILER_INTERNAL;
             break;
     }
-    BT_go_parent(tree);
 }
 
 void generate_return(TBinaryTree* tree){
@@ -925,6 +925,7 @@ void generate_return(TBinaryTree* tree){
         cg_stack_clear();
         calculate_expression(tree);
         cg_stack_pop(cg_var_retval);
+        BT_go_parent(tree);
     }
     cg_pop_frame();
     cg_return();
@@ -952,6 +953,7 @@ void generate_body_command(TBinaryTree* tree){
         case IF:
         case ELSE:
         case FUNCTION_CALL:
+            break;
         default:
             error = ERR_COMPILER_INTERNAL;
             break;
@@ -992,6 +994,7 @@ void codegen(TBinaryTree* tree){
         error = ERR_COMPILER_INTERNAL;
         return;
     }
+    BT_assign_parents(tree);
     generate_comment("Init:");
     cg_init();
     generate_comment("Generating program:");
