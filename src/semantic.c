@@ -7,6 +7,8 @@
  */
 
 #include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 
 #include "semantic.h"
@@ -36,7 +38,7 @@ void semantic_analysis(TBinaryTree* AST) {
 
     /* Program/Root Node (Starting point of the program) */
     TNode** program = &(AST->root);
-    BT_print_tree(*program); //debug print
+    //BT_print_tree(*program); //debug print
 
     /* Get global symtable from Program/Root Node */
     globalSymTable = (*program)->data.nodeData.program.globalSymTable;
@@ -108,12 +110,12 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
             declaration_semantics(command_instance, current_scope);
             check_error();
             break;
-        
+
         case ASSIG:
             assig_check(command_instance);
             check_error();
             break;
-        
+
         case FUNCTION_CALL:
             /* while this approach would probably work to some extent, we need to check other things that I believe we'll be able to check further on function call, arguments, etc.
             if(symtable_search(command.instance.function.id) == false)
@@ -123,13 +125,13 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
             break;
 
         case RETURN:
-            if ( (command_instance->left == NULL && func->data.nodeData.function.type != VOID_TYPE) || (command_instance->left != NULL && func->data.nodeData.function.type == VOID_TYPE) ){
+            if ( (command_instance->left == NULL && func->data.nodeData.function.type != VOID_TYPE) || (command_instance->left != NULL && func->data.nodeData.function.type == VOID_TYPE) ) {
                 error = ERR_RETURN_VALUE_EXPRESSION;
                 return;
             }
             //ExpressionSemantics(command_instance->left);
             hasReturn = true;
-            break;    
+            break;
 
         default:
             break;
@@ -142,7 +144,7 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
         error = ERR_UNUSED_VAR;
         return;
     }*/
-    printf("------------\n");debug_print_keys(current_scope->current_scope); // debug print of current scopes variables stored in symtable and their properties
+    printf("------------\n"); debug_print_keys(current_scope->current_scope); // debug print of current scopes variables stored in symtable and their properties
 }
 
 /**
@@ -203,10 +205,10 @@ void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope, int* typ
             formal_param_type = get_literal_type(formal_param->type);
         }
 
-         if (formal_param_type != real_param[param_position]) {
-             error = ERR_PARAM_TYPE_RETURN_VAL;
-            break; 
-        }        
+        if (formal_param_type != real_param[param_position]) {
+            error = ERR_PARAM_TYPE_RETURN_VAL;
+            break;
+        }
 
         ++param_position;
         formal_param = formal_param->right;
@@ -218,9 +220,9 @@ void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope, int* typ
     check_error();
 }
 
-void assig_check(TNode* command_instance){
+void assig_check(TNode* command_instance) {
     TData function_data;
-    
+
     if (command_instance->left->type == FUNCTION_CALL) {
         if ( command_instance->data.nodeData.identifier.is_disposeable ) {
             /* Get functions metadata */
@@ -228,7 +230,7 @@ void assig_check(TNode* command_instance){
                 error = ERR_COMPILER_INTERNAL;
                 return;
             }
-                    
+
             if ( function_data.function.return_type == VOID_T ) {
                 error = ERR_PARAM_TYPE_RETURN_VAL;
                 return;
@@ -238,11 +240,11 @@ void assig_check(TNode* command_instance){
 }
 
 /**
-* Main function semantic checks 
+* Main function semantic checks
 */
 void main_function_semantics(TSymtable* globalSymTable) {
     /* Check existence of main function */
-    if(symtable_search(globalSymTable, "main") == false) {
+    if (symtable_search(globalSymTable, "main") == false) {
         error = ERR_UNDEFINED_IDENTIFIER;
         return;
     }
@@ -273,29 +275,35 @@ void declaration_semantics(TNode* declaration, scope_t* current_scope) {
         error = ERR_COMPILER_INTERNAL;
         return;
     }
-    
+
     if (declaration->left->type == FUNCTION_CALL) { // var/const 'id' (:type) = function(param_list);
         FunctionCallSemantics(declaration->left, current_scope, &datatype);
 
-    check_error();
+        check_error();
 
-    /* Variable type resolution */
-    if (var_data.variable.type == UNKNOWN_T) { // Type was unknown (var/const without specified type)
-        var_data.variable.type = datatype;
+        /* Variable type resolution */
+        if (var_data.variable.type == UNKNOWN_T) { // Type was unknown (var/const without specified type)
+            var_data.variable.type = datatype;
 
-        if (symtable_insert(current_scope->current_scope, variable_id, var_data) == false) {
-            error = ERR_COMPILER_INTERNAL;
+            if (symtable_insert(current_scope->current_scope, variable_id, var_data) == false) {
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+        }
+
+        if ((int) var_data.variable.type != datatype) {
+            error = ERR_PARAM_TYPE_RETURN_VAL;
             return;
         }
-    } 
+    } else {
+        expr_info exp_res = {.type = UNKNOWN_T, .is_constant_exp = true};
 
-    if ((int) var_data.variable.type != datatype) {
-        error = ERR_PARAM_TYPE_RETURN_VAL;
-        return;
+        expression_semantics(declaration->left, current_scope, &exp_res);
+        check_error();
+        datatype = exp_res.type;
+        printf("is constant expr %d\n", exp_res.is_constant_exp);
     }
-    } else
-        expression_semantics(declaration->left, current_scope, &datatype);
-        
+
     printf("%d", datatype);
 
     check_error();
@@ -305,40 +313,112 @@ void declaration_semantics(TNode* declaration, scope_t* current_scope) {
 /**
 * Expression semantic checks
 */
-void expression_semantics(TNode *expression, scope_t* scope, int* type_out) {
+void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
     if (expression == NULL)
         return;
 
     /* POST-ORDER-TRAVERSAL */
-    expression_semantics(expression->left, scope, type_out);
-    check_error();
-    expression_semantics(expression->right, scope, type_out);
+    expr_info left = {.type = UNKNOWN_T, .is_constant_exp = true};
+    expr_info right = {.type = UNKNOWN_T, .is_constant_exp = true};
+
+    expression_semantics(expression->left, scope, &left);
     check_error();
 
-    BT_print_node_type(expression);
+    expression_semantics(expression->right, scope, &right);
+    check_error();
 
-    switch(expression->type) {
+    BT_print_tree(expression);//BT_print_node_type(expression);
+
+    switch (expression->type) {
         /* LITERALS */
         case INT: // I32 LITERAL
-            *type_out = INTEGER_T;
+            info->type = INTEGER_T;
             break;
         case FL:  // F64 LITERAL
-            *type_out = FLOAT_T;
+            info->type = FLOAT_T;
+            break;
+        case NULL_LITERAL:
+            info->type = UNKNOWN_T;
             break;
         case U8:  // INVALID LITERAL TYPES
         case STR:
             error = ERR_TYPE_COMPATABILITY;
             break;
+        /* VAR or CONST */
+        case VAR_CONST:
+        {
+            TSymtable* local;
+
+            char *variable_id = expression->data.nodeData.value.identifier;
+
+            if (id_defined(scope, variable_id, &local) == false) {
+                error = ERR_UNDEFINED_IDENTIFIER;
+                break;
+            }
+
+            if (symtable_get_data(local, variable_id, &info->data) == false) {
+                error = ERR_COMPILER_INTERNAL;
+                break;
+            }
+
+            set_to_used(local, variable_id);
+
+            info->type = info->data.variable.type;
+
+            if (!info->data.variable.is_constant) // var encountered
+                info->is_constant_exp = false;
+        }
+        break;
 
         case OP_ADD:
         case OP_SUB:
         case OP_MUL:
+            //add_sub_mul_semantic(expression, scope, type_out);
+            if (left.type == right.type) { // i32 = i32, f64 = f64
+                info->type = left.type;
+            } else if ((left.type == INTEGER_T && right.type == FLOAT_T) || (left.type == FLOAT_T && right.type == INTEGER_T)) {
+                /* type conversion here */
+                if (left.is_constant_exp && right.is_constant_exp) {
+                    /* left op literal */
+                    if (expression->left->type == INT) {
+                        char **literal = &expression->left->data.nodeData.value.literal;
+
+                        *literal = literal_convert_i32_to_f64(*literal);
+                        expression->left->type = FL;
+                    }
+                    /* right op literal */
+                    if(expression->right->type == INT) {
+                        char **literal = &expression->right->data.nodeData.value.literal;
+
+                        *literal = literal_convert_i32_to_f64(*literal);
+                        expression->right->type = FL;
+                    }
+                    /* left op const */
+                    /* right op const */
+
+                    info->type = FLOAT_T;
+                } else {
+                    printf(RED_BOLD("error")":var type mismatch\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+            } else { // UNKNOWN_T, NULL_LITERAL, 
+                printf(RED_BOLD("error")": expression type mismatch\n");
+                error = ERR_TYPE_COMPATABILITY;
+                return;
+            }
             break;
 
         case OP_DIV:
+            // 10.0 --> 10 conversion 
+            if (left.type == right.type) {
+                    info->type = left.type;
+            }
+
             break;
 
         case OP_EQ:
+            info->type = BOOL_T;
             break;
 
         case OP_NEQ:
@@ -346,12 +426,14 @@ void expression_semantics(TNode *expression, scope_t* scope, int* type_out) {
         case OP_LS:
         case OP_GTE:
         case OP_LSE:
-            break;    
+            info->type = BOOL_T;
+            break;
 
         default:
-            break;        
+            break;
     }
 
+    BT_print_tree(expression);
 }
 
 /* Helper functions */
@@ -374,14 +456,14 @@ TSymtable* declaration_var_check(struct TScope cur_scope, char* identifier) {
     return NULL;
 }
 
-/** 
+/**
 * Returns count of formal parameters in function call
-* fun(a,b,c) ---> 3 
+* fun(a,b,c) ---> 3
 */
 int formal_param_count(TNode *formal_param) {
     int param_count = 0;
 
-    while(formal_param) {
+    while (formal_param) {
         ++param_count;
         formal_param = formal_param->right;
     }
@@ -395,13 +477,13 @@ int formal_param_count(TNode *formal_param) {
 * returns true or false depending on its definition
 */
 bool id_defined(struct TScope* scope, char* identifier, TSymtable** out_sym) {
-    while(scope) {
-         if (symtable_search(scope->current_scope, identifier)) {
+    while (scope) {
+        if (symtable_search(scope->current_scope, identifier)) {
             *out_sym = scope->current_scope;
             return true;
-         }
+        }
 
-         scope = scope->parent_scope;
+        scope = scope->parent_scope;
     }
 
     *out_sym = NULL;
@@ -414,26 +496,26 @@ bool id_defined(struct TScope* scope, char* identifier, TSymtable** out_sym) {
  */
 
 /**
-* Returns variables data type in char format 'i','u','f' 
+* Returns variables data type in char format 'i','u','f'
 */
 char get_var_type(Type type) {
     char formal_type = 0;
 
     switch (type) {
-        case INTEGER_T:
-            formal_type = 'i';
-            break;
-        case FLOAT_T:
-            formal_type = 'f';
-            break;
-        case U8_SLICE_T:
-            formal_type = 'u';
-            break;
+    case INTEGER_T:
+        formal_type = 'i';
+        break;
+    case FLOAT_T:
+        formal_type = 'f';
+        break;
+    case U8_SLICE_T:
+        formal_type = 'u';
+        break;
 
-        default:
-            formal_type = 0;
-            break; 
-    } 
+    default:
+        formal_type = 0;
+        break;
+    }
 
     return formal_type;
 }
@@ -445,23 +527,23 @@ char get_literal_type(int type) {
     char formal_type = 0;
 
     switch (type) {
-        case INT:
-            formal_type = 'i';
-            break;
-        case FL:
-            formal_type = 'f';
-            break;
-        case U8:
-            formal_type = 'u';
-            break;
-        case STR:
-            formal_type = 's';
-            break;
+    case INT:
+        formal_type = 'i';
+        break;
+    case FL:
+        formal_type = 'f';
+        break;
+    case U8:
+        formal_type = 'u';
+        break;
+    case STR:
+        formal_type = 's';
+        break;
 
-        default:
-            formal_type = 0;
-            break; 
-    } 
+    default:
+        formal_type = 0;
+        break;
+    }
 
     return formal_type;
 }
@@ -483,4 +565,38 @@ void set_to_used(TSymtable* symtable, char* identifier) {
         error = ERR_COMPILER_INTERNAL;
         return;
     }
+}
+
+/*void add_sub_mul_semantic(TNode* operator, scope_t* scope, int* type_out) {
+    if (operator->left->type == INT && operator->right->type == INT) {
+        *type_out = INTEGER_T;
+        return;
+    }
+
+    if (operator->left->type == FL && operator->right->type == FL) {
+        *type_out = FLOAT_T;
+        return;
+    }
+
+    if (operator->left->type == NULL_LITERAL || operator->left->type == NULL_LITERAL) {
+        error = ERR_TYPE_COMPATABILITY;
+        return;
+    }
+
+    scope = scope;
+}*/
+/*void div_semantic();
+void equal_semantic();
+void relation_semantic();*/
+
+char *literal_convert_i32_to_f64(char *literal) {
+    size_t new_size = strlen(literal) + 3; // '.''0''\0'
+
+    char *converted = (char*) malloc(sizeof(char)*new_size);
+    memset(converted, 0, new_size);
+
+    strcpy(converted, literal);
+    strcat(converted, ".0");
+
+    return converted;
 }

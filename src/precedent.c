@@ -26,6 +26,7 @@
 #define PUSH_SYMBOL(symbol_id) push(&sym_stack, (symbol) {.id = symbol_id, .token = {.id = TOKEN_DEFAULT, .lexeme = {.array = NULL}}, .type = NON_OPERAND})
 
 bool precedence_debug = false;
+int relative_op_count = 0;
 
 struct TScope current_symtable_scope;
 
@@ -123,21 +124,27 @@ symbol token_to_symbol(token_t term) {
 	/* Logic OP */
 	case TOKEN_EQUAL: 				// ==
 		symbol.id = EQ;
+		relative_op_count++;
 		break;
 	case TOKEN_NOT_EQUAL: 			// !=
 		symbol.id = NEQ;
+		relative_op_count++;
 		break;
 	case TOKEN_LESS: 				// <
 		symbol.id = LS;
+		relative_op_count++;
 		break;
 	case TOKEN_GREATER:	 			// >
 		symbol.id = GR;
+		relative_op_count++;
 		break;
 	case TOKEN_GREATER_EQUAL: 		// >=
 		symbol.id = GRE;
+		relative_op_count++;
 		break;
 	case TOKEN_LESS_EQUAL: 			// <=
-		symbol.id = LSE;			// I_LOGIC = 2
+		symbol.id = LSE;
+		relative_op_count++;			// I_LOGIC = 2
 		break;
 
 	case TOKEN_BRACKET_ROUND_LEFT:	// (
@@ -415,10 +422,18 @@ TNode* precedent(t_buf* token_buffer, token_id end_marker, struct TScope cur_sco
 
 		top_term = get_topmost_term(&sym_stack);
 
-		if (read_enable)
+		if (read_enable) {
 			next_term = token_to_symbol((token = fetch_token(token_buffer)));
-		if (error) 
+			
+			if (relative_op_count > 1) {
+				printf("error: too many relative operators\n");
+				error = ERR_SYNTAX;
+			}
+		}
+			
+		if (error) {
 			break;
+		}
 
 		if (end_marker == TOKEN_SEMICOLON ? (top_term.id == END && next_term.id == END) : (top_term.id == END && next_term.id == RBR)) // $ = $ -> topmost term in stack = next term, expression is finally solved $E$
 			expr_solved = true;
