@@ -1425,7 +1425,6 @@ void var_const_declaration(Tparser* parser, TNode** current_node, node_type type
                 return;
             }
             if ( (*current_node)->left->left == NULL && (*current_node)->left->right == NULL ) {
-                printf("Entered here");
                 if ( (*current_node)->type == CONST_DECL ) {
                     
                     if ( (*current_node)->left->type == VAR_CONST ) {
