@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "compiler_error.h"
 #include "binary_tree.h"
@@ -218,23 +219,25 @@ void cg_ifj_readi32(void);
 
 void cg_ifj_readf64(void);
 
-void cg_ifj_write(TTerm term);
+void cg_ifj_write(void);
 
-void cg_ifj_i2f(TTerm term);
+void cg_ifj_i2f(void);
 
-void cg_ifj_f2i(TTerm term);
+void cg_ifj_f2i(void);
 
-void cg_ifj_string(TTerm term);
+void cg_ifj_string(void);
 
-void cg_ifj_length(TTerm s);
+void cg_ifj_length(void);
 
-void cg_ifj_concat(TTerm s1, TTerm s2);
+void cg_ifj_concat(void);
 
-void cg_ifj_substring(TTerm s, TTerm i, TTerm j);
+void cg_ifj_substring(void);
 
-void cg_ifj_strcmp(TTerm s1, TTerm s2);
+void cg_ifj_strcmp(void);
 
-void cg_ifj_ord(TTerm s, TTerm i);
+void cg_ifj_ord(void);
+
+void cg_ifj_chr(void);
 
 // Codegen
 
@@ -323,12 +326,25 @@ void cg_exit(TTerm number){
 
 // Function calling
 
+void cg_print_fun(char* function){
+    for(int i = 0; function[i] != '\0'; i++){
+        if(function[i] == '.'){
+            putchar('-');
+        }
+        else{
+            putchar(function[i]);
+        }
+    }
+}
+
 void cg_call(char* function){
     if(function == NULL){
         error = ERR_COMPILER_INTERNAL;
         return;
     }
-    printf("call FUN_%s\n", function);
+    printf("call FUN_");
+    cg_print_fun(function);
+    putchar('\n');
 }
 
 void cg_return(void){
@@ -340,7 +356,9 @@ void cg_create_fun(char* function){
         error = ERR_COMPILER_INTERNAL;
         return;
     }
-    printf("label FUN_%s\n", function);
+    printf("label FUN_");
+    cg_print_fun(function);
+    putchar('\n');
 }
 
 void cg_move(TTerm dest, TTerm src){
@@ -610,66 +628,134 @@ void cg_stack_clear(void){
 // IFJ BUILT-IN
 
 void cg_ifj_readstr(void){
+    cg_create_fun("ifj.readstr");
     printf("read ");
     cg_term(cg_var_retval);
     printf(" string\n");
+    cg_return();
 }
 
 void cg_ifj_readi32(void){
+    cg_create_fun("ifj.readi32");
     printf("read %s%s int\n", get_frame(cg_var_retval.frame), cg_var_retval.value.var_name);
+    cg_return();
 }
 
 void cg_ifj_readf64(void){
+    cg_create_fun("ifj.readf64");
     printf("read %s%s float\n", get_frame(cg_var_retval.frame), cg_var_retval.value.var_name);
+    cg_return();
 }
 
-void cg_ifj_write(TTerm term){
-    printf("write ");
-    cg_term(term);
-    putchar('\n');
-}
-
-void cg_ifj_i2f(TTerm term){
-    if(term.type != CG_VARIABLE_T && term.type != CG_INTEGER_T){
-        error = ERR_COMPILER_INTERNAL;
-        return;
-    }
-    printf("int2float");
-    cg_two_operands(cg_var_retval, term);
-}
-
-void cg_ifj_f2i(TTerm term){
-    if(term.type != CG_VARIABLE_T && term.type != CG_FLOAT_T){
-        error = ERR_COMPILER_INTERNAL;
-        return;
-    }
-    printf("float2int");
-    cg_two_operands(cg_var_retval, term);
-}
-
-void cg_ifj_string(TTerm term){
-    if(term.type != CG_VARIABLE_T && term.type != CG_STRING_T){
-        error = ERR_COMPILER_INTERNAL;
-    }
-    cg_move(cg_var_retval, term);
-}
-
-void cg_ifj_length(TTerm s){
-    cg_strlen(cg_var_retval, s);
-}
-
-void cg_ifj_concat(TTerm s1, TTerm s2){
-    if(s1.type != CG_VARIABLE_T || s2.type != CG_VARIABLE_T){
-        error = ERR_COMPILER_INTERNAL;
-        return;
-    }
-    cg_concat(cg_var_retval, s1, s2);
-}
-
-void cg_ifj_substring(TTerm s, TTerm i, TTerm j){
+void cg_ifj_write(void){
+    cg_create_fun("ifj.write");
     cg_create_frame();
     cg_push_frame();
 
+    TTerm term = {.type = CG_VARIABLE_T, .value.var_name = "term", .frame = LOCAL};
+    cg_create_var(term);
+    cg_stack_pop(term);
+
+    printf("write ");
+    cg_term(term);
+    putchar('\n');
+
+    cg_pop_frame();
+    cg_return();
+}
+
+void cg_ifj_i2f(void){
+    cg_create_fun("ifj.i2f");
+    cg_create_frame();
+    cg_push_frame();
+
+    TTerm term = {.type = CG_VARIABLE_T, .value.var_name = "term", .frame = LOCAL};
+    cg_create_var(term);
+    cg_stack_pop(term);
+
+    printf("int2float");
+    cg_two_operands(cg_var_retval, term);
+
+    cg_pop_frame();
+    cg_return();
+}
+
+void cg_ifj_f2i(void){
+    cg_create_fun("ifj.f2i");
+    cg_create_frame();
+    cg_push_frame();
+
+    TTerm term = {.type = CG_VARIABLE_T, .value.var_name = "term", .frame = LOCAL};
+    cg_create_var(term);
+    cg_stack_pop(term);
+
+    printf("float2int");
+    cg_two_operands(cg_var_retval, term);
+
+    cg_pop_frame();
+    cg_return();
+}
+
+void cg_ifj_string(void){
+    cg_create_fun("ifj.string");
+    cg_create_frame();
+    cg_push_frame();
+
+    TTerm term = {.type = CG_VARIABLE_T, .value.var_name = "term", .frame = LOCAL};
+    cg_create_var(term);
+    cg_stack_pop(term);
+
+    cg_move(cg_var_retval, term);
+
+    cg_pop_frame();
+    cg_return();
+}
+
+void cg_ifj_length(void){
+    cg_create_fun("ifj.length");
+    cg_create_frame();
+    cg_push_frame();
+
+    TTerm s = {.type = CG_VARIABLE_T, .value.var_name = "s", .frame = LOCAL};
+    cg_create_var(s);
+    cg_stack_pop(s);
+
+    cg_strlen(cg_var_retval, s);
+
+    cg_pop_frame();
+    cg_return();
+}
+
+void cg_ifj_concat(void){
+    cg_create_fun("ifj.concat");
+    cg_create_frame();
+    cg_push_frame();
+    // Parameters
+    TTerm s2 = {.type = CG_VARIABLE_T, .value.var_name = "s2", .frame = LOCAL};
+    cg_create_var(s2);
+    cg_stack_pop(s2);
+    TTerm s1 = {.type = CG_VARIABLE_T, .value.var_name = "s1", .frame = LOCAL};
+    cg_create_var(s1);
+    cg_stack_pop(s1);
+    // Code
+    cg_concat(cg_var_retval, s1, s2);
+    cg_pop_frame();
+    cg_return();
+}
+
+void cg_ifj_substring(void){
+    cg_create_fun("ifj.substring");
+    cg_create_frame();
+    cg_push_frame();
+    TTerm j = {.type = CG_VARIABLE_T, .value.var_name = "j", .frame = LOCAL};
+    cg_create_var(j);
+    cg_stack_pop(j);
+    TTerm i = {.type = CG_VARIABLE_T, .value.var_name = "i", .frame = LOCAL};
+    cg_create_var(i);
+    cg_stack_pop(i);
+    TTerm s = {.type = CG_VARIABLE_T, .value.var_name = "s", .frame = LOCAL};
+    cg_create_var(s);
+    cg_stack_pop(s);
     // Label numbers
     TLabel ret_null = cg_get_new_label();
     TLabel finish = cg_get_new_label();
@@ -686,7 +772,8 @@ void cg_ifj_substring(TTerm s, TTerm i, TTerm j){
     // i > j
     cg_jump_gt(ret_null, i, j);
     // i >= ifj.length(s)
-    cg_ifj_length(s);
+    cg_stack_push(s);
+    cg_call("ifj.length");
     cg_move(str_len, cg_var_retval);
     cg_jump_gteq(ret_null, i, str_len);
     // j > ifj.length(s)
@@ -720,11 +807,21 @@ void cg_ifj_substring(TTerm s, TTerm i, TTerm j){
     cg_create_label(finish);
 
     cg_pop_frame();
+    cg_return();
 }
 
-void cg_ifj_strcmp(TTerm s1, TTerm s2){
+void cg_ifj_strcmp(void){
+    cg_create_fun("ifj.strcmp");
     cg_create_frame();
     cg_push_frame();
+    // Parameters
+    TTerm s2 = {.type = CG_VARIABLE_T, .value.var_name = "s2", .frame = LOCAL};
+    cg_create_var(s2);
+    cg_stack_pop(s2);
+    TTerm s1 = {.type = CG_VARIABLE_T, .value.var_name = "s1", .frame = LOCAL};
+    cg_create_var(s1);
+    cg_stack_pop(s1);
+
     // Variables
     TTerm s1_len = {.type = CG_VARIABLE_T, .value.var_name = "s1_len", .frame = LOCAL};
     TTerm s2_len = {.type = CG_VARIABLE_T, .value.var_name = "s2_len", .frame = LOCAL};
@@ -789,11 +886,20 @@ void cg_ifj_strcmp(TTerm s1, TTerm s2){
     cg_int_var_dec_1(cg_var_retval);
     cg_create_label(fun_end);
     cg_pop_frame();
+    cg_return();
 }
 
-void cg_ifj_ord(TTerm s, TTerm i){
+void cg_ifj_ord(void){
+    cg_create_fun("ifj.ord");
     cg_create_frame();
     cg_push_frame();
+
+    TTerm i = {.type = CG_VARIABLE_T, .value.var_name = "i", .frame = LOCAL};
+    cg_create_var(i);
+    cg_stack_pop(i);
+    TTerm s = {.type = CG_VARIABLE_T, .value.var_name = "s", .frame = LOCAL};
+    cg_create_var(s);
+    cg_stack_pop(s);
 
     // Variables
     TTerm s_len = {.type = CG_VARIABLE_T, .value.var_name = "s_len", .frame = LOCAL};
@@ -814,10 +920,22 @@ void cg_ifj_ord(TTerm s, TTerm i){
     cg_move(cg_var_retval, cg_zero_int_term);
     cg_create_label(fun_end);
     cg_pop_frame();
+    cg_return();
 }
 
-void cg_ifj_chr(TTerm i){
+void cg_ifj_chr(void){
+    cg_create_fun("ifj.chr");
+    cg_create_frame();
+    cg_push_frame();
+
+    TTerm i = {.type = CG_VARIABLE_T, .value.var_name = "i", .frame = LOCAL};
+    cg_create_var(i);
+    cg_stack_pop(i);
+
     cg_int2char(cg_var_retval, i);
+
+    cg_pop_frame();
+    cg_return();
 }
 
 // Codegen
@@ -1055,9 +1173,13 @@ void generate_body_command(TBinaryTree* tree){
             generate_assignment(tree);
             break;
         case BODY:
+            break;
         case WHILE:
+            break;
         case IF:
+            break;
         case ELSE:
+            break;
         case FUNCTION_CALL:
             generate_call(tree);
             break;
@@ -1094,6 +1216,22 @@ void generate_function(TBinaryTree* tree){
     generate_return(NULL);
 }
 
+void generate_builtin(void){
+    cg_ifj_readstr();
+    cg_ifj_readi32();
+    cg_ifj_readf64();
+    cg_ifj_write();
+    cg_ifj_i2f();
+    cg_ifj_f2i();
+    cg_ifj_string();
+    cg_ifj_length();
+    cg_ifj_concat();
+    cg_ifj_substring();
+    cg_ifj_strcmp();
+    cg_ifj_ord();
+    cg_ifj_chr();
+}
+
 void codegen(TBinaryTree* tree){
     if(tree == NULL){
         error = ERR_COMPILER_INTERNAL;
@@ -1112,4 +1250,5 @@ void codegen(TBinaryTree* tree){
         BT_go_left(tree);
         generate_function(tree);
     }
+    generate_builtin();
 }
