@@ -21,6 +21,7 @@ typedef enum type {
     INTEGER_T,    // i32
     FLOAT_T,      // f64
     U8_SLICE_T,   // u8[]
+    BOOL_T        // boolean, can only be in conditions
 } Type;
 
 union data {
