@@ -426,8 +426,8 @@ TNode* precedent(t_buf* token_buffer, token_id end_marker, struct TScope cur_sco
 			next_term = token_to_symbol((token = fetch_token(token_buffer)));
 			
 			if (relative_op_count > 1) {
-				printf("error: too many relative operators\n");
-				error = ERR_SYNTAX;
+				//printf("error: too many relative operators\n");
+				//error = ERR_SYNTAX;
 			}
 		}
 			

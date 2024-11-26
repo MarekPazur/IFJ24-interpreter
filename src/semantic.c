@@ -51,7 +51,7 @@ void semantic_analysis(TBinaryTree* AST) {
     TNode* func = (*program)->left;
 
     while (func) {
-        BT_print_node_type(func); // debug print
+        //BT_print_node_type(func); // debug print
 
         FunctionSemantics(func);
         check_error();
@@ -120,7 +120,7 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
             /* while this approach would probably work to some extent, we need to check other things that I believe we'll be able to check further on function call, arguments, etc.
             if(symtable_search(command.instance.function.id) == false)
                 error();*/
-            FunctionCallSemantics(command_instance, current_scope, NULL);
+            //FunctionCallSemantics(command_instance, current_scope, NULL);
             check_error();
             break;
 
@@ -276,38 +276,38 @@ void declaration_semantics(TNode* declaration, scope_t* current_scope) {
         return;
     }
 
+    if(var_data.variable.is_constant && var_data.variable.value_pointer == NULL) { // const must be either literal or have value of another
+        //error = ERR_SYNTAX;
+        //return;
+    }
+
     if (declaration->left->type == FUNCTION_CALL) { // var/const 'id' (:type) = function(param_list);
         FunctionCallSemantics(declaration->left, current_scope, &datatype);
-
         check_error();
-
-        /* Variable type resolution */
-        if (var_data.variable.type == UNKNOWN_T) { // Type was unknown (var/const without specified type)
-            var_data.variable.type = datatype;
-
-            if (symtable_insert(current_scope->current_scope, variable_id, var_data) == false) {
-                error = ERR_COMPILER_INTERNAL;
-                return;
-            }
-        }
-
-        if ((int) var_data.variable.type != datatype) {
-            error = ERR_PARAM_TYPE_RETURN_VAL;
-            return;
-        }
     } else {
         expr_info exp_res = {.type = UNKNOWN_T, .is_constant_exp = true, .is_optional_null = false};
 
         expression_semantics(declaration->left, current_scope, &exp_res);
         check_error();
         datatype = exp_res.type;
-        printf("is constant expr %d\n", exp_res.is_constant_exp);
     }
 
-    printf("%d", datatype);
+    /* Variable type resolution */
+    if (var_data.variable.type == UNKNOWN_T) { // Type was unknown (var/const without specified type)
+        var_data.variable.type = datatype;
+
+        if (symtable_insert(current_scope->current_scope, variable_id, var_data) == false) {
+            error = ERR_COMPILER_INTERNAL;
+            return;
+        }
+    }
+
+    if ((int) var_data.variable.type != datatype) {
+        error = ERR_PARAM_TYPE_RETURN_VAL;
+        return;
+    }
 
     check_error();
-
 }
 
 /**
@@ -327,7 +327,7 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
     expression_semantics(expression->right, scope, &right);
     check_error();
 
-    BT_print_tree(expression);//BT_print_node_type(expression);
+    //BT_print_tree(expression);//BT_print_node_type(expression);
 
     switch (expression->type) {
         /* LITERALS */
@@ -370,6 +370,12 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
 
             if (!info->data.variable.is_constant) // var encountered
                 info->is_constant_exp = false;
+            else {
+/*                if(info->data.variable.value_pointer->left && info->data.variable.value_pointer->right) { // const must be either literal or have value of another
+                error = ERR_SYNTAX;
+                return;
+                }*/
+            }
         }
         break;
 
@@ -421,10 +427,10 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
                             char *const_value = var_data.variable.value_pointer->data.nodeData.value.literal;
 
                             
-                            if(var_data.variable.value_pointer->left && var_data.variable.value_pointer->right) {
+/*                            if(var_data.variable.value_pointer->left && var_data.variable.value_pointer->right) {
                                 error = ERR_SYNTAX;
                                 return;
-                            }
+                            }*/
 
                             const_value = literal_convert_i32_to_f64(const_value);
                             expression->left->type = FL;
@@ -432,6 +438,34 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
                         }
                     }
                     /* right op const */
+                    if(expression->right->type == VAR_CONST) {
+                        TSymtable* local;
+                        TData var_data;
+                        char *variable_id = expression->right->data.nodeData.value.identifier;
+
+                        if (id_defined(scope, variable_id, &local) == false) {
+                            error = ERR_UNDEFINED_IDENTIFIER;
+                            break;
+                        }
+
+                        if (symtable_get_data(local, variable_id, &var_data) == false) {
+                            error = ERR_COMPILER_INTERNAL;
+                            break;
+                        }
+
+                        if (var_data.variable.type == INTEGER_T) {
+                            char *const_value = var_data.variable.value_pointer->data.nodeData.value.literal;
+
+                            /*if(var_data.variable.value_pointer->left && var_data.variable.value_pointer->right) {
+                                error = ERR_SYNTAX;
+                                return;
+                            }*/
+
+                            const_value = literal_convert_i32_to_f64(const_value);
+                            expression->right->type = FL;
+                            expression->right->data.nodeData.value.literal = const_value;
+                        }
+                    }                    
 
                     info->type = FLOAT_T;
                 } else { // var must be the same type
@@ -447,25 +481,105 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
             break;
 
         case OP_DIV:
+            if (left.is_optional_null || right.is_optional_null) {
+                printf(RED_BOLD("error")": type mismatch, trying to use null type in arithmethics\n");
+                error = ERR_TYPE_COMPATABILITY;
+                return;
+            }
             // Same type
             if (left.type == right.type) {
                     info->type = left.type;
             } // type mismatch
             else if ((left.type == INTEGER_T && right.type == FLOAT_T) || (left.type == FLOAT_T && right.type == INTEGER_T)) {
+                // Cant be var
                 if (left.is_constant_exp && right.is_constant_exp) {
                     if (expression->left->type == FL) {
+                        char **literal = &expression->left->data.nodeData.value.literal;
 
+                        if ((*literal = literal_convert_f64_to_i32(*literal)) == NULL) { 
+                            error = ERR_TYPE_COMPATABILITY;
+                            return;
+                        }
+
+                        expression->left->type = INT;
                     }
                     if (expression->right->type == FL) {
+                        char **literal = &expression->right->data.nodeData.value.literal;
 
+                        if ((*literal = literal_convert_f64_to_i32(*literal)) == NULL) { 
+                            error = ERR_TYPE_COMPATABILITY;
+                            return;
+                        }
+
+                        expression->right->type = INT;
                     }
                     if (expression->left->type == VAR_CONST) {
+                        TSymtable* local;
+                        TData var_data;
+                        char *variable_id = expression->left->data.nodeData.value.identifier;
 
+                        if (id_defined(scope, variable_id, &local) == false) {
+                            error = ERR_UNDEFINED_IDENTIFIER;
+                            break;
+                        }
+
+                        if (symtable_get_data(local, variable_id, &var_data) == false) {
+                            error = ERR_COMPILER_INTERNAL;
+                            break;
+                        }
+
+                        if (var_data.variable.type == FLOAT_T) {
+                            char *const_value = var_data.variable.value_pointer->data.nodeData.value.literal;
+
+                            /*if(var_data.variable.value_pointer->left && var_data.variable.value_pointer->right) {
+                                error = ERR_SYNTAX;
+                                return;
+                            }*/
+
+                            if((const_value = literal_convert_f64_to_i32(const_value)) == NULL) {
+                                error = ERR_TYPE_COMPATABILITY;
+                                return;
+                            }
+
+                            expression->left->type = INT;
+                            expression->left->data.nodeData.value.literal = const_value;
+                        }
                     }
                     if (expression->right->type == VAR_CONST) {
+                        TSymtable* local;
+                        TData var_data;
+                        char *variable_id = expression->right->data.nodeData.value.identifier;
 
+                        if (id_defined(scope, variable_id, &local) == false) {
+                            error = ERR_UNDEFINED_IDENTIFIER;
+                            break;
+                        }
+
+                        if (symtable_get_data(local, variable_id, &var_data) == false) {
+                            error = ERR_COMPILER_INTERNAL;
+                            break;
+                        }
+
+                        if (var_data.variable.type == FLOAT_T) {
+                            char *const_value = var_data.variable.value_pointer->data.nodeData.value.literal;
+
+                            
+/*                            if(var_data.variable.value_pointer->right && var_data.variable.value_pointer->right) {
+                                error = ERR_SYNTAX;
+                                return;
+                            }*/
+
+                            if((const_value = literal_convert_f64_to_i32(const_value)) == NULL) {
+                                error = ERR_TYPE_COMPATABILITY;
+                                return;
+                            }
+
+                            expression->right->type = INT;
+                            expression->right->data.nodeData.value.literal = const_value;
+                        }
                     }
 
+                    info->type = INTEGER_T;
                 } else { // var must be the same type
                     printf(RED_BOLD("error")": var type mismatch\n");
                     error = ERR_TYPE_COMPATABILITY;
@@ -494,8 +608,7 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
         default:
             break;
     }
-
-    BT_print_tree(expression);
+    //BT_print_tree(expression);
 }
 
 /* Helper functions */
@@ -629,12 +742,9 @@ void set_to_used(TSymtable* symtable, char* identifier) {
     }
 }
 
-/*void add_sub_mul_semantic(TNode* operator, scope_t* scope, int* type_out) {
-}*/
-/*void div_semantic();
-void equal_semantic();
-void relation_semantic();*/
-
+/**
+* Converts I32 literal/const to F64
+*/
 char *literal_convert_i32_to_f64(char *literal) {
     size_t new_size = strlen(literal) + 3; // '.''0''\0'
 
@@ -647,6 +757,32 @@ char *literal_convert_i32_to_f64(char *literal) {
     return converted;
 }
 
-/*char *literal_convert_f64_to_i32(char *literal) {
+/**
+* Converts F64 literal/const to I32
+*/
+char *literal_convert_f64_to_i32(char *literal) {
+    int i = 0;
+    bool zero_decimal = true;
 
-}*/
+    while(literal[i] != '.') {
+        ++i;
+    }
+
+    int j = i + 1;
+
+    while(literal[j]) {
+        if (literal[j] != '0') {
+            zero_decimal = false;
+            break;
+        }
+        ++j;
+    }
+
+    if(zero_decimal == false) {
+        return NULL;
+    }
+
+    memset(literal+i, 0, strlen(literal));
+
+    return literal;
+}

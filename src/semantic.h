@@ -47,8 +47,8 @@ char get_var_type(Type type);
 char get_literal_type(int type);
 void set_to_used(TSymtable* symtable, char* identifier);
 
-void add_sub_mul_semantic(TNode* operator, scope_t* scope, int* type_out);
-
 char *literal_convert_i32_to_f64(char *literal);
+
+char *literal_convert_f64_to_i32(char *literal);
 
 #endif

@@ -138,7 +138,6 @@ struct node_data {
         struct {
             char *literal;
             char *identifier;
-            char *const_value;
         } value;
     } nodeData;
 };
