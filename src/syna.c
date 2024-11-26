@@ -1439,6 +1439,10 @@ void var_const_declaration(Tparser* parser, TNode** current_node, node_type type
                             return;
                         }
                         
+                        if ( !retrieved_data.variable.is_constant ) {
+                            break;
+                        }
+                        
                         value_pointer = retrieved_data.variable.value_pointer;
                         
                         if(!symtable_get_data(parser->scope.current_scope, parser->processed_identifier, &retrieved_data)){
@@ -1593,6 +1597,10 @@ void var_const_declaration(Tparser* parser, TNode** current_node, node_type type
                         if(!symtable_get_data(identifier_residence, (*current_node)->left->data.nodeData.value.identifier, &retrieved_data)){
                             error = ERR_COMPILER_INTERNAL;
                             return;
+                        }
+                        
+                        if ( !retrieved_data.variable.is_constant ) {
+                            break;
                         }
                         
                         value_pointer = retrieved_data.variable.value_pointer;
