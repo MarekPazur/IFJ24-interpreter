@@ -1016,6 +1016,23 @@ void generate_var_declaration(TBinaryTree* tree){
     }
 }
 
+void generate_assignment(TBinaryTree* tree){
+    node_type type;
+    BT_get_node_type(tree, &type);
+    TTerm var = node_to_term(tree);
+    if(type == FUNCTION_CALL){
+        BT_go_left(tree);
+        generate_call(tree);
+        cg_move(var, cg_var_retval);
+    }
+    else{
+        BT_go_left(tree);
+        calculate_expression(tree);
+        cg_stack_pop(var);
+    }
+    BT_go_parent(tree);
+}
+
 void generate_body_command(TBinaryTree* tree){
     if(!BT_has_left(tree)){
         return;
@@ -1035,11 +1052,14 @@ void generate_body_command(TBinaryTree* tree){
             generate_var_declaration(tree);
             break;
         case ASSIG:
+            generate_assignment(tree);
+            break;
         case BODY:
         case WHILE:
         case IF:
         case ELSE:
         case FUNCTION_CALL:
+            generate_call(tree);
             break;
         default:
             error = ERR_COMPILER_INTERNAL;
