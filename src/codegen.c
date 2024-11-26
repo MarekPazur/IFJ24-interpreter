@@ -823,6 +823,9 @@ void cg_ifj_chr(TTerm i){
 // Codegen
 
 void generate_comment(char* string){
+    if(string == NULL){
+        return;
+    }
     printf("# %s\n", string);
 }
 
@@ -860,27 +863,27 @@ void calculate_expression(TBinaryTree* tree){
         error = ERR_COMPILER_INTERNAL;
         return;
     }
-    TTerm literal;
+    TTerm term;
     switch(type){
         case INT:
-             literal.type = CG_INTEGER_T;
-             literal.value.int_val = (int)strtol(data.nodeData.value.literal, NULL, 0);
-             cg_stack_push(literal);
+            term.type = CG_INTEGER_T;
+            term.value.int_val = (int)strtol(data.nodeData.value.literal, NULL, 0);
+             cg_stack_push(term);
              break;
         case FL:
-            literal.type = CG_FLOAT_T;
-            literal.value.float_val = strtod(data.nodeData.value.literal, NULL);
-            cg_stack_push(literal);
+            term.type = CG_FLOAT_T;
+            term.value.float_val = strtod(data.nodeData.value.literal, NULL);
+            cg_stack_push(term);
             break;
         case STR:
-            literal.type = CG_STRING_T;
-            literal.value.string = data.nodeData.value.literal;
-            cg_stack_push(literal);
+            term.type = CG_STRING_T;
+            term.value.string = data.nodeData.value.literal;
+            cg_stack_push(term);
             break;
         case VAR_CONST:
-            literal.type = CG_VARIABLE_T;
-            literal.value.var_name = data.nodeData.value.identifier;
-            cg_stack_push(literal);
+            term.type = CG_VARIABLE_T;
+            term.value.var_name = data.nodeData.value.identifier;
+            cg_stack_push(term);
             break;
         case OP_ADD:
             cg_add_stack();
@@ -931,6 +934,88 @@ void generate_return(TBinaryTree* tree){
     cg_return();
 }
 
+TTerm node_to_term(TBinaryTree* tree){
+    node_type type;
+    node_data data;
+    TTerm term = {.type = CG_NULL_T};
+    if(!BT_get_node_type(tree, &type) || !BT_get_data(tree, &data)){
+        error = ERR_COMPILER_INTERNAL;
+        return term;
+    }
+    switch(type){
+        case INT:
+            term.type = CG_INTEGER_T;
+            term.value.int_val = (int) strtol(data.nodeData.value.literal, NULL, 0);
+            cg_stack_push(term);
+            break;
+        case FL:
+            term.type = CG_FLOAT_T;
+            term.value.float_val = strtod(data.nodeData.value.literal, NULL);
+            cg_stack_push(term);
+            break;
+        case STR:
+            term.type = CG_STRING_T;
+            term.value.string = data.nodeData.value.literal;
+            cg_stack_push(term);
+            break;
+        case VAR_CONST:
+            term.type = CG_VARIABLE_T;
+            term.value.var_name = data.nodeData.value.identifier;
+            cg_stack_push(term);
+            break;
+        default:
+            error = ERR_COMPILER_INTERNAL;
+            break;
+    }
+    return term;
+}
+
+void generate_call(TBinaryTree* tree){
+    node_data fun_data;
+    if(!BT_get_data(tree, &fun_data)){
+        error = ERR_COMPILER_INTERNAL;
+        return;
+    }
+    cg_call(fun_data.nodeData.identifier.identifier);
+    int arg_count = 0;
+    while(BT_has_right(tree)){
+        BT_go_right(tree);
+        cg_stack_push(node_to_term(tree));
+        arg_count++;
+    }
+    while(arg_count > 0){
+        BT_go_parent(tree);
+        arg_count--;
+    }
+}
+
+void generate_var_declaration(TBinaryTree* tree){
+    node_data data;
+    node_type type;
+    if(!BT_get_data(tree, &data)){
+        error = ERR_COMPILER_INTERNAL;
+        return;
+    }
+    TTerm variable = {.type = CG_VARIABLE_T, .value.var_name = data.nodeData.identifier.identifier, .frame = LOCAL};
+    cg_create_var(variable);
+    if(BT_has_left(tree)){
+        BT_go_left(tree);
+        if(!BT_get_node_type(tree, &type)){
+            error = ERR_COMPILER_INTERNAL;
+            return;
+        }
+        if(type == FUNCTION_CALL){
+            generate_call(tree);
+        }
+        else{
+            cg_stack_clear();
+            calculate_expression(tree);
+            cg_stack_pop(variable);
+        }
+        BT_go_parent(tree);
+    }
+}
+
 void generate_body_command(TBinaryTree* tree){
     if(!BT_has_left(tree)){
         return;
@@ -947,6 +1032,8 @@ void generate_body_command(TBinaryTree* tree){
             break;
         case CONST_DECL:
         case VAR_DECL:
+            generate_var_declaration(tree);
+            break;
         case ASSIG:
         case BODY:
         case WHILE:
@@ -984,10 +1071,8 @@ void generate_function(TBinaryTree* tree){
     generate_function_parameters(data.nodeData.function.param_identifiers);
     generate_function_body(tree);
 
-    cg_pop_frame();
-    cg_return();
+    generate_return(NULL);
 }
-
 
 void codegen(TBinaryTree* tree){
     if(tree == NULL){
