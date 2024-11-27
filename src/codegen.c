@@ -1058,7 +1058,7 @@ void generate_return(TBinaryTree* tree){
     cg_return();
 }
 
-TTerm node_to_term(TBinaryTree* tree){
+TTerm node_to_term_rval(TBinaryTree* tree){
     node_type type;
     node_data data;
     TTerm term = {.type = CG_NULL_T};
@@ -1100,7 +1100,7 @@ void generate_call(TBinaryTree* tree){
     int arg_count = 0;
     while(BT_has_right(tree)){
         BT_go_right(tree);
-        cg_stack_push(node_to_term(tree));
+        cg_stack_push(node_to_term_rval(tree));
         arg_count++;
     }
     while(arg_count > 0){
@@ -1140,15 +1140,16 @@ void generate_var_declaration(TBinaryTree* tree){
 
 void generate_assignment(TBinaryTree* tree){
     node_type type;
+    node_data data;
+    BT_get_data(tree, &data);
+    TTerm var = {.type = CG_VARIABLE_T, .value.var_name = data.nodeData.identifier.identifier, .frame = LOCAL};
+    BT_go_left(tree);
     BT_get_node_type(tree, &type);
-    TTerm var = node_to_term(tree);
     if(type == FUNCTION_CALL){
-        BT_go_left(tree);
         generate_call(tree);
         cg_move(var, cg_var_retval);
     }
     else{
-        BT_go_left(tree);
         calculate_expression(tree);
         cg_stack_pop(var);
     }
