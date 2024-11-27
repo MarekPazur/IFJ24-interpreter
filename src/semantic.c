@@ -179,10 +179,10 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
         Command = Command->right;
     }
     /* Scope ends here  */
-    /*if(!check_is_used(current_scope->current_scope)){
+    if(!check_is_used(current_scope->current_scope)){
         error = ERR_UNUSED_VAR;
         return;
-    }*/
+    }
     printf("------------\n"); debug_print_keys(current_scope->current_scope); // debug print of current scopes variables stored in symtable and their properties
 }
 
