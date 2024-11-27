@@ -1063,6 +1063,10 @@ void calculate_expression(TBinaryTree* tree){
             term.value.string = data.nodeData.value.literal;
             cg_stack_push(term);
             break;
+        case NULL_LITERAL:
+            term.type = CG_NULL_T;
+            cg_stack_push(term);
+            break;
         case VAR_CONST:
             term.type = CG_VARIABLE_T;
             term.value.var_name = data.nodeData.value.identifier;
@@ -1138,6 +1142,9 @@ TTerm node_to_term_rval(TBinaryTree* tree){
         case STR:
             term.type = CG_STRING_T;
             term.value.string = data.nodeData.value.literal;
+            break;
+        case NULL_LITERAL:
+            term.type = CG_NULL_T;
             break;
         case VAR_CONST:
             term.type = CG_VARIABLE_T;
