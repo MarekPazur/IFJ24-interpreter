@@ -638,13 +638,17 @@ void cg_ifj_readstr(void){
 
 void cg_ifj_readi32(void){
     cg_create_fun("ifj.readi32");
-    printf("read %s%s int\n", get_frame(cg_var_retval.frame), cg_var_retval.value.var_name);
+    printf("read ");
+    cg_term(cg_var_retval);
+    printf(" int\n");
     cg_return();
 }
 
 void cg_ifj_readf64(void){
     cg_create_fun("ifj.readf64");
-    printf("read %s%s float\n", get_frame(cg_var_retval.frame), cg_var_retval.value.var_name);
+    printf("read ");
+    cg_term(cg_var_retval);
+    printf(" float\n");
     cg_return();
 }
 
