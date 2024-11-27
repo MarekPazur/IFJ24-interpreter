@@ -121,7 +121,7 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
             break;
 
         case ASSIG:
-            assig_check(command_instance);
+            assig_check(command_instance, current_scope);
             check_error();
             break;
 
@@ -138,14 +138,33 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
             break;
         }
 
-        case RETURN:
-            if ( (command_instance->left == NULL && func->data.nodeData.function.type != VOID_TYPE) || (command_instance->left != NULL && func->data.nodeData.function.type == VOID_TYPE) ) {
+        case RETURN: {
+            TNode *expression = command_instance->left;
+
+            if ( (expression == NULL && func->data.nodeData.function.type != VOID_TYPE) || (expression != NULL && func->data.nodeData.function.type == VOID_TYPE) ) {
                 error = ERR_RETURN_VALUE_EXPRESSION;
                 return;
             }
 
+            if (expression) { // Function is not void, check type of return expression compared to functions return type
+                expr_info expr_data = {.type = UNKNOWN_T, .is_constant_exp = false, .is_optional_null = false, .optional_null_id = NULL};
+                expression_semantics(expression, current_scope, &expr_data);
+                check_error();
+
+                if (expression) {
+                    int function_return_type = get_func_type(globalSymTable, func->data.nodeData.function.identifier);
+                    check_error();
+
+                    if(expr_data.type != function_return_type) {
+                        error = ERR_PARAM_TYPE_RETURN_VAL;
+                        return;
+                    }
+                }
+            }
+
             hasReturn = true;
             break;
+        }    
 
         default:
             break;
@@ -304,21 +323,68 @@ void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope, fun_info
     check_error();
 }
 
-void assig_check(TNode* command_instance) {
-    TData function_data;
+void assig_check(TNode* command_instance, scope_t *scope) {
+    TData function_data, var_data;
+    char *variable_id = command_instance->data.nodeData.identifier.identifier;
+    bool throw_away = command_instance->data.nodeData.identifier.is_disposeable;
+
+    /* Fetches data about variable, checks its existence, if its not '_' */
+    if (throw_away == false) // Must check this, else it would throw error, since '_' is not registered in any symtable
+        var_data =  get_const_var_data(scope, variable_id);
+    
+    check_error();
 
     if (command_instance->left->type == FUNCTION_CALL) {
-        if ( command_instance->data.nodeData.identifier.is_disposeable ) {
-            /* Get functions metadata */
-            if (symtable_get_data(globalSymTable, command_instance->left->data.nodeData.identifier.identifier, &function_data) == false) {
-                error = ERR_COMPILER_INTERNAL;
-                return;
-            }
+        TNode* function = command_instance->left;
+        char* function_id = function->data.nodeData.identifier.identifier;
 
+         /* Get functions metadata */
+        if (symtable_get_data(globalSymTable, function_id, &function_data) == false) {
+            error = ERR_COMPILER_INTERNAL;
+            return;
+        }
+
+        fun_info info = {.type = UNKNOWN_T, .is_optional_null = false};
+        FunctionCallSemantics(function, scope, &info);
+        check_error();
+
+        if (throw_away) {
             if ( function_data.function.return_type == VOID_T ) {
-                printf("error: trying to assign void to variable\n");
+                printf("error: trying to assign void type\n");
                 error = ERR_PARAM_TYPE_RETURN_VAL;
                 return;
+            }
+        } else {
+            if ((int) var_data.variable.type != info.type) {
+                error = ERR_TYPE_COMPATABILITY;
+                printf("error: assignment type mismatch caused by function %s\n",function_id);
+                return;
+            } else {
+                if ((var_data.variable.is_null_type == false) && info.is_optional_null) {
+                    error = ERR_TYPE_COMPATABILITY;
+                    printf("error: trying to assign optional-null type into non-null variable, type mismatch caused by function %s\n",function_id);
+                    return;
+                }
+            }
+        }
+    } else {
+        TNode* expression = command_instance->left;
+        expr_info expr_data = {.type = UNKNOWN_T, .is_constant_exp = false, .is_optional_null = false, .optional_null_id = NULL};
+
+        expression_semantics(expression, scope, &expr_data);
+        check_error();
+
+        if (throw_away == false) {
+            if((int) var_data.variable.type != expr_data.type) {
+                error = ERR_TYPE_COMPATABILITY;
+                printf("error: assignment type mismatch\n");
+                return;
+            } else {
+                if ((var_data.variable.is_null_type == false) && expr_data.is_optional_null) {
+                    error = ERR_TYPE_COMPATABILITY;
+                    printf("error: trying to assign optional-null type into non-null variable, type mismatch\n");
+                    return;
+                }
             }
         }
     }
@@ -384,6 +450,13 @@ void declaration_semantics(TNode* declaration, scope_t* current_scope) {
 
     /* Variable type resolution */
     if (var_data.variable.type == UNKNOWN_T) { // Type was unknown (var/const without specified type)
+
+        if (datatype == NIL_T) {
+            printf("error: unknown type - type of the variable is not specified and cannot be inferred from the expression used\n");
+            error = ERR_UNKNOWN_TYPE;
+            return;
+        }
+
         var_data.variable.type = datatype; // assign result data type from exp/fun call
         var_data.variable.is_null_type = is_optional_null; // is ?type
 
@@ -393,13 +466,12 @@ void declaration_semantics(TNode* declaration, scope_t* current_scope) {
         }
     }
 
-    //TODO rozlisit jestli je to z funkce nebo vyrazu
     if ((int) var_data.variable.type != datatype) {
         printf("error: var/const datatype doesn't match expression/function return type\n");
-        error = ERR_PARAM_TYPE_RETURN_VAL;
+        error = ERR_TYPE_COMPATABILITY;
         return;
     } else {
-        if (var_data.variable.is_null_type != is_optional_null) {
+        if ((var_data.variable.is_null_type == false) && is_optional_null) {
             printf("error: trying to assign optional-null type into non-null type\n");
             error = ERR_TYPE_COMPATABILITY;
             return;
@@ -863,4 +935,45 @@ char *literal_convert_f64_to_i32(char *literal) {
     memset(literal+i, 0, strlen(literal));
 
     return literal;
+}
+
+int get_func_type(TSymtable *globalSymTable, char *function_id) {
+    TData function_data;
+
+    /* Check if function is defined */
+    if (symtable_search(globalSymTable, function_id) == false) {
+        printf("error: function %s undefined\n",function_id);
+        error = ERR_UNDEFINED_IDENTIFIER;
+        return -1;
+    }
+
+    /* Get functions metadata */
+    if (symtable_get_data(globalSymTable, function_id, &function_data) == false) {
+        error = ERR_COMPILER_INTERNAL;
+        return -1;
+    }
+
+    return function_data.function.return_type;
+}
+
+TData get_const_var_data(struct TScope* scope, char *variable_id) {
+    TData variable_data;
+
+    memset(&variable_data, 0, sizeof(variable_data));
+
+    TSymtable* local_st;
+
+    if (id_defined(scope, variable_id, &local_st) == false) {
+        printf("error: var/const %s undefined\n", variable_id);
+        error = ERR_UNDEFINED_IDENTIFIER;
+        return variable_data;
+    }
+
+    /* Get var/const metadata */
+    if (symtable_get_data(local_st, variable_id, &variable_data) == false) {
+        error = ERR_COMPILER_INTERNAL;
+        return variable_data;
+    }
+
+    return variable_data;
 }

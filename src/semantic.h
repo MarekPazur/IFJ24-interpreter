@@ -38,7 +38,7 @@ void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope, fun_info
 
 void main_function_semantics(TSymtable* globalSymTable);
 
-void assig_check(TNode* command_instance);
+void assig_check(TNode* command_instance, scope_t *scope);
 
 void declaration_semantics(TNode* declaration, scope_t* current_scope);
 
@@ -58,5 +58,9 @@ void set_to_used(TSymtable* symtable, char* identifier);
 char *literal_convert_i32_to_f64(char *literal);
 
 char *literal_convert_f64_to_i32(char *literal);
+
+// Data fetch functions
+int get_func_type(TSymtable *globalSymTable, char *function_id);
+TData get_const_var_data(struct TScope* scope, char *variable_id);
 
 #endif
