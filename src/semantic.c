@@ -383,10 +383,12 @@ void assig_check(TNode* command_instance, scope_t *scope) {
         check_error();
 
         if (throw_away == false) {
-            if((int) var_data.variable.type != expr_data.type) {
-                error = ERR_TYPE_COMPATABILITY;
-                printf("error: assignment type mismatch\n");
-                return;
+            if((int) var_data.variable.type != expr_data.type) { // type of a != b
+                if ((var_data.variable.is_null_type == false) || (expr_data.type != NIL_T)) { // only acceptable if a is ?type and b is null, else error
+                    error = ERR_TYPE_COMPATABILITY;
+                    printf("error: assignment type mismatch\n");
+                    return;
+                }
             } else {
                 if ((var_data.variable.is_null_type == false) && expr_data.is_optional_null) {
                     error = ERR_TYPE_COMPATABILITY;
@@ -474,10 +476,12 @@ void declaration_semantics(TNode* declaration, scope_t* current_scope) {
         }
     }
 
-    if ((int) var_data.variable.type != datatype) {
-        printf("error: var/const datatype doesn't match expression/function return type\n");
-        error = ERR_TYPE_COMPATABILITY;
-        return;
+    if ((int) var_data.variable.type != datatype) { // a = b inequal types
+        if ((var_data.variable.is_null_type == false) || (datatype != NIL_T)) { // only acceptable if a is ?type and b is null
+            printf("error: var/const datatype doesn't match expression/function return type\n");
+            error = ERR_TYPE_COMPATABILITY;
+            return;
+        }
     } else {
         if ((var_data.variable.is_null_type == false) && is_optional_null) {
             printf("error: trying to assign optional-null type into non-null type\n");
