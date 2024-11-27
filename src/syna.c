@@ -726,6 +726,10 @@ void function_params(Tparser* parser, TNode** current_node) {
                 error = ERR_COMPILER_INTERNAL;
                 return;
             }
+            if( symtable_search(parser->scope.current_scope, parser->processed_identifier) ){
+                error = ERR_IDENTIFIER_REDEF_CONST_ASSIGN;
+                return;
+            }
             
             TData param_data;
             param_data = declaration_data(false, true, UNKNOWN_T);
