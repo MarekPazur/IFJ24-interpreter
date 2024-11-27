@@ -1062,7 +1062,7 @@ void generate_return(TBinaryTree* tree){
 TTerm node_to_term_rval(TBinaryTree* tree){
     node_type type;
     node_data data;
-    TTerm term = {.type = CG_NULL_T};
+    TTerm term = cg_null_term;
     if(!BT_get_node_type(tree, &type) || !BT_get_data(tree, &data)){
         error = ERR_COMPILER_INTERNAL;
         return term;
@@ -1146,18 +1146,43 @@ void generate_assignment(TBinaryTree* tree){
     TTerm var = {.type = CG_VARIABLE_T, .value.var_name = data.nodeData.identifier.identifier, .frame = LOCAL};
     BT_go_left(tree);
     BT_get_node_type(tree, &type);
-    if(type == FUNCTION_CALL){
-        generate_call(tree);
-        cg_move(var, cg_var_retval);
-    }
-    else{
-        calculate_expression(tree);
-        cg_stack_pop(var);
+    if(strcmp("_", var.value.var_name) != 0){
+        if(type == FUNCTION_CALL){
+            generate_call(tree);
+            cg_move(var, cg_var_retval);
+        }
+        else{
+            calculate_expression(tree);
+            cg_stack_pop(var);
+        }
     }
     BT_go_parent(tree);
 }
 
-void generate_body_command(TBinaryTree* tree){
+//void generate_else(){
+//
+//}
+//
+//void generate_if(TBinaryTree* tree){
+//    // Node
+//    node_data data = BT_get_data(tree);
+//    // Labels
+//    TLabel else_label = cg_get_new_label();
+//    TLabel end_if_label = cg_get_new_label();
+//    // Expression
+//    BT_go_left(tree);
+//    calculate_expression(tree);
+//    BT_go_parent(tree);
+//    // Jump
+//    if(data.nodeData.body.is_nullable){
+//
+//    }
+//    else{
+//
+//    }
+//}
+
+void generate_command(TBinaryTree* tree){
     if(!BT_has_left(tree)){
         return;
     }
@@ -1201,7 +1226,7 @@ void generate_function_body(TBinaryTree* tree){
         return;
     }
     BT_go_right(tree);
-    generate_body_command(tree);
+    generate_command(tree);
 
     generate_function_body(tree);
     BT_go_parent(tree);
