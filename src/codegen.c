@@ -944,6 +944,60 @@ void cg_ifj_chr(void){
     cg_return();
 }
 
+// Variable search tree
+
+typedef struct element{
+    char* var_name;
+    struct element* right;
+    struct element* left;
+} TElement;
+
+TElement* var_tree = NULL;
+
+bool insert_in(TElement** element, char* name){
+    if(element == NULL){
+        error = ERR_COMPILER_INTERNAL;
+        return false;
+    }
+    if(*element == NULL){
+        *element = malloc(sizeof(TElement));
+        if(*element == NULL){
+            error = ERR_COMPILER_INTERNAL;
+            return false;
+        }
+        (*element)->var_name = name;
+        (*element)->right = NULL;
+        (*element)->left = NULL;
+        return true;
+    }
+    int comp = strcmp(name, (*element)->var_name);
+    if(comp < 0){
+        return insert_in(&(*element)->left, name);
+    }
+    if(comp > 0){
+        return insert_in(&(*element)->right, name);
+    }
+    return false;
+}
+
+bool insert(char* name){
+    return insert_in(&var_tree, name);
+}
+
+void dispose_in(TElement* element){
+    if(element == NULL){
+        return;
+    }
+    dispose_in(element->left);
+    dispose_in(element->right);
+    free(element);
+}
+
+void dispose(void){
+    dispose_in(var_tree);
+    var_tree = NULL;
+}
+
 // Codegen
 
 void generate_comment(char* string){
@@ -1119,7 +1173,9 @@ void generate_var_declaration(TBinaryTree* tree){
         return;
     }
     TTerm variable = {.type = CG_VARIABLE_T, .value.var_name = data.nodeData.identifier.identifier, .frame = LOCAL};
-    cg_create_var(variable);
+    if(insert(variable.value.var_name)){
+        cg_create_var(variable);
+    }
     if(BT_has_left(tree)){
         BT_go_left(tree);
         if(!BT_get_node_type(tree, &type)){
@@ -1243,8 +1299,10 @@ void generate_function(TBinaryTree* tree){
     // Creating variables for the parameters, moving arguments to the variables
     generate_function_parameters(data.nodeData.function.param_identifiers);
     generate_function_body(tree);
-
+    // Creating return value
     generate_return(NULL);
+    // Dispose var tree
+    dispose();
 }
 
 void generate_builtin(void){
