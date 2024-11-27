@@ -304,6 +304,7 @@ void cg_init(void){
     cg_create_var(cg_var_retval);
     cg_create_var(cg_var_cmp);
     cg_create_var(cg_var_temp);
+    cg_create_var(cg_var_temp2);
     cg_set_type_bool(cg_var_cmp);
 }
 
