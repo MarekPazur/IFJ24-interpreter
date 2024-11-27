@@ -76,6 +76,7 @@ const char* get_frame(Frame frame){
         case TEMPORARY:
             return TF;
     }
+    error = ERR_COMPILER_INTERNAL;
     return "";
 }
 
@@ -1001,6 +1002,7 @@ void calculate_expression(TBinaryTree* tree){
         case VAR_CONST:
             term.type = CG_VARIABLE_T;
             term.value.var_name = data.nodeData.value.identifier;
+            term.frame = LOCAL;
             cg_stack_push(term);
             break;
         case OP_ADD:
@@ -1064,22 +1066,19 @@ TTerm node_to_term(TBinaryTree* tree){
         case INT:
             term.type = CG_INTEGER_T;
             term.value.int_val = (int) strtol(data.nodeData.value.literal, NULL, 0);
-            cg_stack_push(term);
             break;
         case FL:
             term.type = CG_FLOAT_T;
             term.value.float_val = strtod(data.nodeData.value.literal, NULL);
-            cg_stack_push(term);
             break;
         case STR:
             term.type = CG_STRING_T;
             term.value.string = data.nodeData.value.literal;
-            cg_stack_push(term);
             break;
         case VAR_CONST:
             term.type = CG_VARIABLE_T;
             term.value.var_name = data.nodeData.value.identifier;
-            cg_stack_push(term);
+            term.frame = LOCAL;
             break;
         default:
             error = ERR_COMPILER_INTERNAL;
@@ -1124,6 +1123,7 @@ void generate_var_declaration(TBinaryTree* tree){
         }
         if(type == FUNCTION_CALL){
             generate_call(tree);
+            cg_move(variable, cg_var_retval);
         }
         else{
             cg_stack_clear();
