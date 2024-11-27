@@ -1008,6 +1008,11 @@ void generate_comment(char* string){
 }
 
 // Function generation
+// Declarations
+
+void generate_function_body(TBinaryTree* tree);
+
+// Definitions
 
 void generate_function_parameters(linked_list_t parameters){
     set_last_llist(&parameters);
@@ -1260,6 +1265,7 @@ void generate_command(TBinaryTree* tree){
             generate_assignment(tree);
             break;
         case BODY:
+            generate_function_body(tree);
             break;
         case WHILE:
             break;
