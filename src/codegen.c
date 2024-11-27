@@ -1220,28 +1220,49 @@ void generate_assignment(TBinaryTree* tree){
     BT_go_parent(tree);
 }
 
-//void generate_else(){
-//
-//}
-//
-//void generate_if(TBinaryTree* tree){
-//    // Node
-//    node_data data = BT_get_data(tree);
-//    // Labels
-//    TLabel else_label = cg_get_new_label();
-//    TLabel end_if_label = cg_get_new_label();
-//    // Expression
-//    BT_go_left(tree);
-//    calculate_expression(tree);
-//    BT_go_parent(tree);
-//    // Jump
-//    if(data.nodeData.body.is_nullable){
-//
-//    }
-//    else{
-//
-//    }
-//}
+void generate_else(TBinaryTree* tree, TLabel label){
+    cg_create_label(label);
+    // Enter else node
+    BT_go_parent(tree);
+    BT_go_right(tree);
+    BT_go_left(tree);
+    // Else
+    generate_function_body(tree);
+    // Return to if node
+    BT_go_parent(tree);
+    BT_go_parent(tree);
+    BT_go_left(tree);
+}
+
+void generate_if(TBinaryTree* tree){
+    // Node
+    node_data data;
+    BT_get_data(tree, &data);
+    // Labels
+    TLabel else_label = cg_get_new_label();
+    TLabel end_if_label = cg_get_new_label();
+    // Expression
+    BT_go_left(tree);
+    calculate_expression(tree);
+    BT_go_parent(tree);
+    // Jump
+    cg_stack_pop(cg_var_temp);
+    if(data.nodeData.body.is_nullable){
+        cg_jump_eq(else_label, cg_var_temp, cg_null_term);
+        TTerm replacement = {.type = CG_VARIABLE_T, .value.var_name = data.nodeData.body.null_replacement, .frame = LOCAL};
+        if(insert(replacement.value.var_name)){
+            cg_create_var(replacement);
+        }
+        cg_move(replacement, cg_var_temp);
+    }
+    else{
+        cg_jump_eq(else_label, cg_var_temp, cg_false_term);
+    }
+    generate_function_body(tree);
+    cg_jump(end_if_label);
+    generate_else(tree, else_label);
+    cg_create_label(end_if_label);
+}
 
 void generate_command(TBinaryTree* tree){
     if(!BT_has_left(tree)){
@@ -1270,8 +1291,10 @@ void generate_command(TBinaryTree* tree){
         case WHILE:
             break;
         case IF:
+            generate_if(tree);
             break;
         case ELSE:
+            // Do nothing
             break;
         case FUNCTION_CALL:
             generate_call(tree);
