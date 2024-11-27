@@ -1264,6 +1264,36 @@ void generate_if(TBinaryTree* tree){
     cg_create_label(end_if_label);
 }
 
+void generate_while(TBinaryTree* tree){
+    // Node
+    node_data data;
+    BT_get_data(tree, &data);
+    // Labels
+    TLabel while_beg = cg_get_new_label();
+    TLabel while_end = cg_get_new_label();
+    // Expression
+    cg_create_label(while_beg);
+    BT_go_left(tree);
+    calculate_expression(tree);
+    BT_go_parent(tree);
+    // Jump
+    cg_stack_pop(cg_var_temp);
+    if(data.nodeData.body.is_nullable){
+        cg_jump_eq(while_end, cg_var_temp, cg_null_term);
+        TTerm replacement = {.type = CG_VARIABLE_T, .value.var_name = data.nodeData.body.null_replacement, .frame = LOCAL};
+        if(insert(replacement.value.var_name)){
+            cg_create_var(replacement);
+        }
+        cg_move(replacement, cg_var_temp);
+    }
+    else{
+        cg_jump_eq(while_end, cg_var_temp, cg_false_term);
+    }
+    generate_function_body(tree);
+    cg_jump(while_beg);
+    cg_create_label(while_end);
+}
+
 void generate_command(TBinaryTree* tree){
     if(!BT_has_left(tree)){
         return;
@@ -1289,6 +1319,7 @@ void generate_command(TBinaryTree* tree){
             generate_function_body(tree);
             break;
         case WHILE:
+            generate_while(tree);
             break;
         case IF:
             generate_if(tree);
