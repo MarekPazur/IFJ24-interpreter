@@ -269,7 +269,7 @@ void cg_term(TTerm term){
             int i = 0;
             while(term.value.string[i] != '\0'){
                 char c = term.value.string[i];
-                if(c < 32 || c == '#' || c == '\\'){ // 000-032: Unprintable characters, 035: '#', 092: '\'
+                if(c <= 32 || c == '#' || c == '\\'){ // 000-032: Unprintable characters, 035: '#', 092: '\'
                     printf("\\%03d", c);
                 }
                 else{
