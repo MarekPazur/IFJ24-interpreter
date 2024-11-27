@@ -34,7 +34,9 @@
     symtable_data.variable.is_null_type = nullable;
     symtable_data.variable.is_constant = constant;
     symtable_data.variable.is_used = false;
+    symtable_data.variable.is_mutated = false;
     symtable_data.variable.comp_runtime = false;
+    symtable_data.variable.value_pointer = NULL;
     symtable_data.variable.type = type;
     
     return symtable_data;
@@ -119,6 +121,11 @@ void init_parser(token_t token) {
         error = ERR_COMPILER_INTERNAL;
         return;
     }
+    
+    // Inserting the built-in functions into the global symtable
+    populate_builtin_functions(parser->global_symtable);
+    if(error)
+        return;
 
     // Initialising the AST
     parser->AST = BT_init();
@@ -719,6 +726,10 @@ void function_params(Tparser* parser, TNode** current_node) {
                 error = ERR_COMPILER_INTERNAL;
                 return;
             }
+            if( symtable_search(parser->scope.current_scope, parser->processed_identifier) ){
+                error = ERR_IDENTIFIER_REDEF_CONST_ASSIGN;
+                return;
+            }
             
             TData param_data;
             param_data = declaration_data(false, true, UNKNOWN_T);
@@ -853,7 +864,15 @@ void body(Tparser* parser, TNode** current_node) {
             if (error) return;
 
             (*current_node)->left = create_node(BODY);
-            (*current_node)->left->data.nodeData.body.current_scope = &parser->scope;
+
+            (*current_node)->left->data.nodeData.body.current_scope = (scope_t*) malloc(sizeof(scope_t));
+
+            if ((*current_node)->left->data.nodeData.body.current_scope == NULL) {
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+
+            *(*current_node)->left->data.nodeData.body.current_scope = parser->scope;
            
             parser->state = STATE_command;
             body(parser, &(*current_node)->left->right);
@@ -922,8 +941,9 @@ void body(Tparser* parser, TNode** current_node) {
                 }
                 
                 retrieved_data.variable.is_used = true;
+                retrieved_data.variable.is_mutated = true;
                 
-                if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, retrieved_data)){
+                if(!symtable_insert(identifier_residence, parser->processed_identifier, retrieved_data)){
                     error = ERR_COMPILER_INTERNAL;
                     return;
                 }
@@ -1000,7 +1020,15 @@ void body(Tparser* parser, TNode** current_node) {
             if (error) return;
 
             (*current_node)->left = create_node(ELSE);
-            (*current_node)->left->data.nodeData.body.current_scope = &parser->scope;
+
+            (*current_node)->left->data.nodeData.body.current_scope = (scope_t*) malloc(sizeof(scope_t));
+
+            if ((*current_node)->left->data.nodeData.body.current_scope == NULL) {
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+
+            *(*current_node)->left->data.nodeData.body.current_scope = parser->scope;
             
             parser->state = STATE_command;
             body(parser, &(*current_node)->left->right);
@@ -1045,8 +1073,16 @@ void body(Tparser* parser, TNode** current_node) {
             if (error) return;
         
             (*current_node)->left = create_node(ELSE);
-            (*current_node)->left->data.nodeData.body.current_scope = &parser->scope;
             
+            (*current_node)->left->data.nodeData.body.current_scope = (scope_t*) malloc(sizeof(scope_t));
+
+            if ((*current_node)->left->data.nodeData.body.current_scope == NULL) {
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+
+            *(*current_node)->left->data.nodeData.body.current_scope = parser->scope;
+
             parser->state = STATE_open_else;
             body(parser, &(*current_node)->left->right);
             if (error) return;
@@ -1136,8 +1172,9 @@ void body(Tparser* parser, TNode** current_node) {
                 }
                 
                 retrieved_data.variable.is_used = true;
+                retrieved_data.variable.is_mutated = true;
                 
-                if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, retrieved_data)){
+                if(!symtable_insert(identifier_residence, parser->processed_identifier, retrieved_data)){
                     error = ERR_COMPILER_INTERNAL;
                     return;
                 }
@@ -1220,17 +1257,24 @@ void if_while_header(Tparser* parser, TNode** current_node, node_type type) {
     switch (parser->state) {
     case STATE_lr_bracket:
         if (parser->current_token.id == TOKEN_BRACKET_ROUND_LEFT) { //checking for if ->(<-expression) |null_replacement| {
+
+            enter_sub_body(parser);
+            if (error) return;
         
             (*current_node) = create_node(type);
-            (*current_node)->data.nodeData.body.current_scope = &parser->scope;
-            
+
+            (*current_node)->data.nodeData.body.current_scope = (scope_t*) malloc(sizeof(scope_t));
+
+            if ((*current_node)->data.nodeData.body.current_scope == NULL) {
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+
+            *(*current_node)->data.nodeData.body.current_scope = parser->scope;
             parser->state = STATE_operand;
 
             /* Expression */
             expression(parser, TOKEN_BRACKET_ROUND_RIGHT, &(*current_node)->left, false);
-            if (error) return;
-            
-            enter_sub_body(parser);
             if (error) return;
 
             parser->state = STATE_pipe;
@@ -1271,6 +1315,7 @@ void if_while_header(Tparser* parser, TNode** current_node, node_type type) {
         error = ERR_SYNTAX;
         return;
     }
+
     return;
 }
 
@@ -1326,6 +1371,12 @@ void null_replacement(Tparser* parser, TNode** current_node) {
  * @param parser, holds the current token, symtables, binary tree and the current state of the FSM
  */
 void var_const_declaration(Tparser* parser, TNode** current_node, node_type type) {
+    TData retrieved_data;
+    
+    TNode* value_pointer;
+    
+    TSymtable* identifier_residence;
+    
     if (error) return;
 
     if ((parser->current_token = get_token()).id == TOKEN_ERROR) // Token is invalid
@@ -1377,8 +1428,53 @@ void var_const_declaration(Tparser* parser, TNode** current_node, node_type type
             if (error) {
                 return;
             }
+            if ( (*current_node)->left->left == NULL && (*current_node)->left->right == NULL ) {
+                if ( (*current_node)->type == CONST_DECL ) {
+                    
+                    if ( (*current_node)->left->type == VAR_CONST ) {
+                        if((identifier_residence = declaration_var_check(parser->scope, (*current_node)->left->data.nodeData.value.identifier)) == NULL){
+                            error = ERR_COMPILER_INTERNAL;
+                            return;
+                        }
+                        
+                        if(!symtable_get_data(identifier_residence, (*current_node)->left->data.nodeData.value.identifier, &retrieved_data)){
+                            error = ERR_COMPILER_INTERNAL;
+                            return;
+                        }
+                        
+                        if ( !retrieved_data.variable.is_constant ) {
+                            break;
+                        }
+                        
+                        value_pointer = retrieved_data.variable.value_pointer;
+                        
+                        if(!symtable_get_data(parser->scope.current_scope, parser->processed_identifier, &retrieved_data)){
+                            error = ERR_COMPILER_INTERNAL;
+                            return;
+                        }
+                        
+                        retrieved_data.variable.value_pointer = value_pointer;
+                        
+                        if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, retrieved_data)){
+                            error = ERR_COMPILER_INTERNAL;
+                            return;
+                        }
+                    }else{
+                        if(!symtable_get_data(parser->scope.current_scope, parser->processed_identifier, &retrieved_data)){
+                            error = ERR_COMPILER_INTERNAL;
+                            return;
+                        }
+                        
+                        retrieved_data.variable.value_pointer = (*current_node)->left;
+                        
+                        if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, retrieved_data)){
+                            error = ERR_COMPILER_INTERNAL;
+                            return;
+                        }
+                    }
+                }
+            }
             break;
-            
         } else if (parser->current_token.id == TOKEN_COLON) { //checking for var/const name ->:<- type = expression;
             parser->state = STATE_possible_qmark;
             var_const_declaration(parser, current_node, type);
@@ -1490,6 +1586,54 @@ void var_const_declaration(Tparser* parser, TNode** current_node, node_type type
             if (error) {
                 return;
             }
+          
+            if ( (*current_node)->left->left == NULL && (*current_node)->left->right == NULL ) {
+            
+                if ( (*current_node)->type == CONST_DECL ) {
+                    
+                    if ( (*current_node)->left->type == VAR_CONST ) {
+                        if((identifier_residence = declaration_var_check(parser->scope, (*current_node)->left->data.nodeData.value.identifier)) == NULL){
+                            error = ERR_COMPILER_INTERNAL;
+                            return;
+                        }
+                        
+                        if(!symtable_get_data(identifier_residence, (*current_node)->left->data.nodeData.value.identifier, &retrieved_data)){
+                            error = ERR_COMPILER_INTERNAL;
+                            return;
+                        }
+                        
+                        if ( !retrieved_data.variable.is_constant ) {
+                            break;
+                        }
+                        
+                        value_pointer = retrieved_data.variable.value_pointer;
+                        
+                        if(!symtable_get_data(parser->scope.current_scope, parser->processed_identifier, &retrieved_data)){
+                            error = ERR_COMPILER_INTERNAL;
+                            return;
+                        }
+                        
+                        retrieved_data.variable.value_pointer = value_pointer;
+                        
+                        if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, retrieved_data)){
+                            error = ERR_COMPILER_INTERNAL;
+                            return;
+                        }
+                    }else{
+                        if(!symtable_get_data(parser->scope.current_scope, parser->processed_identifier, &retrieved_data)){
+                            error = ERR_COMPILER_INTERNAL;
+                            return;
+                        }
+                        
+                        retrieved_data.variable.value_pointer = (*current_node)->left;
+                        
+                        if(!symtable_insert(parser->scope.current_scope, parser->processed_identifier, retrieved_data)){
+                            error = ERR_COMPILER_INTERNAL;
+                            return;
+                        }
+                    }
+                }
+            }
             break;
         }
         error = ERR_SYNTAX;
@@ -1593,6 +1737,11 @@ void function_call_params(Tparser* parser, TNode** current_node) {
         case TOKEN_LITERAL_STRING:
             *current_node = create_node(STR);
             (*current_node)->data.nodeData.value.literal = parser->current_token.lexeme.array;
+            parser->state = STATE_coma;
+            function_call_params(parser, &(*current_node)->right);
+            break;
+        case TOKEN_KW_NULL:
+            *current_node = create_node(NULL_LITERAL);
             parser->state = STATE_coma;
             function_call_params(parser, &(*current_node)->right);
             break;
@@ -1725,4 +1874,50 @@ void expression(Tparser* parser, token_id end, TNode **current_node, bool allow_
     } else { // First token is NOT ID --> expression, at this point, Empty expression is Invalid
         (*current_node) = precedent(&t_buffer, end, parser->scope); // call precedence analysis for expression syntax analysis
     }
+}
+
+
+/**
+ * @brief This function adds the built-in functions into the symtable it is given
+ *
+ * @Author xtomasp00, Patrik Tomasko
+ * 
+ * @param global_symtable, pointer to the symtable which is to get filled by the built-in function
+ *
+ * @return true if the symtable was filled succesfully, false if there was some error like seqfault
+ */
+void populate_builtin_functions(TSymtable* global_symtable){
+
+    char* function_names[] = {"ifj.readstr", "ifj.readi32", "ifj.readf64", "ifj.write", "ifj.i2f", "ifj.f2i", "ifj.string", "ifj.length", "ifj.concat", "ifj.substring", "ifj.strcmp", "ifj.ord", "ifj.chr"};
+    char function_input[] = {'a','i','f','n','u','u', 'u','u', 'i', 'i', 'u', 'u', 'u', 'i', 'i'};
+    int param_ammounts[] = {0,0,0,1,1,1,1,1,2,3,2,2,1};
+    Type return_types[] = {U8_SLICE_T, INTEGER_T, FLOAT_T, VOID_T, FLOAT_T, INTEGER_T, U8_SLICE_T, INTEGER_T, U8_SLICE_T, U8_SLICE_T, INTEGER_T, INTEGER_T, U8_SLICE_T};
+    bool is_nullable[] = {true, true, true, false, false, false, false, false, false, true, false, false, false};
+    
+    int param_type_index = 0;
+    
+    for(int index = 0; index < 13; index++){
+    
+        TData function_data;
+        function_data.function.is_null_type = is_nullable[index];
+        d_array_init((&function_data.function.argument_types), 2);
+        for(int index_adder = 0; index_adder < param_ammounts[index]; index_adder++){
+            d_array_append(&function_data.function.argument_types, function_input[param_type_index]);
+
+            if((param_type_index++)>14){
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+        }
+        function_data.function.return_type = return_types[index];
+        function_data.function.function_scope = NULL;
+        
+        if(!symtable_insert(global_symtable, function_names[index], function_data)){
+            error = ERR_COMPILER_INTERNAL;
+            return;
+        }
+        
+    }
+    
+    return;
 }

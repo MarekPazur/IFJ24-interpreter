@@ -26,6 +26,7 @@
 #define PUSH_SYMBOL(symbol_id) push(&sym_stack, (symbol) {.id = symbol_id, .token = {.id = TOKEN_DEFAULT, .lexeme = {.array = NULL}}, .type = NON_OPERAND})
 
 bool precedence_debug = false;
+int relative_op_count = 0;
 
 struct TScope current_symtable_scope;
 
@@ -123,21 +124,27 @@ symbol token_to_symbol(token_t term) {
 	/* Logic OP */
 	case TOKEN_EQUAL: 				// ==
 		symbol.id = EQ;
+		relative_op_count++;
 		break;
 	case TOKEN_NOT_EQUAL: 			// !=
 		symbol.id = NEQ;
+		relative_op_count++;
 		break;
 	case TOKEN_LESS: 				// <
 		symbol.id = LS;
+		relative_op_count++;
 		break;
 	case TOKEN_GREATER:	 			// >
 		symbol.id = GR;
+		relative_op_count++;
 		break;
 	case TOKEN_GREATER_EQUAL: 		// >=
 		symbol.id = GRE;
+		relative_op_count++;
 		break;
 	case TOKEN_LESS_EQUAL: 			// <=
-		symbol.id = LSE;			// I_LOGIC = 2
+		symbol.id = LSE;
+		relative_op_count++;			// I_LOGIC = 2
 		break;
 
 	case TOKEN_BRACKET_ROUND_LEFT:	// (
@@ -152,7 +159,6 @@ symbol token_to_symbol(token_t term) {
 	        //Checking the existance of the variable and changing it's is_used value to true
 	        
 	        if((identifier_residence = declaration_var_check(current_symtable_scope, term.lexeme.array)) == NULL){
-	            printf("I broke at the %s", term.lexeme.array);
                     error = ERR_UNDEFINED_IDENTIFIER;
                     return symbol;
                 }
@@ -160,6 +166,11 @@ symbol token_to_symbol(token_t term) {
                 symtable_get_data(identifier_residence, term.lexeme.array, &retrieved_data);
                 
                 retrieved_data.variable.is_used = true;
+                
+                if(!symtable_insert(identifier_residence, term.lexeme.array, retrieved_data)){
+                    error = ERR_COMPILER_INTERNAL;
+                    return symbol;
+                }
 	
 		symbol.id = I;
 		symbol.type = CONST_VAR_ID;
@@ -203,6 +214,9 @@ int get_node_type(int term, int select) {
 			break;
 		case F64_T:
 			type = FL;
+			break;
+		case NULL_T:
+			type = NULL_LITERAL;
 			break;
 		default:
 			type = VAR_CONST;
@@ -320,11 +334,11 @@ void reduction(stack_t *stack, int expresion_length) {
 		}
 
 		/* Operators can't be applied on string, []u8, null type  */
-		if ((E1.type == STRING_T || E2.type == STRING_T) || (E1.type == U8_T || E2.type == U8_T) || (E1.type == NULL_T || E2.type == NULL_T)) {
+/*		if ((E1.type == STRING_T || E2.type == STRING_T) || (E1.type == U8_T || E2.type == U8_T) || (E1.type == NULL_T || E2.type == NULL_T)) {
 			printf("error: invalid type used in expression!\n");
 			error = ERR_TYPE_COMPATABILITY;
 			return;
-		}
+		}*/
 
 		push(stack, E);
 	} else {
@@ -350,7 +364,8 @@ token_t fetch_token(t_buf* token_buffer) {
 /* Precedent analysis core function */
 /* Checks expression in assignment, condition, return */
 TNode* precedent(t_buf* token_buffer, token_id end_marker, struct TScope cur_scope) {
-        current_symtable_scope = cur_scope;
+	relative_op_count = 0;
+    current_symtable_scope = cur_scope;
 	stack_t sym_stack;
 	init_stack(&sym_stack);
 	PUSH_SYMBOL(END);
@@ -408,10 +423,18 @@ TNode* precedent(t_buf* token_buffer, token_id end_marker, struct TScope cur_sco
 
 		top_term = get_topmost_term(&sym_stack);
 
-		if (read_enable)
+		if (read_enable) {
 			next_term = token_to_symbol((token = fetch_token(token_buffer)));
-		if (error) 
+			
+			if (relative_op_count > 1) {
+				printf("error: too many relative operators\n");
+				error = ERR_SYNTAX;
+			}
+		}
+			
+		if (error) {
 			break;
+		}
 
 		if (end_marker == TOKEN_SEMICOLON ? (top_term.id == END && next_term.id == END) : (top_term.id == END && next_term.id == RBR)) // $ = $ -> topmost term in stack = next term, expression is finally solved $E$
 			expr_solved = true;

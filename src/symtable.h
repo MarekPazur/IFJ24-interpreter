@@ -21,7 +21,11 @@ typedef enum type {
     INTEGER_T,    // i32
     FLOAT_T,      // f64
     U8_SLICE_T,   // u8[]
+    BOOL_T,       // boolean, can only be in conditions
+    NIL_T        // NULLABLE
 } Type;
+
+struct node;
 
 union data {
     struct {
@@ -36,7 +40,10 @@ union data {
         bool is_null_type;            // Variable type can be nullable '?type'
         bool is_constant;             // Variable is constant
         bool is_used;                 // Variable has to be used in its life
+        bool is_mutated;              // Variable was changed in its life
         bool comp_runtime;            // Variable or value that is known and evaluated during compilation
+        
+        struct node* value_pointer;
 
         Type type;                    // Variable data type
     } variable;
@@ -93,5 +100,7 @@ void symtable_free(TSymtable* symtable);
 // DEBUG FUNCTIONS
 
 void debug_print_keys(TSymtable* symtable);
+
+bool check_is_used(TSymtable* symtable);
 
 #endif

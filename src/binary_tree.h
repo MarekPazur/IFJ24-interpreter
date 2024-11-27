@@ -41,7 +41,9 @@ typedef enum node_type {
 	INT,				// integer i32 datatype LITERAL
 	FL,					// float f64 datatype	LITERAL
 	U8,					// U8 SLICE
+	NULL_LITERAL,
 	STR,				// string datatype		LITERAL
+	
 	VAR_CONST,			// variable/constant, u8[] can be only in this form, not on its own
 
 	EXPRESSION,			// node containing expression

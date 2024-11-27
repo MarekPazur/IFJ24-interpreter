@@ -27,6 +27,7 @@ TNode* create_node(node_type type) {
         new_node->left = NULL;
         new_node->right = NULL;
         new_node->type = type;
+        memset(&new_node->data, 0, sizeof(new_node->data));
     }
     return new_node;
 }
@@ -286,6 +287,7 @@ const char *node_t_string[] = {
     "F64",
     "U8[]",
     "STR",
+    "NULL",
     "VAR/CONST",
 
     "EXPR",

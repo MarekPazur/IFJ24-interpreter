@@ -13,20 +13,21 @@
 #include <stdbool.h>
 #include <string.h>
 #include "symtable.h"
+#include "binary_tree.h"
 
 // STRUCTURES
 
-typedef struct node TNode;
+typedef struct sym_node SymNode;
 
-struct node{
+struct sym_node{
     TKey key;
     TData data;
-    TNode* left;
-    TNode* right;
+    SymNode* left;
+    SymNode* right;
 };
 
 struct symtable{
-    TNode* root;
+    SymNode* root;
 };
 
 // DATA OPERATION DECLARATIONS
@@ -39,29 +40,29 @@ static bool key_is_less(TKey key_1, TKey key_2);
 
 // BST OPERATION DECLARATIONS
 
-static TNode* create_node(TKey key, TData data);
+static SymNode* create_node_sym(TKey key, TData data);
 
-static bool bst_insert_node(TNode** root, TKey key, TData data);
+static bool bst_insert_node(SymNode** root, TKey key, TData data);
 
-static bool bst_seek_node(TNode* root, TKey key, TData* data_out);
+static bool bst_seek_node(SymNode* root, TKey key, TData* data_out);
 
-static void bst_free_nodes(TNode* root);
+static void bst_free_nodes(SymNode* root);
 
-static void delete_node(TNode** root);
+static void delete_node(SymNode** root);
 
-static void bst_delete_node(TNode** root, TKey key);
+static void bst_delete_node(SymNode** root, TKey key);
 
-//static int bst_get_height(TNode* root);
+//static int bst_get_height(SymNode* root);
 
-static bool bst_is_height_balanced(TNode* root, int* height);
+static bool bst_is_height_balanced(SymNode* root, int* height);
 
-static int bst_get_weight(TNode* root);
+static int bst_get_weight(SymNode* root);
 
-static TNode** bst_to_array(TNode* root, int* len);
+static SymNode** bst_to_array(SymNode* root, int* len);
 
-static TNode* array_to_balanced_bst(TNode* node_arr[], unsigned int len);
+static SymNode* array_to_balanced_bst(SymNode* node_arr[], unsigned int len);
 
-static bool bst_balance(TNode** root);
+static bool bst_balance(SymNode** root);
 
 // SYMTABLE OPERATIONS DEFINITIONS
 TSymtable* symtable_init(void){
@@ -137,11 +138,11 @@ static bool key_is_less(TKey key_1, TKey key_2){
 
 // BST OPERATION DEFINITIONS
 
-static TNode* create_node(TKey key, TData data){
+static SymNode* create_node_sym(TKey key, TData data){
     if(key == NULL){
         return NULL;
     }
-    TNode* new_node = malloc(sizeof(TNode));
+    SymNode* new_node = malloc(sizeof(SymNode));
     if(new_node == NULL){
         return NULL;
     }
@@ -158,13 +159,13 @@ static TNode* create_node(TKey key, TData data){
     return new_node;
 }
 
-static bool bst_insert_node(TNode** root, TKey key, TData data){
+static bool bst_insert_node(SymNode** root, TKey key, TData data){
     if(root == NULL || key == NULL){
         return false;
     }
-    TNode* temp = *(root);
+    SymNode* temp = *(root);
     if(temp == NULL){
-        *root = create_node(key, data);
+        *root = create_node_sym(key, data);
         if(*root == NULL){
             return false;
         }
@@ -182,7 +183,7 @@ static bool bst_insert_node(TNode** root, TKey key, TData data){
     }
 }
 
-static bool bst_seek_node(TNode* root, TKey key, TData* data_out){
+static bool bst_seek_node(SymNode* root, TKey key, TData* data_out){
     if(root == NULL || key == NULL){
         return false;
     }
@@ -200,7 +201,7 @@ static bool bst_seek_node(TNode* root, TKey key, TData* data_out){
     }
 }
 
-static void bst_free_nodes(TNode* root){
+static void bst_free_nodes(SymNode* root){
     if(root == NULL){
         return;
     }
@@ -210,11 +211,11 @@ static void bst_free_nodes(TNode* root){
     free(root);
 }
 
-static void delete_node(TNode** root){
+static void delete_node(SymNode** root){
     if(root == NULL || *root == NULL){
         return;
     }
-    TNode* temp = *root;
+    SymNode* temp = *root;
     if(temp->left == NULL){
         *root = temp->right;
         free(temp->key);
@@ -242,7 +243,7 @@ static void delete_node(TNode** root){
     delete_node(&(temp->right));
 }
 
-static void bst_delete_node(TNode** root, TKey key){
+static void bst_delete_node(SymNode** root, TKey key){
     if(root == NULL || *root == NULL || key == NULL){
         return;
     }
@@ -257,7 +258,7 @@ static void bst_delete_node(TNode** root, TKey key){
     }
 }
 
-//static int bst_get_height(TNode* root){
+//static int bst_get_height(SymNode* root){
 //    if(root == NULL){
 //        return 0;
 //    }
@@ -271,14 +272,14 @@ static void bst_delete_node(TNode** root, TKey key){
 //    }
 //}
 
-static int bst_get_weight(TNode* root){
+static int bst_get_weight(SymNode* root){
     if(root == NULL){
         return 0;
     }
     return bst_get_weight(root->left) + bst_get_weight(root->right) + 1;
 }
 
-static bool bst_to_array_inner(TNode* root, TNode *arr[], unsigned int* pos){
+static bool bst_to_array_inner(SymNode* root, SymNode *arr[], unsigned int* pos){
     if(root == NULL){
         return true;
     }
@@ -288,7 +289,7 @@ static bool bst_to_array_inner(TNode* root, TNode *arr[], unsigned int* pos){
     if(!bst_to_array_inner(root->left, arr, pos)){
         return false;
     }
-    TNode* node = create_node(root->key, root->data);
+    SymNode* node = create_node_sym(root->key, root->data);
     if(node == NULL){
         return false;
     }
@@ -300,7 +301,7 @@ static bool bst_to_array_inner(TNode* root, TNode *arr[], unsigned int* pos){
     return true;
 }
 
-static TNode** bst_to_array(TNode* root, int* len){
+static SymNode** bst_to_array(SymNode* root, int* len){
     if(root == NULL || len == NULL){
         return NULL;
     }
@@ -308,7 +309,7 @@ static TNode** bst_to_array(TNode* root, int* len){
     if(len == 0){
         return NULL;
     }
-    TNode** arr = calloc(*len, sizeof(TNode*));
+    SymNode** arr = calloc(*len, sizeof(SymNode*));
     if(arr == NULL){
         *len = -1;
         return NULL;
@@ -327,7 +328,7 @@ static TNode** bst_to_array(TNode* root, int* len){
     return arr;
 }
 
-static TNode* array_to_balanced_bst_inner(TNode *node_arr[], int beg, int end){
+static SymNode* array_to_balanced_bst_inner(SymNode *node_arr[], int beg, int end){
     if(node_arr == NULL){
         return NULL;
     }
@@ -335,20 +336,20 @@ static TNode* array_to_balanced_bst_inner(TNode *node_arr[], int beg, int end){
         return NULL;
     }
     int mid = (beg + end) / 2;
-    TNode* node = node_arr[mid];
+    SymNode* node = node_arr[mid];
     node->left = array_to_balanced_bst_inner(node_arr, beg, mid - 1);
     node->right = array_to_balanced_bst_inner(node_arr, mid + 1, end);
     return node;
 }
 
-static TNode* array_to_balanced_bst(TNode* node_arr[], unsigned int len){
+static SymNode* array_to_balanced_bst(SymNode* node_arr[], unsigned int len){
     if(node_arr == NULL || len == 0){
         return NULL;
     }
     return array_to_balanced_bst_inner(node_arr, 0, len - 1);
 }
 
-static bool bst_is_height_balanced(TNode* root, int* height){
+static bool bst_is_height_balanced(SymNode* root, int* height){
     if(root == NULL) {
         if(height != NULL){
             *height = 0;
@@ -371,18 +372,18 @@ static bool bst_is_height_balanced(TNode* root, int* height){
     return true;
 }
 
-static bool bst_balance(TNode** root){
+static bool bst_balance(SymNode** root){
     if(root == NULL){
         return false;
     }
     if(!bst_is_height_balanced(*root, NULL)){
         int len = 0;
-        TNode** arr = bst_to_array(*root, &len);
+        SymNode** arr = bst_to_array(*root, &len);
         if(arr == NULL){
             return false;
         }
-        TNode* new_root = array_to_balanced_bst(arr, len);
-        TNode* prev_root = *root;
+        SymNode* new_root = array_to_balanced_bst(arr, len);
+        SymNode* prev_root = *root;
         free(arr);
         if(new_root == NULL){
             return false;
@@ -396,7 +397,7 @@ static bool bst_balance(TNode** root){
 // DEBUG FUNCTIONS
 
 // DEBUG FUNCTION
-void bst_print_keys(TNode* root){
+void bst_print_keys(SymNode* root){
     TData data;
     if(root == NULL){
         return;
@@ -406,16 +407,18 @@ void bst_print_keys(TNode* root){
     data = root->data;
     
     //used for debuging the global symtable
-    printf("is_null_type: %d\n", data.function.is_null_type);
+    /*printf("is_null_type: %d\n", data.function.is_null_type);
     printf("argument_types: %s\n", data.function.argument_types.array);
-    printf("return_type: %d\n", data.function.return_type);
+    printf("return_type: %d\n", data.function.return_type);*/
     
     //used for debuging local symtables
-    /*printf("is_null_type: %d\n", data.variable.is_null_type);
+    printf("is_null_type: %d\n", data.variable.is_null_type);
     printf("is_constant: %d\n", data.variable.is_constant);
     printf("is_used: %d\n", data.variable.is_used);
     printf("comp_runtime: %d\n", data.variable.comp_runtime);
-    printf("type: %d\n\n", data.variable.type);*/
+    printf("type: %d\n\n", data.variable.type);
+    if ( data.variable.value_pointer != NULL )
+        printf("The value is %s \n\n", data.variable.value_pointer->data.nodeData.value.literal);
     bst_print_keys(root->right);
 }
 
@@ -425,4 +428,44 @@ void debug_print_keys(TSymtable* symtable){
         return;
     }
     bst_print_keys(symtable->root);
+}
+
+/**
+ * @brief This function is used to itterate through a symtable and check wether all it's elements are used
+ *
+ * @param root, the root of the symtable
+ */
+bool check_is_used_iter(SymNode* root){
+    if ( root == NULL ) {
+        return true;
+    }
+    if (!check_is_used_iter(root->left))
+        return false;
+    
+    if( !root->data.variable.is_used ){
+        return false;
+    }
+    if ( (!root->data.variable.is_constant) && (!root->data.variable.is_mutated)) {
+        return false;
+    }
+
+    if (!check_is_used_iter(root->right))
+        return false;
+    return true;
+}
+
+/**
+ * @brief This function checks that all the variables in a given are used
+ * The symtable given to the function has to be local, it calls the check_is_used_iter function to check the elements of the symtable
+ *
+ * @param symtable, has the instances to check
+ * @return True if there was no element with the flas is_used set to false, returns false otherwise
+ */
+bool check_is_used(TSymtable* symtable){
+    if( symtable == NULL ){
+        return true;
+    }
+    if(!check_is_used_iter(symtable->root))
+        return false;
+    return true;
 }
