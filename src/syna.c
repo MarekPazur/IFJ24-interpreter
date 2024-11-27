@@ -1884,7 +1884,7 @@ void expression(Tparser* parser, token_id end, TNode **current_node, bool allow_
  */
 void populate_builtin_functions(TSymtable* global_symtable){
 
-    char* function_names[] = {"ifj.readstr", "ifj.readi32", "ifj.readf64", "ifj.write", "ifj.i2f", "ifj.f2i", "ifj.string", "ifj.length", "ifj.concat", "ifj.substring", "pub fn ifj.strcmp", "ifj.ord", "ifj.chr"};
+    char* function_names[] = {"ifj.readstr", "ifj.readi32", "ifj.readf64", "ifj.write", "ifj.i2f", "ifj.f2i", "ifj.string", "ifj.length", "ifj.concat", "ifj.substring", "ifj.strcmp", "ifj.ord", "ifj.chr"};
     char function_input[] = {'a','i','f','n','u','u', 'u','u', 'i', 'i', 'u', 'u', 'u', 'i', 'i'};
     int param_ammounts[] = {0,0,0,1,1,1,1,1,2,3,2,2,1};
     Type return_types[] = {U8_SLICE_T, INTEGER_T, FLOAT_T, VOID_T, FLOAT_T, INTEGER_T, U8_SLICE_T, INTEGER_T, U8_SLICE_T, U8_SLICE_T, INTEGER_T, INTEGER_T, U8_SLICE_T};

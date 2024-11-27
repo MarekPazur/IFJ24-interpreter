@@ -70,6 +70,7 @@ void FunctionSemantics(TNode* func) {
 
     /* Once we arrive at a return in CommandSemantics we set the global variable has Return to true*/
     CommandSemantics(Command, &function_scope, func); // Pass first command with functions symtable
+    check_error();
 
     /* Check return statement missing if its not void function */
     if (hasReturn == false && func->data.nodeData.function.type != VOID_TYPE) {
@@ -108,7 +109,6 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
             
         case ELSE:
         case BODY:
-            //ExpressionSemantics(command_instance->left);
             sub_scope = command_instance->data.nodeData.body.current_scope;
             CommandSemantics(command_instance->right, sub_scope, func); // Recursively call so we can return to original node as soon as we explore the branch on the left side caused by a while or if
             check_error();
@@ -116,7 +116,6 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
 
         case VAR_DECL:
         case CONST_DECL:
-            //ExpressionSemantics(command_instance->left);
             declaration_semantics(command_instance, current_scope);
             check_error();
             break;
@@ -126,17 +125,25 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
             check_error();
             break;
 
-        case FUNCTION_CALL:
-            FunctionCallSemantics(command_instance, current_scope, NULL);
+        case FUNCTION_CALL: {
+            fun_info info = {.type = UNKNOWN_T, .is_optional_null = false};
+            FunctionCallSemantics(command_instance, current_scope, &info);
             check_error();
+
+            if (info.type != VOID_T) {
+                printf("error: function return value ignored, all non-void values must be used\n");
+                error = ERR_PARAM_TYPE_RETURN_VAL;
+                return;
+            }
             break;
+        }
 
         case RETURN:
             if ( (command_instance->left == NULL && func->data.nodeData.function.type != VOID_TYPE) || (command_instance->left != NULL && func->data.nodeData.function.type == VOID_TYPE) ) {
                 error = ERR_RETURN_VALUE_EXPRESSION;
                 return;
             }
-            //ExpressionSemantics(command_instance->left);
+
             hasReturn = true;
             break;
 
@@ -160,24 +167,25 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
 */
 void check_head_type(TNode* body, scope_t *scope){
 
-    expr_info expr_data;
+    expr_info expr_data = {.type = UNKNOWN_T, .is_constant_exp = false, .is_optional_null = false, .optional_null_id = NULL};
     
     expression_semantics(body->left, body->data.nodeData.body.current_scope->parent_scope, &expr_data);
     
-    printf("[condition %s]\n",body->data.nodeData.body.is_nullable ? "optional-null" : "not null");
+    //printf("[condition %s]\n",body->data.nodeData.body.is_nullable ? "optional-null" : "not null");
 
     if ( body->data.nodeData.body.is_nullable ) {
         if ( !expr_data.is_optional_null ) { // variable is not correct type
             error = ERR_SEMANTIC_OTHER;
             return;
         } else { // if (id) |ID| --> update ID datatype with non-null ids datatype
-            printf("%s",expr_data.optional_null_id);
+            //printf("%s",expr_data.optional_null_id);
             TSymtable* local;
             TData null_var_data, not_null_inheritor_data;
             char *variable_id = expr_data.optional_null_id, *not_null_id = body->data.nodeData.body.null_replacement;
 
             /* get variable data in condition */
             if (id_defined(scope, variable_id, &local) == false) {
+                printf("error: var/const %s in condition undefined\n", variable_id);
                 error = ERR_UNDEFINED_IDENTIFIER;
                 return;
             }
@@ -186,6 +194,7 @@ void check_head_type(TNode* body, scope_t *scope){
                 return;
             }/* |not_null_variable| data*/
             if (id_defined(scope, not_null_id, &local) == false) {
+                printf("error: not_null variable undefined\n");
                 error = ERR_UNDEFINED_IDENTIFIER;
                 return;
             }
@@ -202,8 +211,9 @@ void check_head_type(TNode* body, scope_t *scope){
             }
         }
     } else {
-        if( expr_data.type!=BOOL_T ){
+        if( expr_data.type != BOOL_T ){
             error = ERR_TYPE_COMPATABILITY;
+            printf("error: trying to put non-truth expression in condition statement\n");
             return;
         }
     }
@@ -220,6 +230,7 @@ void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope, fun_info
 
     /* Check if function is defined */
     if (symtable_search(globalSymTable, function_id) == false) {
+        printf("error: function %s undefined\n",function_id);
         error = ERR_UNDEFINED_IDENTIFIER;
         return;
     }
@@ -252,6 +263,7 @@ void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope, fun_info
             TSymtable* local = NULL; // Local symtable where variable 'id' might be defined
 
             if (id_defined(current_scope, variable_id, &local) == false) {
+                printf("error: formal parameter %s undefined\n", variable_id);
                 error = ERR_UNDEFINED_IDENTIFIER;
                 break;
             }
@@ -439,6 +451,7 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
             char *variable_id = expression->data.nodeData.value.identifier;
 
             if (id_defined(scope, variable_id, &local) == false) {
+                printf("error: var/const %s undefined in this expression\n", variable_id);
                 error = ERR_UNDEFINED_IDENTIFIER;
                 break;
             }
@@ -497,6 +510,7 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
                         char *variable_id = expression->left->data.nodeData.value.identifier;
 
                         if (id_defined(scope, variable_id, &local) == false) {
+                            printf("error: var/const %s undefined in arithmetic expression\n", variable_id);
                             error = ERR_UNDEFINED_IDENTIFIER;
                             break;
                         }
@@ -521,6 +535,7 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
                         char *variable_id = expression->right->data.nodeData.value.identifier;
 
                         if (id_defined(scope, variable_id, &local) == false) {
+                            printf("error: var/const %s undefined in arithmetic expression\n", variable_id);
                             error = ERR_UNDEFINED_IDENTIFIER;
                             break;
                         }
@@ -591,6 +606,7 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
                         char *variable_id = expression->left->data.nodeData.value.identifier;
 
                         if (id_defined(scope, variable_id, &local) == false) {
+                            printf("error: var/const %s undefined in arithmetic expression\n", variable_id);
                             error = ERR_UNDEFINED_IDENTIFIER;
                             break;
                         }
@@ -618,6 +634,7 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
                         char *variable_id = expression->right->data.nodeData.value.identifier;
 
                         if (id_defined(scope, variable_id, &local) == false) {
+                            printf("error: var/const %s undefined in arithmetic expression\n", variable_id);
                             error = ERR_UNDEFINED_IDENTIFIER;
                             break;
                         }
