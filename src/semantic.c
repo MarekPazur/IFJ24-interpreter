@@ -97,10 +97,11 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
         case WHILE:
         case IF:
         
-            check_head_type(command_instance);
+            sub_scope = command_instance->data.nodeData.body.current_scope;
+
+            check_head_type(command_instance, sub_scope);
             check_error();
             
-            sub_scope = command_instance->data.nodeData.body.current_scope;
             CommandSemantics(command_instance->right, sub_scope, func); // Recursively call so we can return to original node as soon as we explore the branch on the left side caused by a while or if
             check_error();
             break;
@@ -126,10 +127,7 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
             break;
 
         case FUNCTION_CALL:
-            /* while this approach would probably work to some extent, we need to check other things that I believe we'll be able to check further on function call, arguments, etc.
-            if(symtable_search(command.instance.function.id) == false)
-                error();*/
-            //FunctionCallSemantics(command_instance, current_scope, NULL);
+            FunctionCallSemantics(command_instance, current_scope, NULL);
             check_error();
             break;
 
@@ -160,16 +158,48 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
 * @brief this function checks that there is a bool expression inside the if and while header, also checks that if the header has |this| it is nullable
 * @param the node of the if or while
 */
-void check_head_type(TNode* body){
+void check_head_type(TNode* body, scope_t *scope){
 
     expr_info expr_data;
     
     expression_semantics(body->left, body->data.nodeData.body.current_scope->parent_scope, &expr_data);
     
-    if ( body->data.nodeData.body.is_nullable ){
-        if( !expr_data.is_optional_null ){
+    printf("[condition %s]\n",body->data.nodeData.body.is_nullable ? "optional-null" : "not null");
+
+    if ( body->data.nodeData.body.is_nullable ) {
+        if ( !expr_data.is_optional_null ) { // variable is not correct type
             error = ERR_SEMANTIC_OTHER;
             return;
+        } else { // if (id) |ID| --> update ID datatype with non-null ids datatype
+            printf("%s",expr_data.optional_null_id);
+            TSymtable* local;
+            TData null_var_data, not_null_inheritor_data;
+            char *variable_id = expr_data.optional_null_id, *not_null_id = body->data.nodeData.body.null_replacement;
+
+            /* get variable data in condition */
+            if (id_defined(scope, variable_id, &local) == false) {
+                error = ERR_UNDEFINED_IDENTIFIER;
+                return;
+            }
+            if (symtable_get_data(local, variable_id, &null_var_data) == false) {
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }/* |not_null_variable| data*/
+            if (id_defined(scope, not_null_id, &local) == false) {
+                error = ERR_UNDEFINED_IDENTIFIER;
+                return;
+            }
+            if (symtable_get_data(local, not_null_id, &not_null_inheritor_data) == false) {
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
+            /* Assign inherited datatype without null */
+            not_null_inheritor_data.variable.type = null_var_data.variable.type;
+            /* Update data about not_null constant */
+            if (symtable_insert(local, not_null_id, not_null_inheritor_data) == false) {
+                error = ERR_COMPILER_INTERNAL;
+                return;
+            }
         }
     } else {
         if( expr_data.type!=BOOL_T ){
@@ -183,7 +213,7 @@ void check_head_type(TNode* body){
 * Function call semantics checks (definition, formal parameters)
 * TODO CHECK NULLABLE TYPES
 */
-void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope, int* type_out) {
+void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope, fun_info* info) {
     char *function_id = functionCall->data.nodeData.identifier.identifier; // Get function ID
     TData function_data;
     TNode *formal_param = functionCall->right; // Right pointer for some unknown reason
@@ -203,6 +233,7 @@ void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope, int* typ
     /** Check function call *formal* parameter(s) (count, type) **/
     /* Check function call *formal* parameters count */
     if (function_data.function.argument_types.length != formal_param_count(formal_param)) {
+        printf("error: invalid function call parameter count\n");
         error = ERR_PARAM_TYPE_RETURN_VAL;
         return;
     }
@@ -238,16 +269,25 @@ void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope, int* typ
         }
 
         if (formal_param_type != real_param[param_position]) {
-            error = ERR_PARAM_TYPE_RETURN_VAL;
-            break;
+            /* Formal and real params may differentiate, however if its built-in function, it may accept all parameter types - 'a' (ifj.write())
+            or it may accept string or []u8 slice - 'n' (ifj.string()) where its neccesary to check if the formal params are of type string or []u8 slice */
+            if (real_param[param_position] != 'a' && (real_param[param_position] != 'n' || (formal_param_type != 'u' && formal_param_type != 's'))){
+                printf("%s - ",function_id);
+                printf("[%c - %c]",formal_param_type, real_param[param_position]);
+                printf("error: formal parameter type doesn't match function definition parameter type\n");
+                error = ERR_PARAM_TYPE_RETURN_VAL;
+                break;
+            }
         }
 
         ++param_position;
         formal_param = formal_param->right;
     }
 
-    if (type_out) // If asked for type, return called functions return type
-        *type_out = function_data.function.return_type;
+    if (info) { // If asked for type, return called functions return type
+        info->type = function_data.function.return_type;
+        info->is_optional_null = function_data.function.is_null_type;
+    }
 
     check_error();
 }
@@ -264,6 +304,7 @@ void assig_check(TNode* command_instance) {
             }
 
             if ( function_data.function.return_type == VOID_T ) {
+                printf("error: trying to assign void to variable\n");
                 error = ERR_PARAM_TYPE_RETURN_VAL;
                 return;
             }
@@ -277,6 +318,7 @@ void assig_check(TNode* command_instance) {
 void main_function_semantics(TSymtable* globalSymTable) {
     /* Check existence of main function */
     if (symtable_search(globalSymTable, "main") == false) {
+        printf("error: main function undeclared\n");
         error = ERR_UNDEFINED_IDENTIFIER;
         return;
     }
@@ -290,6 +332,7 @@ void main_function_semantics(TSymtable* globalSymTable) {
 
     /* Check defined Parameters and Return value */
     if (function_data.function.argument_types.length != 0 || function_data.function.return_type != VOID_T) {
+        printf("error: main function cant have parameters and must return void\n");
         error = ERR_PARAM_TYPE_RETURN_VAL;
         return;
     }
@@ -301,7 +344,7 @@ void main_function_semantics(TSymtable* globalSymTable) {
 void declaration_semantics(TNode* declaration, scope_t* current_scope) {
     char *variable_id = declaration->data.nodeData.identifier.identifier; // Get LHS var id
     TData var_data;
-    int datatype = 0;
+    int datatype = 0, is_optional_null = 0;
 
     if (symtable_get_data(current_scope->current_scope, variable_id, &var_data) == false) { // Get LHS var 'id' metadata from current symtable
         error = ERR_COMPILER_INTERNAL;
@@ -309,24 +352,28 @@ void declaration_semantics(TNode* declaration, scope_t* current_scope) {
     }
 
     if(var_data.variable.is_constant && var_data.variable.value_pointer == NULL) { // const must be either literal or have value of another
-        //error = ERR_SYNTAX;
+        //TODO FIX!!!!!!!!!!!!!!!!!!!!!!!//error = ERR_SYNTAX;
         //return;
     }
 
     if (declaration->left->type == FUNCTION_CALL) { // var/const 'id' (:type) = function(param_list);
-        FunctionCallSemantics(declaration->left, current_scope, &datatype);
-        check_error();
+        fun_info info = {.type = UNKNOWN_T, .is_optional_null = false};
+        FunctionCallSemantics(declaration->left, current_scope, &info);
+        check_error(); 
+        datatype = info.type;
+        is_optional_null = info.is_optional_null;
     } else {
         expr_info exp_res = {.type = UNKNOWN_T, .is_constant_exp = true, .is_optional_null = false};
-
         expression_semantics(declaration->left, current_scope, &exp_res);
         check_error();
         datatype = exp_res.type;
+        is_optional_null = exp_res.is_optional_null;
     }
 
     /* Variable type resolution */
     if (var_data.variable.type == UNKNOWN_T) { // Type was unknown (var/const without specified type)
-        var_data.variable.type = datatype;
+        var_data.variable.type = datatype; // assign result data type from exp/fun call
+        var_data.variable.is_null_type = is_optional_null; // is ?type
 
         if (symtable_insert(current_scope->current_scope, variable_id, var_data) == false) {
             error = ERR_COMPILER_INTERNAL;
@@ -334,9 +381,17 @@ void declaration_semantics(TNode* declaration, scope_t* current_scope) {
         }
     }
 
+    //TODO rozlisit jestli je to z funkce nebo vyrazu
     if ((int) var_data.variable.type != datatype) {
+        printf("error: var/const datatype doesn't match expression/function return type\n");
         error = ERR_PARAM_TYPE_RETURN_VAL;
         return;
+    } else {
+        if (var_data.variable.is_null_type != is_optional_null) {
+            printf("error: trying to assign optional-null type into non-null type\n");
+            error = ERR_TYPE_COMPATABILITY;
+            return;
+        }
     }
 
     check_error();
@@ -397,17 +452,13 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
 
             info->type = info->data.variable.type;
 
-            if (info->data.variable.is_null_type)
+            if (info->data.variable.is_null_type) {
                 info->is_optional_null = true;
+                info->optional_null_id = variable_id;
+            }
 
             if (!info->data.variable.is_constant) // var encountered
                 info->is_constant_exp = false;
-            else {
-/*                if(info->data.variable.value_pointer->left && info->data.variable.value_pointer->right) { // const must be either literal or have value of another
-                error = ERR_SYNTAX;
-                return;
-                }*/
-            }
         }
         break;
 
@@ -458,12 +509,6 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
                         if (var_data.variable.type == INTEGER_T) {
                             char *const_value = var_data.variable.value_pointer->data.nodeData.value.literal;
 
-                            
-/*                            if(var_data.variable.value_pointer->left && var_data.variable.value_pointer->right) {
-                                error = ERR_SYNTAX;
-                                return;
-                            }*/
-
                             const_value = literal_convert_i32_to_f64(const_value);
                             expression->left->type = FL;
                             expression->left->data.nodeData.value.literal = const_value;
@@ -487,11 +532,6 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
 
                         if (var_data.variable.type == INTEGER_T) {
                             char *const_value = var_data.variable.value_pointer->data.nodeData.value.literal;
-
-                            /*if(var_data.variable.value_pointer->left && var_data.variable.value_pointer->right) {
-                                error = ERR_SYNTAX;
-                                return;
-                            }*/
 
                             const_value = literal_convert_i32_to_f64(const_value);
                             expression->right->type = FL;
@@ -563,11 +603,6 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
                         if (var_data.variable.type == FLOAT_T) {
                             char *const_value = var_data.variable.value_pointer->data.nodeData.value.literal;
 
-                            /*if(var_data.variable.value_pointer->left && var_data.variable.value_pointer->right) {
-                                error = ERR_SYNTAX;
-                                return;
-                            }*/
-
                             if((const_value = literal_convert_f64_to_i32(const_value)) == NULL) {
                                 error = ERR_TYPE_COMPATABILITY;
                                 return;
@@ -594,12 +629,6 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
 
                         if (var_data.variable.type == FLOAT_T) {
                             char *const_value = var_data.variable.value_pointer->data.nodeData.value.literal;
-
-                            
-/*                            if(var_data.variable.value_pointer->right && var_data.variable.value_pointer->right) {
-                                error = ERR_SYNTAX;
-                                return;
-                            }*/
 
                             if((const_value = literal_convert_f64_to_i32(const_value)) == NULL) {
                                 error = ERR_TYPE_COMPATABILITY;

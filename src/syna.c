@@ -1885,7 +1885,7 @@ void expression(Tparser* parser, token_id end, TNode **current_node, bool allow_
 void populate_builtin_functions(TSymtable* global_symtable){
 
     char* function_names[] = {"ifj.readstr", "ifj.readi32", "ifj.readf64", "ifj.write", "ifj.i2f", "ifj.f2i", "ifj.string", "ifj.length", "ifj.concat", "ifj.substring", "pub fn ifj.strcmp", "ifj.ord", "ifj.chr"};
-    char function_input[] = {'n','i','f','n','u','u', 'u','u', 'i', 'i', 'u', 'u', 'u', 'i', 'i'};
+    char function_input[] = {'a','i','f','n','u','u', 'u','u', 'i', 'i', 'u', 'u', 'u', 'i', 'i'};
     int param_ammounts[] = {0,0,0,1,1,1,1,1,2,3,2,2,1};
     Type return_types[] = {U8_SLICE_T, INTEGER_T, FLOAT_T, VOID_T, FLOAT_T, INTEGER_T, U8_SLICE_T, INTEGER_T, U8_SLICE_T, U8_SLICE_T, INTEGER_T, INTEGER_T, U8_SLICE_T};
     bool is_nullable[] = {true, true, true, false, false, false, false, false, false, true, false, false, false};
@@ -1898,11 +1898,12 @@ void populate_builtin_functions(TSymtable* global_symtable){
         function_data.function.is_null_type = is_nullable[index];
         d_array_init((&function_data.function.argument_types), 2);
         for(int index_adder = 0; index_adder < param_ammounts[index]; index_adder++){
+            d_array_append(&function_data.function.argument_types, function_input[param_type_index]);
+
             if((param_type_index++)>14){
                 error = ERR_COMPILER_INTERNAL;
                 return;
             }
-            d_array_append(&function_data.function.argument_types, function_input[param_type_index]);
         }
         function_data.function.return_type = return_types[index];
         function_data.function.function_scope = NULL;

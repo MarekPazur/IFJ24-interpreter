@@ -20,7 +20,13 @@ typedef struct {
     TData data;	// data about variable/constant
     bool is_constant_exp; // is result of (sub)expression constant
     bool is_optional_null;
+    char *optional_null_id; // id of the optional null variable used in expression
 } expr_info;
+
+typedef struct {
+    int type;
+    bool is_optional_null;
+} fun_info;
 
 void semantic_analysis(TBinaryTree* AST);
 
@@ -28,7 +34,7 @@ void FunctionSemantics(TNode* func);
 
 void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func);
 
-void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope, int* type_out);
+void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope, fun_info* info);
 
 void main_function_semantics(TSymtable* globalSymTable);
 
@@ -36,7 +42,7 @@ void assig_check(TNode* command_instance);
 
 void declaration_semantics(TNode* declaration, scope_t* current_scope);
 
-void check_head_type(TNode* body);
+void check_head_type(TNode* body, scope_t *scope);
 
 void expression_semantics(TNode *expression, scope_t* scope, expr_info* info);
 

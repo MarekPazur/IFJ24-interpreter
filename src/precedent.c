@@ -364,7 +364,8 @@ token_t fetch_token(t_buf* token_buffer) {
 /* Precedent analysis core function */
 /* Checks expression in assignment, condition, return */
 TNode* precedent(t_buf* token_buffer, token_id end_marker, struct TScope cur_scope) {
-        current_symtable_scope = cur_scope;
+	relative_op_count = 0;
+    current_symtable_scope = cur_scope;
 	stack_t sym_stack;
 	init_stack(&sym_stack);
 	PUSH_SYMBOL(END);
@@ -426,8 +427,8 @@ TNode* precedent(t_buf* token_buffer, token_id end_marker, struct TScope cur_sco
 			next_term = token_to_symbol((token = fetch_token(token_buffer)));
 			
 			if (relative_op_count > 1) {
-				//printf("error: too many relative operators\n");
-				//error = ERR_SYNTAX;
+				printf("error: too many relative operators\n");
+				error = ERR_SYNTAX;
 			}
 		}
 			
