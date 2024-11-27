@@ -63,6 +63,9 @@ void semantic_analysis(TBinaryTree* AST) {
     //debug_print_keys((*program)->data.nodeData.program.globalSymTable);
 }
 
+/**
+* Iterates through every function in AST
+*/
 void FunctionSemantics(TNode* func) {
     TNode* Command = func->right; // Get first command wrapper of the function
 
@@ -79,6 +82,9 @@ void FunctionSemantics(TNode* func) {
     }
 }
 
+/**
+* Iterates and uses recursion to do semantic checks on every command/statement used in given function, also takes in mind scopes of variables/constants
+*/
 void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
 
     while (Command) {
@@ -240,7 +246,6 @@ void check_head_type(TNode* body, scope_t *scope){
 
 /**
 * Function call semantics checks (definition, formal parameters)
-* TODO CHECK NULLABLE TYPES
 */
 void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope, fun_info* info) {
     char *function_id = functionCall->data.nodeData.identifier.identifier; // Get function ID
@@ -323,6 +328,9 @@ void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope, fun_info
     check_error();
 }
 
+/**
+* Assigment semantic checks: throw away, assigment type match
+*/
 void assig_check(TNode* command_instance, scope_t *scope) {
     TData function_data, var_data;
     char *variable_id = command_instance->data.nodeData.identifier.identifier;
@@ -763,7 +771,6 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
 
 /* Helper functions */
 
-/* Semantic analysis function for Syntax analysis */
 /**
 * Function to check declaration of variables, has to be done during syntax analysis so completely seperate from the rest of this script
 */
@@ -937,6 +944,9 @@ char *literal_convert_f64_to_i32(char *literal) {
     return literal;
 }
 
+/**
+* Returns return type of given function in integer format 
+*/
 int get_func_type(TSymtable *globalSymTable, char *function_id) {
     TData function_data;
 
@@ -956,6 +966,9 @@ int get_func_type(TSymtable *globalSymTable, char *function_id) {
     return function_data.function.return_type;
 }
 
+/**
+* Fetches data about given var/constant
+*/
 TData get_const_var_data(struct TScope* scope, char *variable_id) {
     TData variable_data;
 
