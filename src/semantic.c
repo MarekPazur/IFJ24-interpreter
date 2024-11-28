@@ -38,11 +38,10 @@ void semantic_analysis(TBinaryTree* AST) {
 
     /* Program/Root Node (Starting point of the program) */
     TNode** program = &(AST->root);
-    //BT_print_tree(*program); //debug print
+    //BT_print_tree(*program); // debug print of the AST before semantic checks 
 
     /* Get global symtable from Program/Root Node */
     globalSymTable = (*program)->data.nodeData.program.globalSymTable;
-
 
     main_function_semantics(globalSymTable);
     check_error();
@@ -59,7 +58,7 @@ void semantic_analysis(TBinaryTree* AST) {
         hasReturn = false; //set hasReturn to false for next function
         func = func->left;
     }
-
+    //BT_print_tree(*program); // Final tree passed to code generator
     //debug_print_keys((*program)->data.nodeData.program.globalSymTable);
 }
 
@@ -106,7 +105,7 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
         
             sub_scope = command_instance->data.nodeData.body.current_scope;
 
-            check_head_type(command_instance, sub_scope);
+            check_head_type(command_instance, sub_scope); // Checks expression and its type inside condition '(expr)'
             check_error();
             
             CommandSemantics(command_instance->right, sub_scope, func); // Recursively call so we can return to original node as soon as we explore the branch on the left side caused by a while or if
@@ -179,7 +178,7 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
         Command = Command->right;
     }
     /* Scope ends here  */
-    if(!check_is_used(current_scope->current_scope)){
+    if(!check_is_used(current_scope->current_scope)){ // Check if every const is used, var used and mutated
         error = ERR_UNUSED_VAR;
         return;
     }
@@ -200,7 +199,7 @@ void check_head_type(TNode* body, scope_t *scope){
 
     if ( body->data.nodeData.body.is_nullable ) {
         if ( !expr_data.is_optional_null ) { // variable is not correct type
-            error = ERR_SEMANTIC_OTHER;
+            error = ERR_TYPE_COMPATABILITY;
             return;
         } else { // if (id) |ID| --> update ID datatype with non-null ids datatype
             //printf("%s",expr_data.optional_null_id);
@@ -439,10 +438,13 @@ void declaration_semantics(TNode* declaration, scope_t* current_scope) {
         return;
     }
 
-    if(var_data.variable.is_constant && var_data.variable.value_pointer == NULL) { // const must be either literal or have value of another
+    /* const thing */
+    if(var_data.variable.is_constant /*&& var_data.variable.value_pointer == NULL*/) {
         //TODO FIX!!!!!!!!!!!!!!!!!!!!!!!//error = ERR_SYNTAX;
         //return;
-    }
+        TNode* rhs = var_data.variable.value_pointer;
+        if (rhs) BT_print_node_type(rhs);
+    } 
 
     if (declaration->left->type == FUNCTION_CALL) { // var/const 'id' (:type) = function(param_list);
         fun_info info = {.type = UNKNOWN_T, .is_optional_null = false};
@@ -461,7 +463,7 @@ void declaration_semantics(TNode* declaration, scope_t* current_scope) {
     /* Variable type resolution */
     if (var_data.variable.type == UNKNOWN_T) { // Type was unknown (var/const without specified type)
 
-        if (datatype == NIL_T) {
+        if (datatype == NIL_T || datatype == STR_T) {
             printf("error: unknown type - type of the variable is not specified and cannot be inferred from the expression used\n");
             error = ERR_UNKNOWN_TYPE;
             return;
@@ -523,9 +525,11 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
         case NULL_LITERAL:
             info->type = NIL_T;
             break;
-        case U8:  // INVALID LITERAL TYPES
-        case STR:
+        case U8:  // INVALID LITERAL TYPE
             error = ERR_TYPE_COMPATABILITY;
+            break;
+        case STR: // STR LITERAL
+            info->type = STR_T;
             break;
         /* VAR or CONST */
         case VAR_CONST:
@@ -563,10 +567,16 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
         case OP_SUB:
         case OP_MUL:
             if (left.is_optional_null || right.is_optional_null) {
-                printf(RED_BOLD("error")": type mismatch, trying to use null type in arithmethics\n");
+                printf(RED_BOLD("error")": type mismatch, trying to use optional null type in arithmethics\n");
                 error = ERR_TYPE_COMPATABILITY;
                 return;
             }
+            
+/*            if (left.type == STR_T || right.type == STR_T) {
+                printf(RED_BOLD("error")": type mismatch, trying to use string literals in arithmethics\n");
+                error = ERR_TYPE_COMPATABILITY;
+                return;
+            }*/
 
             if (left.type == right.type) { // i32 = i32, f64 = f64
                 info->type = left.type;

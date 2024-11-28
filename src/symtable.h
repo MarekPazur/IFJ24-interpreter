@@ -22,7 +22,8 @@ typedef enum type {
     FLOAT_T,      // f64
     U8_SLICE_T,   // u8[]
     BOOL_T,       // boolean, can only be in conditions
-    NIL_T        // NULLABLE
+    NIL_T,        // NULLABLE
+    STR_T         // string literal
 } Type;
 
 struct node;

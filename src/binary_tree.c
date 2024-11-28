@@ -269,8 +269,9 @@ const char *node_t_string[] = {
     "I32",
     "F64",
     "U8[]",
-    "STR",
     "NULL",
+    "STR",
+
     "VAR/CONST",
 
     "EXPR",
