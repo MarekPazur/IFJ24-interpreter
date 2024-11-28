@@ -1255,11 +1255,11 @@ void generate_if(TBinaryTree* tree){
     // Jump
     cg_stack_pop(cg_var_temp);
     if(data.nodeData.body.is_nullable){
-        cg_jump_eq(else_label, cg_var_temp, cg_null_term);
         TTerm replacement = {.type = CG_VARIABLE_T, .value.var_name = data.nodeData.body.null_replacement, .frame = LOCAL};
         if(insert(replacement.value.var_name)){
             cg_create_var(replacement);
         }
+        cg_jump_eq(else_label, cg_var_temp, cg_null_term);
         cg_move(replacement, cg_var_temp);
     }
     else{
