@@ -38,7 +38,9 @@ void semantic_analysis(TBinaryTree* AST) {
 
     /* Program/Root Node (Starting point of the program) */
     TNode** program = &(AST->root);
-    //BT_print_tree(*program); // debug print of the AST before semantic checks 
+    //BT_print_tree(*program); // debug print of the AST before semantic checks
+
+    /* Empty Program */
 
     /* Get global symtable from Program/Root Node */
     globalSymTable = (*program)->data.nodeData.program.globalSymTable;
@@ -102,16 +104,16 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
         switch (command_instance->type) {
         case WHILE:
         case IF:
-        
+
             sub_scope = command_instance->data.nodeData.body.current_scope;
 
             check_head_type(command_instance, sub_scope); // Checks expression and its type inside condition '(expr)'
             check_error();
-            
+
             CommandSemantics(command_instance->right, sub_scope, func); // Recursively call so we can return to original node as soon as we explore the branch on the left side caused by a while or if
             check_error();
             break;
-            
+
         case ELSE:
         case BODY:
             sub_scope = command_instance->data.nodeData.body.current_scope;
@@ -160,7 +162,7 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
                     int function_return_type = get_func_type(globalSymTable, func->data.nodeData.function.identifier);
                     check_error();
 
-                    if(expr_data.type != function_return_type) {
+                    if (expr_data.type != function_return_type) {
                         error = ERR_PARAM_TYPE_RETURN_VAL;
                         return;
                     }
@@ -169,7 +171,7 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
 
             hasReturn = true;
             break;
-        }    
+        }
 
         default:
             break;
@@ -178,7 +180,7 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
         Command = Command->right;
     }
     /* Scope ends here  */
-    if(!check_is_used(current_scope->current_scope)){ // Check if every const is used, var used and mutated
+    if (!check_is_used(current_scope->current_scope)) { // Check if every const is used, var used and mutated
         error = ERR_UNUSED_VAR;
         return;
     }
@@ -189,12 +191,12 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
 * @brief this function checks that there is a bool expression inside the if and while header, also checks that if the header has |this| it is nullable
 * @param the node of the if or while
 */
-void check_head_type(TNode* body, scope_t *scope){
+void check_head_type(TNode* body, scope_t *scope) {
 
     expr_info expr_data = {.type = UNKNOWN_T, .is_constant_exp = false, .is_optional_null = false, .optional_null_id = NULL};
-    
+
     expression_semantics(body->left, body->data.nodeData.body.current_scope->parent_scope, &expr_data);
-    
+
     //printf("[condition %s]\n",body->data.nodeData.body.is_nullable ? "optional-null" : "not null");
 
     if ( body->data.nodeData.body.is_nullable ) {
@@ -235,7 +237,7 @@ void check_head_type(TNode* body, scope_t *scope){
             }
         }
     } else {
-        if( expr_data.type != BOOL_T ){
+        if ( expr_data.type != BOOL_T ) {
             error = ERR_TYPE_COMPATABILITY;
             printf("error: trying to put non-truth expression in condition statement\n");
             return;
@@ -253,7 +255,7 @@ void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope, fun_info
 
     /* Check if function is defined */
     if (symtable_search(globalSymTable, function_id) == false) {
-        printf("error: function %s undefined\n",function_id);
+        printf("error: function %s undefined\n", function_id);
         error = ERR_UNDEFINED_IDENTIFIER;
         return;
     }
@@ -306,9 +308,9 @@ void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope, fun_info
         if (formal_param_type != real_param[param_position]) {
             /* Formal and real params may differentiate, however if its built-in function, it may accept all parameter types - 'a' (ifj.write())
             or it may accept string or []u8 slice - 'n' (ifj.string()) where its neccesary to check if the formal params are of type string or []u8 slice */
-            if (real_param[param_position] != 'a' && (real_param[param_position] != 'n' || (formal_param_type != 'u' && formal_param_type != 's'))){
-                printf("%s - ",function_id);
-                printf("[%c - %c]",formal_param_type, real_param[param_position]);
+            if (real_param[param_position] != 'a' && (real_param[param_position] != 'n' || (formal_param_type != 'u' && formal_param_type != 's'))) {
+                printf("%s - ", function_id);
+                printf("[%c - %c]", formal_param_type, real_param[param_position]);
                 printf("error: formal parameter type doesn't match function definition parameter type\n");
                 error = ERR_PARAM_TYPE_RETURN_VAL;
                 break;
@@ -338,14 +340,14 @@ void assig_check(TNode* command_instance, scope_t *scope) {
     /* Fetches data about variable, checks its existence, if its not '_' */
     if (throw_away == false) // Must check this, else it would throw error, since '_' is not registered in any symtable
         var_data =  get_const_var_data(scope, variable_id);
-    
+
     check_error();
 
     if (command_instance->left->type == FUNCTION_CALL) {
         TNode* function = command_instance->left;
         char* function_id = function->data.nodeData.identifier.identifier;
 
-         /* Get functions metadata */
+        /* Get functions metadata */
         if (symtable_get_data(globalSymTable, function_id, &function_data) == false) {
             error = ERR_COMPILER_INTERNAL;
             return;
@@ -364,12 +366,12 @@ void assig_check(TNode* command_instance, scope_t *scope) {
         } else {
             if ((int) var_data.variable.type != info.type) {
                 error = ERR_TYPE_COMPATABILITY;
-                printf("error: assignment type mismatch caused by function %s\n",function_id);
+                printf("error: assignment type mismatch caused by function %s\n", function_id);
                 return;
             } else {
                 if ((var_data.variable.is_null_type == false) && info.is_optional_null) {
                     error = ERR_TYPE_COMPATABILITY;
-                    printf("error: trying to assign optional-null type into non-null variable, type mismatch caused by function %s\n",function_id);
+                    printf("error: trying to assign optional-null type into non-null variable, type mismatch caused by function %s\n", function_id);
                     return;
                 }
             }
@@ -382,7 +384,7 @@ void assig_check(TNode* command_instance, scope_t *scope) {
         check_error();
 
         if (throw_away == false) {
-            if((int) var_data.variable.type != expr_data.type) { // type of a != b
+            if ((int) var_data.variable.type != expr_data.type) { // type of a != b
                 if ((var_data.variable.is_null_type == false) || (expr_data.type != NIL_T)) { // only acceptable if a is ?type and b is null, else error
                     error = ERR_TYPE_COMPATABILITY;
                     printf("error: assignment type mismatch\n");
@@ -438,18 +440,18 @@ void declaration_semantics(TNode* declaration, scope_t* current_scope) {
         return;
     }
 
-    /* const thing */
-    if(var_data.variable.is_constant /*&& var_data.variable.value_pointer == NULL*/) {
-        //TODO FIX!!!!!!!!!!!!!!!!!!!!!!!//error = ERR_SYNTAX;
-        //return;
+    /* const comptime check */
+    if (var_data.variable.is_constant) {
         TNode* rhs = var_data.variable.value_pointer;
-        if (rhs) BT_print_node_type(rhs);
-    } 
+
+        if (rhs && (rhs->type != FUNCTION_CALL))
+            var_data.variable.comp_runtime = true;
+    }
 
     if (declaration->left->type == FUNCTION_CALL) { // var/const 'id' (:type) = function(param_list);
         fun_info info = {.type = UNKNOWN_T, .is_optional_null = false};
         FunctionCallSemantics(declaration->left, current_scope, &info);
-        check_error(); 
+        check_error();
         datatype = info.type;
         is_optional_null = info.is_optional_null;
     } else {
@@ -471,11 +473,11 @@ void declaration_semantics(TNode* declaration, scope_t* current_scope) {
 
         var_data.variable.type = datatype; // assign result data type from exp/fun call
         var_data.variable.is_null_type = is_optional_null; // is ?type
+    }
 
-        if (symtable_insert(current_scope->current_scope, variable_id, var_data) == false) {
-            error = ERR_COMPILER_INTERNAL;
-            return;
-        }
+    if (symtable_insert(current_scope->current_scope, variable_id, var_data) == false) {
+        error = ERR_COMPILER_INTERNAL;
+        return;
     }
 
     if ((int) var_data.variable.type != datatype) { // a = b inequal types
@@ -515,272 +517,252 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
     //BT_print_tree(expression);//BT_print_node_type(expression);
 
     switch (expression->type) {
-        /* LITERALS */
-        case INT: // I32 LITERAL
-            info->type = INTEGER_T;
-            break;
-        case FL:  // F64 LITERAL
-            info->type = FLOAT_T;
-            break;
-        case NULL_LITERAL:
-            info->type = NIL_T;
-            break;
-        case U8:  // INVALID LITERAL TYPE
-            error = ERR_TYPE_COMPATABILITY;
-            break;
-        case STR: // STR LITERAL
-            info->type = STR_T;
-            break;
-        /* VAR or CONST */
-        case VAR_CONST:
-        {
-            TSymtable* local;
-
-            char *variable_id = expression->data.nodeData.value.identifier;
-
-            if (id_defined(scope, variable_id, &local) == false) {
-                printf("error: var/const %s undefined in this expression\n", variable_id);
-                error = ERR_UNDEFINED_IDENTIFIER;
-                break;
-            }
-
-            if (symtable_get_data(local, variable_id, &info->data) == false) {
-                error = ERR_COMPILER_INTERNAL;
-                break;
-            }
-
-            set_to_used(local, variable_id);
-
-            info->type = info->data.variable.type;
-
-            if (info->data.variable.is_null_type) {
-                info->is_optional_null = true;
-                info->optional_null_id = variable_id;
-            }
-
-            if (!info->data.variable.is_constant) // var encountered
-                info->is_constant_exp = false;
-        }
+    /* LITERALS */
+    case INT: // I32 LITERAL
+        info->type = INTEGER_T;
         break;
+    case FL:  // F64 LITERAL
+        info->type = FLOAT_T;
+        break;
+    case NULL_LITERAL:
+        info->type = NIL_T;
+        break;
+    case U8:  // INVALID LITERAL TYPE
+        error = ERR_TYPE_COMPATABILITY;
+        break;
+    case STR: // STR LITERAL
+        info->type = STR_T;
+        break;
+    /* VAR or CONST */
+    case VAR_CONST:
+    {
+        TSymtable* local;
 
-        case OP_ADD:
-        case OP_SUB:
-        case OP_MUL:
-            if (left.is_optional_null || right.is_optional_null) {
-                printf(RED_BOLD("error")": type mismatch, trying to use optional null type in arithmethics\n");
-                error = ERR_TYPE_COMPATABILITY;
-                return;
-            }
-            
-/*            if (left.type == STR_T || right.type == STR_T) {
-                printf(RED_BOLD("error")": type mismatch, trying to use string literals in arithmethics\n");
-                error = ERR_TYPE_COMPATABILITY;
-                return;
-            }*/
+        char *variable_id = expression->data.nodeData.value.identifier;
 
-            if (left.type == right.type) { // i32 = i32, f64 = f64
-                info->type = left.type;
-            } else if ((left.type == INTEGER_T && right.type == FLOAT_T) || (left.type == FLOAT_T && right.type == INTEGER_T)) {
-                /* type conversion here */
-                if (left.is_constant_exp && right.is_constant_exp) { // made out of literals and constants
-                    /* left op literal */
-                    if (expression->left->type == INT) {
-                        char **literal = &expression->left->data.nodeData.value.literal;
-
-                        *literal = literal_convert_i32_to_f64(*literal);
-                        expression->left->type = FL;
-                    }
-                    /* right op literal */
-                    if(expression->right->type == INT) {
-                        char **literal = &expression->right->data.nodeData.value.literal;
-
-                        *literal = literal_convert_i32_to_f64(*literal);
-                        expression->right->type = FL;
-                    }
-                    /* left op const */
-                    if(expression->left->type == VAR_CONST) {
-                        TSymtable* local;
-                        TData var_data;
-                        char *variable_id = expression->left->data.nodeData.value.identifier;
-
-                        if (id_defined(scope, variable_id, &local) == false) {
-                            printf("error: var/const %s undefined in arithmetic expression\n", variable_id);
-                            error = ERR_UNDEFINED_IDENTIFIER;
-                            break;
-                        }
-
-                        if (symtable_get_data(local, variable_id, &var_data) == false) {
-                            error = ERR_COMPILER_INTERNAL;
-                            break;
-                        }
-
-                        if (var_data.variable.type == INTEGER_T) {
-                            char *const_value = var_data.variable.value_pointer->data.nodeData.value.literal;
-
-                            const_value = literal_convert_i32_to_f64(const_value);
-                            expression->left->type = FL;
-                            expression->left->data.nodeData.value.literal = const_value;
-                        }
-                    }
-                    /* right op const */
-                    if(expression->right->type == VAR_CONST) {
-                        TSymtable* local;
-                        TData var_data;
-                        char *variable_id = expression->right->data.nodeData.value.identifier;
-
-                        if (id_defined(scope, variable_id, &local) == false) {
-                            printf("error: var/const %s undefined in arithmetic expression\n", variable_id);
-                            error = ERR_UNDEFINED_IDENTIFIER;
-                            break;
-                        }
-
-                        if (symtable_get_data(local, variable_id, &var_data) == false) {
-                            error = ERR_COMPILER_INTERNAL;
-                            break;
-                        }
-
-                        if (var_data.variable.type == INTEGER_T) {
-                            char *const_value = var_data.variable.value_pointer->data.nodeData.value.literal;
-
-                            const_value = literal_convert_i32_to_f64(const_value);
-                            expression->right->type = FL;
-                            expression->right->data.nodeData.value.literal = const_value;
-                        }
-                    }                    
-
-                    info->type = FLOAT_T;
-                } else { // var must be the same type
-                    printf(RED_BOLD("error")": var type mismatch\n");
-                    error = ERR_TYPE_COMPATABILITY;
-                    return;
-                }
-            } else { // UNKNOWN_T, NULL_T 
-                printf(RED_BOLD("error")": expression type mismatch\n");
-                error = ERR_TYPE_COMPATABILITY;
-                return;
-            }
+        if (id_defined(scope, variable_id, &local) == false) {
+            printf("error: var/const %s undefined in this expression\n", variable_id);
+            error = ERR_UNDEFINED_IDENTIFIER;
             break;
+        }
 
-        case OP_DIV:
-            if (left.is_optional_null || right.is_optional_null) {
-                printf(RED_BOLD("error")": type mismatch, trying to use null type in arithmethics\n");
-                error = ERR_TYPE_COMPATABILITY;
-                return;
-            }
-            // Same type
-            if (left.type == right.type) {
-                    info->type = left.type;
-            } // type mismatch
-            else if ((left.type == INTEGER_T && right.type == FLOAT_T) || (left.type == FLOAT_T && right.type == INTEGER_T)) {
-                // Cant be var
-                if (left.is_constant_exp && right.is_constant_exp) {
-                    if (expression->left->type == FL) {
-                        char **literal = &expression->left->data.nodeData.value.literal;
-
-                        if ((*literal = literal_convert_f64_to_i32(*literal)) == NULL) { 
-                            error = ERR_TYPE_COMPATABILITY;
-                            return;
-                        }
-
-                        expression->left->type = INT;
-                    }
-                    if (expression->right->type == FL) {
-                        char **literal = &expression->right->data.nodeData.value.literal;
-
-                        if ((*literal = literal_convert_f64_to_i32(*literal)) == NULL) { 
-                            error = ERR_TYPE_COMPATABILITY;
-                            return;
-                        }
-
-                        expression->right->type = INT;
-                    }
-                    if (expression->left->type == VAR_CONST) {
-                        TSymtable* local;
-                        TData var_data;
-                        char *variable_id = expression->left->data.nodeData.value.identifier;
-
-                        if (id_defined(scope, variable_id, &local) == false) {
-                            printf("error: var/const %s undefined in arithmetic expression\n", variable_id);
-                            error = ERR_UNDEFINED_IDENTIFIER;
-                            break;
-                        }
-
-                        if (symtable_get_data(local, variable_id, &var_data) == false) {
-                            error = ERR_COMPILER_INTERNAL;
-                            break;
-                        }
-
-                        if (var_data.variable.type == FLOAT_T) {
-                            char *const_value = var_data.variable.value_pointer->data.nodeData.value.literal;
-
-                            if((const_value = literal_convert_f64_to_i32(const_value)) == NULL) {
-                                error = ERR_TYPE_COMPATABILITY;
-                                return;
-                            }
-
-                            expression->left->type = INT;
-                            expression->left->data.nodeData.value.literal = const_value;
-                        }
-                    }
-                    if (expression->right->type == VAR_CONST) {
-                        TSymtable* local;
-                        TData var_data;
-                        char *variable_id = expression->right->data.nodeData.value.identifier;
-
-                        if (id_defined(scope, variable_id, &local) == false) {
-                            printf("error: var/const %s undefined in arithmetic expression\n", variable_id);
-                            error = ERR_UNDEFINED_IDENTIFIER;
-                            break;
-                        }
-
-                        if (symtable_get_data(local, variable_id, &var_data) == false) {
-                            error = ERR_COMPILER_INTERNAL;
-                            break;
-                        }
-
-                        if (var_data.variable.type == FLOAT_T) {
-                            char *const_value = var_data.variable.value_pointer->data.nodeData.value.literal;
-
-                            if((const_value = literal_convert_f64_to_i32(const_value)) == NULL) {
-                                error = ERR_TYPE_COMPATABILITY;
-                                return;
-                            }
-
-                            expression->right->type = INT;
-                            expression->right->data.nodeData.value.literal = const_value;
-                        }
-                    }
-
-                    info->type = INTEGER_T;
-                } else { // var must be the same type
-                    printf(RED_BOLD("error")": var type mismatch\n");
-                    error = ERR_TYPE_COMPATABILITY;
-                    return;
-                }
-
-            } else { // UNKNOWN_T, NULL_T 
-                printf(RED_BOLD("error")": expression type mismatch\n");
-                error = ERR_TYPE_COMPATABILITY;
-                return;
-            }
+        if (symtable_get_data(local, variable_id, &info->data) == false) {
+            error = ERR_COMPILER_INTERNAL;
             break;
+        }
 
-        case OP_EQ:
-            info->type = BOOL_T;
-            break;
+        set_to_used(local, variable_id);
 
-        case OP_NEQ:
-        case OP_GT:
-        case OP_LS:
-        case OP_GTE:
-        case OP_LSE:
-            info->type = BOOL_T;
-            break;
+        info->type = info->data.variable.type;
 
-        default:
-            break;
+        if (info->data.variable.is_null_type) {
+            info->is_optional_null = true;
+            info->optional_null_id = variable_id;
+        }
+
+        if (!info->data.variable.is_constant) // var encountered
+            info->is_constant_exp = false;
     }
-    //BT_print_tree(expression);
+    break;
+
+    case OP_ADD:
+    case OP_SUB:
+    case OP_MUL:
+    {
+        if (left.is_optional_null || right.is_optional_null) { // Unacceptable to have ?type in arithmetics
+            printf(RED_BOLD("error")": type mismatch, trying to use optional null type in arithmethics\n");
+            error = ERR_TYPE_COMPATABILITY;
+            return;
+        }
+
+        if ((left.type == INTEGER_T && right.type == INTEGER_T) || ((left.type == FLOAT_T && right.type == FLOAT_T))) { // i32 = i32, f64 = f64
+            info->type = left.type;
+        }
+        else if ((left.type == INTEGER_T && right.type == FLOAT_T) || (left.type == FLOAT_T && right.type == INTEGER_T)) { // i32 op f64, f64 op i32
+            /* type conversion here */
+            if (left.is_constant_exp || right.is_constant_exp) { //TODO CHECK POTENTIAL ERROR One side has to be non variable
+
+                if (expression->left->type == INT) { /* left op literal */
+                    char **literal = &expression->left->data.nodeData.value.literal;
+
+                    *literal = literal_convert_i32_to_f64(*literal);
+                    expression->left->type = FL;
+                }
+                else if (expression->right->type == INT) { /* right op literal */
+                    char **literal = &expression->right->data.nodeData.value.literal;
+
+                    *literal = literal_convert_i32_to_f64(*literal);
+                    expression->right->type = FL;
+                }
+                else { // No i32 literal on either side to be converted, conversion error (i32 is var, expression or operation result)
+                    printf(RED_BOLD("error")": arithmetic (+ - *) expression error, cannot convert non-i32 literal\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+                info->type = FLOAT_T; // Succesful conversion of i32 literal, result of binary +-* operation is float type
+            } else { // var must be the same type
+                printf(RED_BOLD("error")": var type mismatch\n");
+                error = ERR_TYPE_COMPATABILITY;
+                return;
+            }
+        } else { // invalid data types in arithmetics: UNKNOWN_T, NULL_T, STR_T
+            printf(RED_BOLD("error")": expression type mismatch\n");
+            error = ERR_TYPE_COMPATABILITY;
+            return;
+        }
+    }
+    break;
+
+    case OP_DIV:
+    {
+        if (left.is_optional_null || right.is_optional_null) {
+            printf(RED_BOLD("error")": type mismatch, trying to use null type in arithmethics\n");
+            error = ERR_TYPE_COMPATABILITY;
+            return;
+        }
+        if ((left.type == INTEGER_T && right.type == INTEGER_T) || ((left.type == FLOAT_T && right.type == FLOAT_T))) { // i32 = i32, f64 = f64
+            info->type = left.type; // Types equal on both sides
+        }
+        else if ((left.type == INTEGER_T && right.type == FLOAT_T) || (left.type == FLOAT_T && right.type == INTEGER_T)) {
+            if (left.is_constant_exp || right.is_constant_exp) {  //TODO CHECK POTENTIAL ERROR One side has to be non var
+
+                if (expression->left->type == FL) { // left operand = f64 literal
+                    char **literal = &expression->left->data.nodeData.value.literal;
+
+                    if ((*literal = literal_convert_f64_to_i32(*literal)) == NULL) { // NULL => float has non zero decimal part, so it cannot be converted
+                        printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
+                    }
+
+                    expression->left->type = INT; // binary op result type = i32, changed in AST
+                }
+                else if (expression->right->type == FL) { // right operand = f64 literal
+                    char **literal = &expression->right->data.nodeData.value.literal;
+
+                    if ((*literal = literal_convert_f64_to_i32(*literal)) == NULL) {  // NULL => float has non zero decimal part, so it cannot be converted
+                        printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
+                    }
+
+                    expression->right->type = INT; // binary op result type = i32, changed in AST
+                }
+                else if (expression->left->type == VAR_CONST && left.type == FLOAT_T) {
+                    TData var_data;
+                    char *variable_id = expression->left->data.nodeData.value.identifier;
+
+                    var_data = get_const_var_data(scope, variable_id); // fetch var/const data
+                    check_error();
+
+
+                    if (var_data.variable.is_constant == false) { // float operator is var, which cannot be implicitly converted
+                        printf("error: expression - cannot convert var in division\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
+                    }
+
+                    if (var_data.variable.comp_runtime == false) { // const value is unknown at the time of compilation
+                        printf("error: expression - cannot convert const in division (constant value is unknown at compile time)\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
+                    }
+
+                    char *const_value = var_data.variable.value_pointer->data.nodeData.value.literal; // Extract the literal to be converted
+
+                    if ((const_value = literal_convert_f64_to_i32(const_value)) == NULL) {
+                        printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
+                    }
+
+                    expression->left->type = INT;
+                    expression->left->data.nodeData.value.literal = const_value;
+
+                }
+                else if (expression->right->type == VAR_CONST && right.type == FLOAT_T) {
+                    TData var_data;
+                    char *variable_id = expression->right->data.nodeData.value.identifier;
+
+                    var_data = get_const_var_data(scope, variable_id); // fetch var/const data
+                    check_error();
+
+
+                    if (var_data.variable.is_constant == false) {
+                        printf("error: expression - cannot convert var in division\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
+                    }
+
+                    if (var_data.variable.comp_runtime == false) {
+                        printf("error: expression - cannot convert const in division (constant value is unknown at compile time)\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
+                    }
+
+                    char *const_value = var_data.variable.value_pointer->data.nodeData.value.literal;
+
+                    if ((const_value = literal_convert_f64_to_i32(const_value)) == NULL) {
+                        printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
+                    }
+
+                    expression->right->type = INT;
+                    expression->right->data.nodeData.value.literal = const_value;
+
+                } else { // No f64 literal/const expression on either side to be converted, conversion error (f64 op is either var, expression or operation result)
+                    printf(RED_BOLD("error")": arithmetic (/) expression error, cannot convert non-f64 literal/ non-const expression \n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                info->type = INTEGER_T;
+            } else { // var must be the same type, this type mismatch is not acceptable
+                printf(RED_BOLD("error")": var type mismatch\n");
+                error = ERR_TYPE_COMPATABILITY;
+                return;
+            }
+        } else { // UNKNOWN_T, NULL_T, STR_T
+            printf(RED_BOLD("error")": expression type mismatch\n");
+            error = ERR_TYPE_COMPATABILITY;
+            return;
+        }
+    }
+    break;
+
+    case OP_EQ:
+    case OP_NEQ: 
+    {
+        if (left.type == STR_T || right.type  != STR_T) {
+            printf("error: strings in relation operators expression\n");
+            error = ERR_TYPE_COMPATABILITY;
+            return;
+        }
+
+        info->type = BOOL_T;
+    }
+    break;
+
+    case OP_GT:
+    case OP_LS:
+    case OP_GTE:
+    case OP_LSE:
+    {    
+        if (left.type == STR_T || right.type  != STR_T) {
+            printf("error: strings in relation operators expression\n");
+            error = ERR_TYPE_COMPATABILITY;
+            return;
+        }
+        
+        info->type = BOOL_T;
+    }
+    break;
+
+    default:
+        break;
+    }
+    BT_print_tree(expression);
 }
 
 /* Helper functions */
@@ -919,7 +901,7 @@ void set_to_used(TSymtable* symtable, char* identifier) {
 char *literal_convert_i32_to_f64(char *literal) {
     size_t new_size = strlen(literal) + 3; // '.''0''\0'
 
-    char *converted = (char*) malloc(sizeof(char)*new_size);
+    char *converted = (char*) malloc(sizeof(char) * new_size);
     memset(converted, 0, new_size);
 
     strcpy(converted, literal);
@@ -935,13 +917,17 @@ char *literal_convert_f64_to_i32(char *literal) {
     int i = 0;
     bool zero_decimal = true;
 
-    while(literal[i] != '.') {
+    while (literal[i] != '.') {
         ++i;
+    }
+
+    if (literal[i] != '.') { //1e2 format, no '.' part
+        return NULL;
     }
 
     int j = i + 1;
 
-    while(literal[j]) {
+    while (literal[j]) {
         if (literal[j] != '0') {
             zero_decimal = false;
             break;
@@ -949,24 +935,24 @@ char *literal_convert_f64_to_i32(char *literal) {
         ++j;
     }
 
-    if(zero_decimal == false) {
+    if (zero_decimal == false) {
         return NULL;
     }
 
-    memset(literal+i, 0, strlen(literal));
+    memset(literal + i, 0, strlen(literal));
 
     return literal;
 }
 
 /**
-* Returns return type of given function in integer format 
+* Returns return type of given function in integer format
 */
 int get_func_type(TSymtable *globalSymTable, char *function_id) {
     TData function_data;
 
     /* Check if function is defined */
     if (symtable_search(globalSymTable, function_id) == false) {
-        printf("error: function %s undefined\n",function_id);
+        printf("error: function %s undefined\n", function_id);
         error = ERR_UNDEFINED_IDENTIFIER;
         return -1;
     }
