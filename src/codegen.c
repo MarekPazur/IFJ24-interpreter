@@ -1271,6 +1271,48 @@ void generate_if(TBinaryTree* tree){
     cg_create_label(end_if_label);
 }
 
+void generate_while_declarations(TBinaryTree* tree){
+    if(BT_has_left(tree)){
+        BT_go_left(tree);
+        node_type type;
+        node_data data;
+        BT_get_node_type(tree, &type);
+        BT_get_data(tree, &data);
+        TTerm variable = {.type = CG_VARIABLE_T, .frame = LOCAL};
+        switch(type){
+            case CONST_DECL:
+            case VAR_DECL:
+                if(insert(data.nodeData.identifier.identifier)){
+                    variable.value.var_name = data.nodeData.identifier.identifier;
+                    cg_create_var(variable);
+                }
+                break;
+            case WHILE:
+            case IF:
+                if(data.nodeData.body.is_nullable){
+                    if(insert(data.nodeData.body.null_replacement)){
+                        variable.value.var_name = data.nodeData.body.null_replacement;
+                        cg_create_var(variable);
+                    }
+                }
+            default:
+                break;
+        }
+        int nestings = 0;
+        while(BT_has_right(tree)){
+            BT_go_right(tree);
+            nestings++;
+            generate_while_declarations(tree);
+        }
+        while(nestings > 0){
+            BT_go_parent(tree);
+            nestings--;
+        }
+        BT_go_parent(tree);
+    }
+}
+
+bool generated = false;
 void generate_while(TBinaryTree* tree){
     // Node
     node_data data;
@@ -1278,6 +1320,15 @@ void generate_while(TBinaryTree* tree){
     // Labels
     TLabel while_beg = cg_get_new_label();
     TLabel while_end = cg_get_new_label();
+    // Declarations
+    bool unlock = false;
+    if(!generated){
+        BT_go_parent(tree);
+        generate_while_declarations(tree);
+        BT_go_left(tree);
+        unlock = true;
+        generated = true;
+    }
     // Expression
     cg_create_label(while_beg);
     BT_go_left(tree);
@@ -1288,9 +1339,6 @@ void generate_while(TBinaryTree* tree){
     if(data.nodeData.body.is_nullable){
         cg_jump_eq(while_end, cg_var_temp, cg_null_term);
         TTerm replacement = {.type = CG_VARIABLE_T, .value.var_name = data.nodeData.body.null_replacement, .frame = LOCAL};
-        if(insert(replacement.value.var_name)){
-            cg_create_var(replacement);
-        }
         cg_move(replacement, cg_var_temp);
     }
     else{
@@ -1299,6 +1347,9 @@ void generate_while(TBinaryTree* tree){
     generate_function_body(tree);
     cg_jump(while_beg);
     cg_create_label(while_end);
+    if(unlock){
+        generated = false;
+    }
 }
 
 void generate_command(TBinaryTree* tree){
