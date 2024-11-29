@@ -945,12 +945,159 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
                 return;
             }
 
+            if (expression->left->type == INT) { // lhs i32 literal => convert to f64 literal
+                char **literal = &expression->left->data.nodeData.value.literal;
 
-/*            else {
+                *literal = literal_convert_i32_to_f64(*literal);
+                expression->left->type = FL;
+            }
+            else if (expression->right->type == INT) { // rhs i32 literal => convert to f64 literal
+                char **literal = &expression->right->data.nodeData.value.literal;
+
+                *literal = literal_convert_i32_to_f64(*literal);
+                expression->right->type = FL;
+            }
+            else if (expression->left->type == VAR_CONST && left.type == INTEGER_T && left.is_constant_exp) { // lhs i32 const => convert to f64 literal
+                TData var_data;
+                char *variable_id = expression->left->data.nodeData.value.identifier;
+
+                var_data = get_const_var_data(scope, variable_id); // fetch var/const data
+                check_error();
+
+                if (var_data.variable.is_constant == false) { // i32 operator is var, which cannot be implicitly converted
+                    printf("error: expression - cannot convert var in (==, !=)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                if (var_data.variable.comp_runtime == false) { // const value is unknown at the time of compilation
+                    printf("error: expression - cannot convert const in (==, !=) (constant value is unknown at compile time)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                char *const_value = copy_literal(var_data.variable.value_pointer->data.nodeData.value.literal); // Extract the literal to be converted
+
+                const_value = literal_convert_i32_to_f64(const_value);
+
+                expression->left->type = FL;
+                expression->left->data.nodeData.value.literal = const_value;
+            }
+            else if (expression->right->type == VAR_CONST && right.type == INTEGER_T && right.is_constant_exp) { // rhs i32 const => convert to f64 literal
+                TData var_data;
+                char *variable_id = expression->right->data.nodeData.value.identifier;
+
+                var_data = get_const_var_data(scope, variable_id); // fetch var/const data
+                check_error();
+
+                if (var_data.variable.is_constant == false) { // i32 operator is var, which cannot be implicitly converted
+                    printf("error: expression - cannot convert var in (==, !=)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                if (var_data.variable.comp_runtime == false) { // const value is unknown at the time of compilation
+                    printf("error: expression - cannot convert const in (==, !=) (constant value is unknown at compile time)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                char *const_value = copy_literal(var_data.variable.value_pointer->data.nodeData.value.literal); // Extract the literal to be converted
+
+                const_value = literal_convert_i32_to_f64(const_value);
+
+                expression->right->type = FL;
+                expression->right->data.nodeData.value.literal = const_value;
+            }
+            else if (expression->left->type == FL && (!right.is_constant_exp || expression->right->type != INT || expression->right->type != VAR_CONST)) { // lhs f64 literal, rhs is not i32 literal or const (op result, variable)
+                char **literal = &expression->left->data.nodeData.value.literal;
+
+                if ((*literal = literal_convert_f64_to_i32(*literal)) == NULL) { // NULL => float has non zero decimal part, so it cannot be converted
+                    printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                expression->left->type = INT; // binary op result type = i32, changed in AST
+            }
+            else if (expression->right->type == FL && (!left.is_constant_exp || expression->left->type != INT || expression->left->type != VAR_CONST)) { // rhs f64 literal, lhs is not i32 literal or const (op result, variable)
+                char **literal = &expression->right->data.nodeData.value.literal;
+
+                if ((*literal = literal_convert_f64_to_i32(*literal)) == NULL) { // NULL => float has non zero decimal part, so it cannot be converted
+                    printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                expression->right->type = INT; // binary op result type = i32, changed in AST
+            }
+            else if ((expression->left->type == VAR_CONST && left.is_constant_exp) && (!right.is_constant_exp || expression->right->type != INT || expression->right->type != VAR_CONST)) { // lhs f64 literal, rhs is not i32 literal or const (op result, variable)
+                TData var_data;
+                char *variable_id = expression->left->data.nodeData.value.identifier;
+
+                var_data = get_const_var_data(scope, variable_id); // fetch var/const data
+                check_error();
+
+
+                if (var_data.variable.is_constant == false) { // float operator is var, which cannot be implicitly converted
+                    printf("error: expression - cannot convert var in  relation operators (==, !=)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                if (var_data.variable.comp_runtime == false) { // const value is unknown at the time of compilation
+                    printf("error: expression - cannot convert const in relation operators (==, !=) (constant value is unknown at compile time)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                /*ERROR!!!!!!!!!!!!!!! NUTNO ZKOPIROVAT NE UKRAST POZOR POZOR POZOR NUTNO OPRAVIT VSUDE*/
+                char *const_value = copy_literal(var_data.variable.value_pointer->data.nodeData.value.literal); // Extract the literal to be converted
+
+                if ((const_value = literal_convert_f64_to_i32(const_value)) == NULL) {
+                    printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                expression->left->type = INT;
+                expression->left->data.nodeData.value.literal = const_value;
+            }
+            else if ((expression->right->type == VAR_CONST && right.is_constant_exp) && (!left.is_constant_exp || expression->left->type != INT || expression->left->type != VAR_CONST)) { // rhs f64 literal, lhs is not i32 literal or const (op result, variable)
+                TData var_data;
+                char *variable_id = expression->right->data.nodeData.value.identifier;
+
+                var_data = get_const_var_data(scope, variable_id); // fetch var/const data
+                check_error();
+
+                if (var_data.variable.is_constant == false) { // float operator is var, which cannot be implicitly converted
+                    printf("error: expression - cannot convert var in  relation operators (==, !=)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                if (var_data.variable.comp_runtime == false) { // const value is unknown at the time of compilation
+                    printf("error: expression - cannot convert const in relation operators (==, !=) (constant value is unknown at compile time)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                char *const_value = copy_literal(var_data.variable.value_pointer->data.nodeData.value.literal); // Extract the literal to be converted
+
+                if ((const_value = literal_convert_f64_to_i32(const_value)) == NULL) {
+                    printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                expression->right->type = INT;
+                expression->right->data.nodeData.value.literal = const_value;
+            }
+            else {
                 printf("error: relation operators (==, !=) type mismatch\n");
                 error = ERR_TYPE_COMPATABILITY;
                 return;
-            }*/
+            }
         }
 
         if (!left.is_constant_exp || !right.is_constant_exp) { // Result contains var => not a constant expression, unknown at comp-time
