@@ -1,0 +1,563 @@
+# Init:
+.IFJcode24
+defvar GF@VAR_retval
+defvar GF@VAR_cmp
+defvar GF@VAR_temp
+defvar GF@VAR_temp2
+move GF@VAR_cmp bool@false
+# Generating program:
+# Main function call:
+call FUN_main
+exit int@0
+# Function definitions:
+# main
+label FUN_main
+createframe
+pushframe
+defvar LF@VAR_viewportWidth
+clears
+pushs float@0x1.4p+4
+pops LF@VAR_viewportWidth
+defvar LF@VAR_viewportHeight
+clears
+pushs float@0x1.4p+3
+pops LF@VAR_viewportHeight
+defvar LF@VAR_sphereX
+clears
+pushs float@0x0p+0
+pops LF@VAR_sphereX
+defvar LF@VAR_sphereY
+clears
+pushs float@0x0p+0
+pops LF@VAR_sphereY
+defvar LF@VAR_sphereRadius
+clears
+pushs float@0x1.4p+2
+pops LF@VAR_sphereRadius
+defvar LF@VAR_lightX
+clears
+pushs float@0x1.4p+3
+pops LF@VAR_lightX
+defvar LF@VAR_lightY
+clears
+pushs float@0x1.4p+3
+pops LF@VAR_lightY
+defvar LF@VAR_y
+clears
+pushs float@0x0p+0
+pushs float@0x1p+0
+subs
+pushs LF@VAR_viewportHeight
+muls
+pushs float@0x1p+1
+pops GF@VAR_temp
+type  GF@VAR_temp2 GF@VAR_temp
+pushs GF@VAR_temp
+jumpifeq L0 GF@VAR_temp2 string@float
+idivs
+jump L1
+label L0
+divs
+label L1
+pops LF@VAR_y
+defvar LF@VAR_x
+defvar LF@VAR_rayX
+defvar LF@VAR_rayY
+defvar LF@VAR_dx
+defvar LF@VAR_dy
+defvar LF@VAR_distSq
+defvar LF@VAR_nx
+defvar LF@VAR_ny
+defvar LF@VAR_lx
+defvar LF@VAR_ly
+defvar LF@VAR_input
+defvar LF@VAR_lenL
+defvar LF@VAR_normLx
+defvar LF@VAR_normLy
+defvar LF@VAR_dot
+label L2
+pushs LF@VAR_y
+pushs LF@VAR_viewportHeight
+pushs float@0x1p+1
+pops GF@VAR_temp
+type  GF@VAR_temp2 GF@VAR_temp
+pushs GF@VAR_temp
+jumpifeq L4 GF@VAR_temp2 string@float
+idivs
+jump L5
+label L4
+divs
+label L5
+pops GF@VAR_temp2
+pops GF@VAR_temp
+pushs GF@VAR_temp
+pushs GF@VAR_temp2
+lts
+pushs GF@VAR_temp
+pushs GF@VAR_temp2
+eqs
+ors
+pops GF@VAR_temp
+jumpifeq L3 GF@VAR_temp bool@false
+clears
+pushs float@0x0p+0
+pushs float@0x1p+0
+subs
+pushs LF@VAR_viewportWidth
+muls
+pushs float@0x1p+1
+pops GF@VAR_temp
+type  GF@VAR_temp2 GF@VAR_temp
+pushs GF@VAR_temp
+jumpifeq L6 GF@VAR_temp2 string@float
+idivs
+jump L7
+label L6
+divs
+label L7
+pops LF@VAR_x
+label L8
+pushs LF@VAR_x
+pushs LF@VAR_viewportWidth
+pushs float@0x1p+1
+pops GF@VAR_temp
+type  GF@VAR_temp2 GF@VAR_temp
+pushs GF@VAR_temp
+jumpifeq L10 GF@VAR_temp2 string@float
+idivs
+jump L11
+label L10
+divs
+label L11
+pops GF@VAR_temp2
+pops GF@VAR_temp
+pushs GF@VAR_temp
+pushs GF@VAR_temp2
+lts
+pushs GF@VAR_temp
+pushs GF@VAR_temp2
+eqs
+ors
+pops GF@VAR_temp
+jumpifeq L9 GF@VAR_temp bool@false
+clears
+pushs LF@VAR_x
+pushs float@0x1p+0
+muls
+pops LF@VAR_rayX
+clears
+pushs LF@VAR_y
+pushs float@0x1p+0
+muls
+pops LF@VAR_rayY
+clears
+pushs LF@VAR_rayX
+pushs LF@VAR_sphereX
+subs
+pops LF@VAR_dx
+clears
+pushs LF@VAR_rayY
+pushs LF@VAR_sphereY
+subs
+pops LF@VAR_dy
+clears
+pushs LF@VAR_dx
+pushs LF@VAR_dx
+muls
+pushs LF@VAR_dy
+pushs LF@VAR_dy
+muls
+adds
+pops LF@VAR_distSq
+pushs LF@VAR_distSq
+pushs LF@VAR_sphereRadius
+pushs LF@VAR_sphereRadius
+muls
+pops GF@VAR_temp2
+pops GF@VAR_temp
+pushs GF@VAR_temp
+pushs GF@VAR_temp2
+lts
+pushs GF@VAR_temp
+pushs GF@VAR_temp2
+eqs
+ors
+pops GF@VAR_temp
+jumpifeq L12 GF@VAR_temp bool@false
+clears
+pushs LF@VAR_dx
+pushs LF@VAR_sphereRadius
+pops GF@VAR_temp
+type  GF@VAR_temp2 GF@VAR_temp
+pushs GF@VAR_temp
+jumpifeq L14 GF@VAR_temp2 string@float
+idivs
+jump L15
+label L14
+divs
+label L15
+pops LF@VAR_nx
+clears
+pushs LF@VAR_dy
+pushs LF@VAR_sphereRadius
+pops GF@VAR_temp
+type  GF@VAR_temp2 GF@VAR_temp
+pushs GF@VAR_temp
+jumpifeq L16 GF@VAR_temp2 string@float
+idivs
+jump L17
+label L16
+divs
+label L17
+pops LF@VAR_ny
+clears
+pushs LF@VAR_lightX
+pushs LF@VAR_rayX
+subs
+pops LF@VAR_lx
+clears
+pushs LF@VAR_lightY
+pushs LF@VAR_rayY
+subs
+pops LF@VAR_ly
+clears
+pushs LF@VAR_lx
+pushs LF@VAR_lx
+muls
+pushs LF@VAR_ly
+pushs LF@VAR_ly
+muls
+adds
+pops LF@VAR_input
+pushs LF@VAR_input
+call FUN_sqrt
+move LF@VAR_lenL GF@VAR_retval
+pushs LF@VAR_lenL
+pushs float@0x0p+0
+gts
+pops GF@VAR_temp
+jumpifeq L18 GF@VAR_temp bool@false
+clears
+pushs LF@VAR_lx
+pushs LF@VAR_lenL
+pops GF@VAR_temp
+type  GF@VAR_temp2 GF@VAR_temp
+pushs GF@VAR_temp
+jumpifeq L20 GF@VAR_temp2 string@float
+idivs
+jump L21
+label L20
+divs
+label L21
+pops LF@VAR_normLx
+clears
+pushs LF@VAR_ly
+pushs LF@VAR_lenL
+pops GF@VAR_temp
+type  GF@VAR_temp2 GF@VAR_temp
+pushs GF@VAR_temp
+jumpifeq L22 GF@VAR_temp2 string@float
+idivs
+jump L23
+label L22
+divs
+label L23
+pops LF@VAR_normLy
+clears
+pushs LF@VAR_nx
+pushs LF@VAR_normLx
+muls
+pushs LF@VAR_ny
+pushs LF@VAR_normLy
+muls
+adds
+pops LF@VAR_dot
+pushs LF@VAR_dot
+pushs float@0x0p+0
+gts
+pops GF@VAR_temp
+jumpifeq L24 GF@VAR_temp bool@false
+pushs string@*
+call FUN_ifj-write
+jump L25
+label L24
+pushs string@.
+call FUN_ifj-write
+label L25
+jump L19
+label L18
+pushs string@.
+call FUN_ifj-write
+label L19
+jump L13
+label L12
+pushs string@\032
+call FUN_ifj-write
+label L13
+pushs LF@VAR_x
+pushs float@0x1p+0
+adds
+pops LF@VAR_x
+jump L8
+label L9
+pushs string@\010
+call FUN_ifj-write
+pushs LF@VAR_y
+pushs float@0x1p+0
+adds
+pops LF@VAR_y
+jump L2
+label L3
+pushs string@Raytracing\032complete.\010
+call FUN_ifj-write
+popframe
+return
+# sqrt
+label FUN_sqrt
+createframe
+pushframe
+defvar LF@VAR_x
+pops LF@VAR_x
+defvar LF@VAR_guess
+clears
+pushs LF@VAR_x
+pushs float@0x1p+1
+pops GF@VAR_temp
+type  GF@VAR_temp2 GF@VAR_temp
+pushs GF@VAR_temp
+jumpifeq L26 GF@VAR_temp2 string@float
+idivs
+jump L27
+label L26
+divs
+label L27
+pops LF@VAR_guess
+defvar LF@VAR_tolerance
+clears
+pushs float@0x1.0c6f7a0b5ed8dp-20
+pops LF@VAR_tolerance
+label L28
+pushs LF@VAR_guess
+pushs LF@VAR_guess
+muls
+pushs LF@VAR_x
+pushs LF@VAR_tolerance
+adds
+gts
+pops GF@VAR_temp
+jumpifeq L29 GF@VAR_temp bool@false
+pushs LF@VAR_guess
+pushs LF@VAR_x
+pushs LF@VAR_guess
+pops GF@VAR_temp
+type  GF@VAR_temp2 GF@VAR_temp
+pushs GF@VAR_temp
+jumpifeq L30 GF@VAR_temp2 string@float
+idivs
+jump L31
+label L30
+divs
+label L31
+adds
+pushs float@0x1p+1
+pops GF@VAR_temp
+type  GF@VAR_temp2 GF@VAR_temp
+pushs GF@VAR_temp
+jumpifeq L32 GF@VAR_temp2 string@float
+idivs
+jump L33
+label L32
+divs
+label L33
+pops LF@VAR_guess
+jump L28
+label L29
+clears
+pushs LF@VAR_guess
+pops GF@VAR_retval
+popframe
+return
+popframe
+return
+# ____IFJ BUILT-IN____
+label FUN_ifj-readstr
+read GF@VAR_retval string
+return
+label FUN_ifj-readi32
+read GF@VAR_retval int
+return
+label FUN_ifj-readf64
+read GF@VAR_retval float
+return
+label FUN_ifj-write
+createframe
+pushframe
+defvar LF@VAR_term
+pops LF@VAR_term
+write LF@VAR_term
+popframe
+return
+label FUN_ifj-i2f
+createframe
+pushframe
+defvar LF@VAR_term
+pops LF@VAR_term
+int2float GF@VAR_retval LF@VAR_term
+popframe
+return
+label FUN_ifj-f2i
+createframe
+pushframe
+defvar LF@VAR_term
+pops LF@VAR_term
+float2int GF@VAR_retval LF@VAR_term
+popframe
+return
+label FUN_ifj-string
+createframe
+pushframe
+defvar LF@VAR_term
+pops LF@VAR_term
+move GF@VAR_retval LF@VAR_term
+popframe
+return
+label FUN_ifj-length
+createframe
+pushframe
+defvar LF@VAR_s
+pops LF@VAR_s
+strlen GF@VAR_retval LF@VAR_s
+popframe
+return
+label FUN_ifj-concat
+createframe
+pushframe
+defvar LF@VAR_s2
+pops LF@VAR_s2
+defvar LF@VAR_s1
+pops LF@VAR_s1
+concat GF@VAR_retval LF@VAR_s1 LF@VAR_s2
+popframe
+return
+label FUN_ifj-substring
+createframe
+pushframe
+defvar LF@VAR_j
+pops LF@VAR_j
+defvar LF@VAR_i
+pops LF@VAR_i
+defvar LF@VAR_s
+pops LF@VAR_s
+defvar LF@VAR_str_len
+defvar LF@VAR_character
+lt GF@VAR_cmp LF@VAR_i int@0
+jumpifeq L34 GF@VAR_cmp bool@true
+lt GF@VAR_cmp LF@VAR_j int@0
+jumpifeq L34 GF@VAR_cmp bool@true
+gt GF@VAR_cmp LF@VAR_i LF@VAR_j
+jumpifeq L34 GF@VAR_cmp bool@true
+pushs LF@VAR_s
+call FUN_ifj-length
+move LF@VAR_str_len GF@VAR_retval
+jumpifeq L34 LF@VAR_i LF@VAR_str_len
+gt GF@VAR_cmp LF@VAR_i LF@VAR_str_len
+jumpifeq L34 GF@VAR_cmp bool@true
+gt GF@VAR_cmp LF@VAR_j LF@VAR_str_len
+jumpifeq L34 GF@VAR_cmp bool@true
+defvar LF@VAR_i_loc
+move LF@VAR_i_loc LF@VAR_i
+move GF@VAR_retval string@
+label L36
+jumpifeq L37 LF@VAR_i_loc LF@VAR_j
+gt GF@VAR_cmp LF@VAR_i_loc LF@VAR_j
+jumpifeq L37 GF@VAR_cmp bool@true
+getchar LF@VAR_character LF@VAR_s LF@VAR_i_loc
+concat GF@VAR_retval GF@VAR_retval LF@VAR_character
+add LF@VAR_i_loc LF@VAR_i_loc int@1
+jump L36
+label L37
+jump L35
+label L34
+move GF@VAR_retval nil@nil
+label L35
+popframe
+return
+label FUN_ifj-strcmp
+createframe
+pushframe
+defvar LF@VAR_s2
+pops LF@VAR_s2
+defvar LF@VAR_s1
+pops LF@VAR_s1
+defvar LF@VAR_s1_len
+defvar LF@VAR_s2_len
+defvar LF@VAR_len_min
+defvar LF@VAR_index
+defvar LF@VAR_char1
+defvar LF@VAR_char2
+move GF@VAR_retval int@0
+strlen LF@VAR_s1_len LF@VAR_s1
+strlen LF@VAR_s2_len LF@VAR_s2
+gt GF@VAR_cmp LF@VAR_s1_len LF@VAR_s2_len
+jumpifeq L38 GF@VAR_cmp bool@true
+move LF@VAR_len_min LF@VAR_s1_len
+jump L39
+label L38
+move LF@VAR_len_min LF@VAR_s2_len
+label L39
+move LF@VAR_index int@0
+label L40
+jumpifeq L41 LF@VAR_index LF@VAR_len_min
+gt GF@VAR_cmp LF@VAR_index LF@VAR_len_min
+jumpifeq L41 GF@VAR_cmp bool@true
+getchar LF@VAR_char1 LF@VAR_s1 LF@VAR_index
+getchar LF@VAR_char2 LF@VAR_s2 LF@VAR_index
+lt GF@VAR_cmp LF@VAR_char1 LF@VAR_char2
+jumpifeq L43 GF@VAR_cmp bool@true
+gt GF@VAR_cmp LF@VAR_char1 LF@VAR_char2
+jumpifeq L42 GF@VAR_cmp bool@true
+add LF@VAR_index LF@VAR_index int@1
+jump L40
+label L41
+lt GF@VAR_cmp LF@VAR_s1_len LF@VAR_s2_len
+jumpifeq L43 GF@VAR_cmp bool@true
+gt GF@VAR_cmp LF@VAR_s1_len LF@VAR_s2_len
+jumpifeq L42 GF@VAR_cmp bool@true
+jump L44
+label L42
+add GF@VAR_retval GF@VAR_retval int@1
+jump L44
+label L43
+sub GF@VAR_retval GF@VAR_retval int@1
+label L44
+popframe
+return
+label FUN_ifj-ord
+createframe
+pushframe
+defvar LF@VAR_i
+pops LF@VAR_i
+defvar LF@VAR_s
+pops LF@VAR_s
+defvar LF@VAR_s_len
+strlen LF@VAR_s_len LF@VAR_s
+lt GF@VAR_cmp LF@VAR_i int@0
+jumpifeq L46 GF@VAR_cmp bool@true
+jumpifeq L46 LF@VAR_i LF@VAR_s_len
+gt GF@VAR_cmp LF@VAR_i LF@VAR_s_len
+jumpifeq L46 GF@VAR_cmp bool@true
+stri2int GF@VAR_retval LF@VAR_s LF@VAR_i
+jump L45
+label L46
+move GF@VAR_retval int@0
+label L45
+popframe
+return
+label FUN_ifj-chr
+createframe
+pushframe
+defvar LF@VAR_i
+pops LF@VAR_i
+int2char GF@VAR_retval LF@VAR_i
+popframe
+return

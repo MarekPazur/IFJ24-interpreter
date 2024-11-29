@@ -16,6 +16,7 @@
 #include "binary_tree.h"
 #include "symtable.h"
 #include "syna.h"
+#include "codegen.h"
 
 /* Utility macros */
 #define check_error() do { if (error) return; } while (0)
@@ -60,6 +61,8 @@ void semantic_analysis(TBinaryTree* AST) {
     }
     //BT_print_tree(*program); // Final tree passed to code generator
     //debug_print_keys((*program)->data.nodeData.program.globalSymTable);
+    codegen(AST);
+    check_error();
 }
 
 /**
@@ -96,7 +99,7 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
             return;
         }
 
-        BT_print_node_type(command_instance);
+        //BT_print_node_type(command_instance);
         scope_t *sub_scope; // sub-scope of current scope, used when WHEN,IF,ELSE,{} encountered, since they have its own local symtable
 
         switch (command_instance->type) {
@@ -182,7 +185,7 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
         error = ERR_UNUSED_VAR;
         return;
     }
-    printf("------------\n"); debug_print_keys(current_scope->current_scope); // debug print of current scopes variables stored in symtable and their properties
+    //printf("------------\n"); debug_print_keys(current_scope->current_scope); // debug print of current scopes variables stored in symtable and their properties
 }
 
 /**
@@ -1111,7 +1114,7 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
     default:
         break;
     }
-    BT_print_tree(expression);
+    //BT_print_tree(expression);
 }
 
 /* Helper functions */
