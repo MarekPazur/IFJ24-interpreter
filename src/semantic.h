@@ -59,6 +59,8 @@ char *literal_convert_i32_to_f64(char *literal);
 
 char *literal_convert_f64_to_i32(char *literal);
 
+char *copy_literal(char *literal);
+
 // Data fetch functions
 int get_func_type(TSymtable *globalSymTable, char *function_id);
 TData get_const_var_data(struct TScope* scope, char *variable_id);
