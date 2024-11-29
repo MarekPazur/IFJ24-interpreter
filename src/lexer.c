@@ -205,7 +205,6 @@ token_t get_token(void) {
                 } else { // Standalone '!' is not any lexeme
                     token.id = TOKEN_ERROR;
                     //scanner.p_state = STATE_START;
-
                     error = ERR_LEXICAL;
                     ungetc(c, stdin);
                     return token;
@@ -425,6 +424,7 @@ token_t get_token(void) {
                                     hex_chars[hex_number] = c;
                                 } else {
                                     token.id = TOKEN_ERROR;
+                                    error = ERR_LEXICAL;
                                     return token;
                                 }
                             }
@@ -436,13 +436,13 @@ token_t get_token(void) {
                     }
                     if (initial_array_size == token.lexeme.length) {
                         token.id = TOKEN_ERROR;
+                        error = ERR_LEXICAL;
                         return token;
                     }
                 } else if (c >= 32 && c <= 126) {
                     d_array_append(&token.lexeme, c);
                 } else {
                     token.id = TOKEN_ERROR;
-                    printf("440");
                     error = ERR_LEXICAL;
                     return token;
                 }
@@ -465,6 +465,7 @@ token_t get_token(void) {
                                     d_array_append(&token.lexeme, c);
                                 } else {
                                     token.id = TOKEN_ERROR;
+                                    error = ERR_LEXICAL;
                                     return token;
                                 }
                             }
@@ -473,6 +474,7 @@ token_t get_token(void) {
                     }
                     if (initial_array_size == token.lexeme.length) {
                         token.id = TOKEN_ERROR;
+                        error = ERR_LEXICAL;
                         return token;
                     }
                 } else if (c >= 32 && c <= 126) {
@@ -484,6 +486,7 @@ token_t get_token(void) {
                     scanner.p_state = STATE_NEXT_MULTILINE;
                 } else {
                     token.id = TOKEN_ERROR;
+                    error = ERR_LEXICAL;
                     return token;
                 }
                 break;
@@ -504,12 +507,14 @@ token_t get_token(void) {
                     return token;
                 } else {
                     token.id = TOKEN_ERROR;
+                    error = ERR_LEXICAL;
                     return token;
                 }
                 break;
 
             default:
                 token.id = TOKEN_ERROR;
+                error = ERR_LEXICAL;
                 return token;
                 break;
         }
