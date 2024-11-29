@@ -45,6 +45,15 @@ void free_nodes(TNode* root){
     free(root);
 }
 
+void assign_parents(TNode* root, TNode* parent){
+    if(root == NULL){
+        return;
+    }
+    root->parent = parent;
+    assign_parents(root->left, root);
+    assign_parents(root->right, root);
+}
+
 // Binary tree public functions
 
 TBinaryTree* BT_init(void){
@@ -207,6 +216,14 @@ bool BT_get_data(TBinaryTree* BT, node_data* data_out){
         return false;
     }
     *data_out = BT->active->data;
+    return true;
+}
+
+bool BT_get_node_type(TBinaryTree* BT, node_type* type){
+    if(!BT_is_active(BT)){
+        return false;
+    }
+    *type = BT->active->type;
     return true;
 }
 
@@ -413,6 +430,7 @@ void BT_print_tree(TNode *tree) {
 
 void init_llist(linked_list_t* llist){
     llist->first = NULL;
+    llist->last = NULL;
     llist->active = NULL;
 }
 
@@ -428,16 +446,20 @@ bool insert_llist(linked_list_t* llist, char* inserted){
         return false;
     }
     new_item->next = NULL;
+    new_item->prev = NULL;
 
     if (llist->first == NULL) {
         llist->first = new_item;
-    } else {
+    }
+    else {
         item_ll_t* current_item = llist->first;
         while (current_item->next != NULL) {
             current_item = current_item->next;
         }
         current_item->next = new_item;
+        new_item->prev = current_item;
     }
+    llist->last = new_item;
     return true;
 }
 
@@ -449,6 +471,14 @@ bool set_first_llist(linked_list_t* llist){
     return true;
 }
 
+bool set_last_llist(linked_list_t* llist){
+    if (llist->last == NULL) {
+        return false;
+    }
+    llist->active = llist->last;
+    return true;
+}
+
 bool next_llist(linked_list_t* llist){
     if(llist->active == NULL){
         return false;
@@ -457,7 +487,15 @@ bool next_llist(linked_list_t* llist){
     return true;
 }
 
-bool free_llist(linked_list_t* llist){
+bool prev_llist(linked_list_t* llist){
+    if(llist->active == NULL){
+        return false;
+    }
+    llist->active = llist->active->prev;
+    return true;
+}
+
+void free_llist(linked_list_t* llist){
     item_ll_t* current_item = llist->first;
     while (current_item != NULL) {
         item_ll_t* next_item = current_item->next;
@@ -467,7 +505,6 @@ bool free_llist(linked_list_t* llist){
     }
     llist->first = NULL;
     llist->active = NULL;
-    return true;
 }
 
 bool get_value_llist(linked_list_t* llist, char** value){
@@ -488,4 +525,11 @@ void BT_print_node_type (TNode *node) {
     }
 
     printf(WHITE_BOLD("NODE TYPE:")" %s\n", node_t_string[node->type]);
+}
+
+void BT_assign_parents(TBinaryTree* tree){
+    if(tree == NULL){
+        return;
+    }
+    assign_parents(tree->root, NULL);
 }
