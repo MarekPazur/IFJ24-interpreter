@@ -71,28 +71,34 @@ typedef struct parser {
 /**
  * @brief This function creates a new symtable when entering a new sub body and sets the parser scope struct to have the new body symtable as the current_scope and the previous in the parent_scope
  *
- * @param parser
+ * @param parser, where the scope will be changed
  */
 void enter_sub_body(Tparser* parser);
 
 /**
  * @brief This function leaves sets the current_scope back to its parent and the parent_scope to the parent of the parent
  *
- * @param parser
+ * @param parser, where the scope will be changed
  */
 void leave_sub_body(Tparser* parser);
 
 /**
  * @brief This function a data structure for the symtable to insert a variable/constant
  *
- * @param parser
+ * @param nullable, signifies wether the returned data should have the nullable bool set to true or false
+ * @param constant, signifies wether the returned data should have the constant bool set to true or false
+ * @param type, represents the type to be set in the returned data
+ *
+ * @return returns the struct TData, that will be inserted into the symtable as a variable/constant
  */
 TData declaration_data(bool nullable, bool constant, Type type);
 
 /**
  * @brief This function a data structure for the symtable to insert a function, the data are set to default values
  *
- * @param parser
+ * @param scope, the scope of the symtables that will be set to the TData the will be returned and inserted into the symtable
+ *
+ * @return returns the struct TData, that will be inserted into the symtable as a function
  */
 TData blank_function(TSymtable* scope);
 
