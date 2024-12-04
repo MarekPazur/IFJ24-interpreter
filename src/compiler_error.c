@@ -9,8 +9,10 @@
 #include "compiler_error.h"
 #include <stdio.h>
 
+/* Global variable for error code */
 unsigned int error = 0;
 
+/* Array of string messages containing the information about given error code */
 static const char *error_msg[] = {
 	GREEN("SUCCESS")" -  Preklad probehl uspesne",
 	RED("ERR_LEXICAL")" - Chyba v programu v ramci lexikalní analyzy (chybna struktura aktualniho lexemu)",
@@ -26,6 +28,7 @@ static const char *error_msg[] = {
 	RED("ERR_COMPILER_INTERNAL") " - Interni chyba prekladace (chyba alokace pameti, ...)"
 };
 
+/* error print function - prints the message bound to its error code */
 void print_error(unsigned int err) {
 
 	unsigned int size = sizeof(error_msg) / sizeof(char *); 

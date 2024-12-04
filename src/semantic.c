@@ -16,6 +16,7 @@
 #include "binary_tree.h"
 #include "symtable.h"
 #include "syna.h"
+#include "codegen.h"
 
 /* Utility macros */
 #define check_error() do { if (error) return; } while (0)
@@ -38,11 +39,10 @@ void semantic_analysis(TBinaryTree* AST) {
 
     /* Program/Root Node (Starting point of the program) */
     TNode** program = &(AST->root);
-    //BT_print_tree(*program); //debug print
+    //BT_print_tree(*program); // debug print of the AST before semantic checks
 
     /* Get global symtable from Program/Root Node */
     globalSymTable = (*program)->data.nodeData.program.globalSymTable;
-
 
     main_function_semantics(globalSymTable);
     check_error();
@@ -59,8 +59,10 @@ void semantic_analysis(TBinaryTree* AST) {
         hasReturn = false; //set hasReturn to false for next function
         func = func->left;
     }
-
+    //BT_print_tree(*program); // Final tree passed to code generator
     //debug_print_keys((*program)->data.nodeData.program.globalSymTable);
+    codegen(AST);
+    check_error();
 }
 
 /**
@@ -97,22 +99,22 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
             return;
         }
 
-        BT_print_node_type(command_instance);
+        //BT_print_node_type(command_instance);
         scope_t *sub_scope; // sub-scope of current scope, used when WHEN,IF,ELSE,{} encountered, since they have its own local symtable
 
         switch (command_instance->type) {
         case WHILE:
         case IF:
-        
+
             sub_scope = command_instance->data.nodeData.body.current_scope;
 
-            check_head_type(command_instance, sub_scope);
+            check_head_type(command_instance, sub_scope); // Checks expression and its type inside condition '(expr)'
             check_error();
-            
+
             CommandSemantics(command_instance->right, sub_scope, func); // Recursively call so we can return to original node as soon as we explore the branch on the left side caused by a while or if
             check_error();
             break;
-            
+
         case ELSE:
         case BODY:
             sub_scope = command_instance->data.nodeData.body.current_scope;
@@ -136,7 +138,7 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
             FunctionCallSemantics(command_instance, current_scope, &info);
             check_error();
 
-            if (info.type != VOID_T) {
+            if (info.type != VOID_T) { // If the functions return type is NOT void, the return value cannot be ignored.
                 printf("error: function return value ignored, all non-void values must be used\n");
                 error = ERR_PARAM_TYPE_RETURN_VAL;
                 return;
@@ -145,8 +147,8 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
         }
 
         case RETURN: {
-            TNode *expression = command_instance->left;
-
+            TNode *expression = command_instance->left; // Get expression from left child-node of the command
+            /* Checks if the expression in a return statement is missing or is there an extra expression when the function has void return type */
             if ( (expression == NULL && func->data.nodeData.function.type != VOID_TYPE) || (expression != NULL && func->data.nodeData.function.type == VOID_TYPE) ) {
                 error = ERR_RETURN_VALUE_EXPRESSION;
                 return;
@@ -161,52 +163,53 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
                     int function_return_type = get_func_type(globalSymTable, func->data.nodeData.function.identifier);
                     check_error();
 
-                    if(expr_data.type != function_return_type) {
+                    if (expr_data.type != function_return_type) {
                         error = ERR_PARAM_TYPE_RETURN_VAL;
                         return;
                     }
                 }
             }
 
-            hasReturn = true;
+            hasReturn = true; // Set the flag to true, since the function has atleast one return statement/command
             break;
-        }    
+        }
 
         default:
             break;
         }
 
-        Command = Command->right;
+        Command = Command->right; // Move to the next command wrapper
     }
     /* Scope ends here  */
-    if(!check_is_used(current_scope->current_scope)){
+    if (!check_is_used(current_scope->current_scope)) { // Check if every const is used, var used and mutated
         error = ERR_UNUSED_VAR;
         return;
     }
-    printf("------------\n"); debug_print_keys(current_scope->current_scope); // debug print of current scopes variables stored in symtable and their properties
+    //printf("------------\n"); debug_print_keys(current_scope->current_scope); // debug print of current scopes variables stored in symtable and their properties
 }
 
 /**
 * @brief this function checks that there is a bool expression inside the if and while header, also checks that if the header has |this| it is nullable
 * @param the node of the if or while
 */
-void check_head_type(TNode* body, scope_t *scope){
+void check_head_type(TNode* body, scope_t *scope) {
 
     expr_info expr_data = {.type = UNKNOWN_T, .is_constant_exp = false, .is_optional_null = false, .optional_null_id = NULL};
-    
-    expression_semantics(body->left, body->data.nodeData.body.current_scope->parent_scope, &expr_data);
-    
+
+    expression_semantics(body->left, body->data.nodeData.body.current_scope->parent_scope, &expr_data); // Evaluate the expression in the condition first
+    check_error();
+
     //printf("[condition %s]\n",body->data.nodeData.body.is_nullable ? "optional-null" : "not null");
 
     if ( body->data.nodeData.body.is_nullable ) {
         if ( !expr_data.is_optional_null ) { // variable is not correct type
-            error = ERR_SEMANTIC_OTHER;
+            error = ERR_TYPE_COMPATABILITY;
             return;
         } else { // if (id) |ID| --> update ID datatype with non-null ids datatype
             //printf("%s",expr_data.optional_null_id);
             TSymtable* local;
             TData null_var_data, not_null_inheritor_data;
-            char *variable_id = expr_data.optional_null_id, *not_null_id = body->data.nodeData.body.null_replacement;
+            char *variable_id = expr_data.optional_null_id, *not_null_id = body->data.nodeData.body.null_replacement; // ID of the variable in condition brackets and ID of the optional replacement const in vertical bars
 
             /* get variable data in condition */
             if (id_defined(scope, variable_id, &local) == false) {
@@ -235,8 +238,8 @@ void check_head_type(TNode* body, scope_t *scope){
                 return;
             }
         }
-    } else {
-        if( expr_data.type != BOOL_T ){
+    } else { /* Condition is not optional null AND expression must be of truth expression type else its error */
+        if ( expr_data.type != BOOL_T ) {
             error = ERR_TYPE_COMPATABILITY;
             printf("error: trying to put non-truth expression in condition statement\n");
             return;
@@ -254,7 +257,7 @@ void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope, fun_info
 
     /* Check if function is defined */
     if (symtable_search(globalSymTable, function_id) == false) {
-        printf("error: function %s undefined\n",function_id);
+        printf("error: function %s undefined\n", function_id);
         error = ERR_UNDEFINED_IDENTIFIER;
         return;
     }
@@ -307,9 +310,9 @@ void FunctionCallSemantics(TNode *functionCall, scope_t* current_scope, fun_info
         if (formal_param_type != real_param[param_position]) {
             /* Formal and real params may differentiate, however if its built-in function, it may accept all parameter types - 'a' (ifj.write())
             or it may accept string or []u8 slice - 'n' (ifj.string()) where its neccesary to check if the formal params are of type string or []u8 slice */
-            if (real_param[param_position] != 'a' && (real_param[param_position] != 'n' || (formal_param_type != 'u' && formal_param_type != 's'))){
-                printf("%s - ",function_id);
-                printf("[%c - %c]",formal_param_type, real_param[param_position]);
+            if (real_param[param_position] != 'a' && (real_param[param_position] != 'n' || (formal_param_type != 'u' && formal_param_type != 's'))) {
+                printf("%s - ", function_id);
+                printf("[%c - %c]", formal_param_type, real_param[param_position]);
                 printf("error: formal parameter type doesn't match function definition parameter type\n");
                 error = ERR_PARAM_TYPE_RETURN_VAL;
                 break;
@@ -339,14 +342,14 @@ void assig_check(TNode* command_instance, scope_t *scope) {
     /* Fetches data about variable, checks its existence, if its not '_' */
     if (throw_away == false) // Must check this, else it would throw error, since '_' is not registered in any symtable
         var_data =  get_const_var_data(scope, variable_id);
-    
+
     check_error();
 
-    if (command_instance->left->type == FUNCTION_CALL) {
+    if (command_instance->left->type == FUNCTION_CALL) { // Variable is being assigned function call return value
         TNode* function = command_instance->left;
         char* function_id = function->data.nodeData.identifier.identifier;
 
-         /* Get functions metadata */
+        /* Get functions metadata */
         if (symtable_get_data(globalSymTable, function_id, &function_data) == false) {
             error = ERR_COMPILER_INTERNAL;
             return;
@@ -356,21 +359,21 @@ void assig_check(TNode* command_instance, scope_t *scope) {
         FunctionCallSemantics(function, scope, &info);
         check_error();
 
-        if (throw_away) {
+        if (throw_away) { // function call is assigned to "_" special variable, so the type check can be skipped
             if ( function_data.function.return_type == VOID_T ) {
                 printf("error: trying to assign void type\n");
                 error = ERR_PARAM_TYPE_RETURN_VAL;
                 return;
             }
         } else {
-            if ((int) var_data.variable.type != info.type) {
+            if ((int) var_data.variable.type != info.type) { // types dont match
                 error = ERR_TYPE_COMPATABILITY;
-                printf("error: assignment type mismatch caused by function %s\n",function_id);
+                printf("error: assignment type mismatch caused by function %s\n", function_id);
                 return;
             } else {
-                if ((var_data.variable.is_null_type == false) && info.is_optional_null) {
+                if ((var_data.variable.is_null_type == false) && info.is_optional_null) { // types can be the same but differ in null includement
                     error = ERR_TYPE_COMPATABILITY;
-                    printf("error: trying to assign optional-null type into non-null variable, type mismatch caused by function %s\n",function_id);
+                    printf("error: trying to assign optional-null type into non-null variable, type mismatch caused by function %s\n", function_id);
                     return;
                 }
             }
@@ -383,14 +386,14 @@ void assig_check(TNode* command_instance, scope_t *scope) {
         check_error();
 
         if (throw_away == false) {
-            if((int) var_data.variable.type != expr_data.type) { // type of a != b
+            if ((int) var_data.variable.type != expr_data.type) { // type of a != b
                 if ((var_data.variable.is_null_type == false) || (expr_data.type != NIL_T)) { // only acceptable if a is ?type and b is null, else error
                     error = ERR_TYPE_COMPATABILITY;
                     printf("error: assignment type mismatch\n");
                     return;
                 }
             } else {
-                if ((var_data.variable.is_null_type == false) && expr_data.is_optional_null) {
+                if ((var_data.variable.is_null_type == false) && expr_data.is_optional_null) { // types can be the same but differ in null includement
                     error = ERR_TYPE_COMPATABILITY;
                     printf("error: trying to assign optional-null type into non-null variable, type mismatch\n");
                     return;
@@ -439,15 +442,18 @@ void declaration_semantics(TNode* declaration, scope_t* current_scope) {
         return;
     }
 
-    if(var_data.variable.is_constant && var_data.variable.value_pointer == NULL) { // const must be either literal or have value of another
-        //TODO FIX!!!!!!!!!!!!!!!!!!!!!!!//error = ERR_SYNTAX;
-        //return;
+    /* const comptime check */
+    if (var_data.variable.is_constant) {
+        TNode* rhs = var_data.variable.value_pointer;
+
+        if (rhs && (rhs->type != FUNCTION_CALL))
+            var_data.variable.comp_runtime = true;
     }
 
     if (declaration->left->type == FUNCTION_CALL) { // var/const 'id' (:type) = function(param_list);
         fun_info info = {.type = UNKNOWN_T, .is_optional_null = false};
         FunctionCallSemantics(declaration->left, current_scope, &info);
-        check_error(); 
+        check_error();
         datatype = info.type;
         is_optional_null = info.is_optional_null;
     } else {
@@ -461,7 +467,7 @@ void declaration_semantics(TNode* declaration, scope_t* current_scope) {
     /* Variable type resolution */
     if (var_data.variable.type == UNKNOWN_T) { // Type was unknown (var/const without specified type)
 
-        if (datatype == NIL_T) {
+        if (datatype == NIL_T || datatype == STR_T) {
             printf("error: unknown type - type of the variable is not specified and cannot be inferred from the expression used\n");
             error = ERR_UNKNOWN_TYPE;
             return;
@@ -469,11 +475,11 @@ void declaration_semantics(TNode* declaration, scope_t* current_scope) {
 
         var_data.variable.type = datatype; // assign result data type from exp/fun call
         var_data.variable.is_null_type = is_optional_null; // is ?type
+    }
 
-        if (symtable_insert(current_scope->current_scope, variable_id, var_data) == false) {
-            error = ERR_COMPILER_INTERNAL;
-            return;
-        }
+    if (symtable_insert(current_scope->current_scope, variable_id, var_data) == false) {
+        error = ERR_COMPILER_INTERNAL;
+        return;
     }
 
     if ((int) var_data.variable.type != datatype) { // a = b inequal types
@@ -513,262 +519,692 @@ void expression_semantics(TNode *expression, scope_t* scope, expr_info* info) {
     //BT_print_tree(expression);//BT_print_node_type(expression);
 
     switch (expression->type) {
-        /* LITERALS */
-        case INT: // I32 LITERAL
-            info->type = INTEGER_T;
-            break;
-        case FL:  // F64 LITERAL
-            info->type = FLOAT_T;
-            break;
-        case NULL_LITERAL:
-            info->type = NIL_T;
-            break;
-        case U8:  // INVALID LITERAL TYPES
-        case STR:
-            error = ERR_TYPE_COMPATABILITY;
-            break;
-        /* VAR or CONST */
-        case VAR_CONST:
-        {
-            TSymtable* local;
-
-            char *variable_id = expression->data.nodeData.value.identifier;
-
-            if (id_defined(scope, variable_id, &local) == false) {
-                printf("error: var/const %s undefined in this expression\n", variable_id);
-                error = ERR_UNDEFINED_IDENTIFIER;
-                break;
-            }
-
-            if (symtable_get_data(local, variable_id, &info->data) == false) {
-                error = ERR_COMPILER_INTERNAL;
-                break;
-            }
-
-            set_to_used(local, variable_id);
-
-            info->type = info->data.variable.type;
-
-            if (info->data.variable.is_null_type) {
-                info->is_optional_null = true;
-                info->optional_null_id = variable_id;
-            }
-
-            if (!info->data.variable.is_constant) // var encountered
-                info->is_constant_exp = false;
-        }
+    /* LITERALS */
+    case INT: // I32 LITERAL
+        info->type = INTEGER_T;
         break;
+    case FL:  // F64 LITERAL
+        info->type = FLOAT_T;
+        break;
+    case NULL_LITERAL:
+        info->type = NIL_T;
+        break;
+    case U8:  // INVALID LITERAL TYPE
+        error = ERR_TYPE_COMPATABILITY;
+        break;
+    case STR: // STR LITERAL
+        info->type = STR_T;
+        break;
+    /* VAR or CONST */
+    case VAR_CONST:
+    {
+        TSymtable* local;
 
-        case OP_ADD:
-        case OP_SUB:
-        case OP_MUL:
-            if (left.is_optional_null || right.is_optional_null) {
-                printf(RED_BOLD("error")": type mismatch, trying to use null type in arithmethics\n");
-                error = ERR_TYPE_COMPATABILITY;
-                return;
-            }
+        char *variable_id = expression->data.nodeData.value.identifier;
 
-            if (left.type == right.type) { // i32 = i32, f64 = f64
-                info->type = left.type;
-            } else if ((left.type == INTEGER_T && right.type == FLOAT_T) || (left.type == FLOAT_T && right.type == INTEGER_T)) {
-                /* type conversion here */
-                if (left.is_constant_exp && right.is_constant_exp) { // made out of literals and constants
-                    /* left op literal */
-                    if (expression->left->type == INT) {
-                        char **literal = &expression->left->data.nodeData.value.literal;
+        if (id_defined(scope, variable_id, &local) == false) {
+            printf("error: var/const %s undefined in this expression\n", variable_id);
+            error = ERR_UNDEFINED_IDENTIFIER;
+            break;
+        }
 
-                        *literal = literal_convert_i32_to_f64(*literal);
-                        expression->left->type = FL;
+        if (symtable_get_data(local, variable_id, &info->data) == false) {
+            error = ERR_COMPILER_INTERNAL;
+            break;
+        }
+
+        set_to_used(local, variable_id);
+
+        info->type = info->data.variable.type;
+
+        if (info->data.variable.is_null_type) {
+            info->is_optional_null = true;
+            info->optional_null_id = variable_id;
+        }
+
+        if (!info->data.variable.is_constant) // var encountered
+            info->is_constant_exp = false;
+    }
+    break;
+
+    /* +,-,* implicit conversion of: f64 const & literal with zero decimal part -> i32 literal, i32 literal -> f64 literal */
+    case OP_ADD:
+    case OP_SUB:
+    case OP_MUL:
+    {
+        if (left.is_optional_null || right.is_optional_null) { // Unacceptable to have ?type in arithmetics
+            printf(RED_BOLD("error")": type mismatch, trying to use optional null type in arithmethics\n");
+            error = ERR_TYPE_COMPATABILITY;
+            return;
+        }
+
+        if ((left.type == INTEGER_T && right.type == INTEGER_T) || ((left.type == FLOAT_T && right.type == FLOAT_T))) { // i32 = i32, f64 = f64
+            info->type = left.type;
+        }
+        else if ((left.type == INTEGER_T && right.type == FLOAT_T) || (left.type == FLOAT_T && right.type == INTEGER_T)) { // i32 op f64, f64 op i32
+            /* type conversion here */
+            if (left.is_constant_exp || right.is_constant_exp) { //TODO CHECK POTENTIAL ERROR One side has to be non variable
+
+                if (expression->left->type == INT) { /* left op is i32 literal */
+                    char **literal = &expression->left->data.nodeData.value.literal;
+
+                    *literal = literal_convert_i32_to_f64(*literal);
+                    expression->left->type = FL;
+                    info->type = FLOAT_T; // Succesful conversion of i32 literal, result of binary +-* operation is float type
+                }
+                else if (expression->right->type == INT) { /* right op is i32 literal */
+                    char **literal = &expression->right->data.nodeData.value.literal;
+
+                    *literal = literal_convert_i32_to_f64(*literal);
+                    expression->right->type = FL;
+                    info->type = FLOAT_T; // Succesful conversion of i32 literal, result of binary +-* operation is float type
+                }
+                else if (expression->left->type == FL && expression->right->type != INT) { // Convert lhs f64 literal to i32 if it has zero-decimal part and rhs is NOT i32 literal (its const, op result, variable, ...) 
+                    char **literal = &expression->left->data.nodeData.value.literal;
+
+                    if ((*literal = literal_convert_f64_to_i32(*literal)) == NULL) { // NULL => float has non zero decimal part, so it cannot be converted
+                        printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
                     }
-                    /* right op literal */
-                    if(expression->right->type == INT) {
-                        char **literal = &expression->right->data.nodeData.value.literal;
 
-                        *literal = literal_convert_i32_to_f64(*literal);
-                        expression->right->type = FL;
+                    expression->left->type = INT; // binary op result type = i32, changed in AST
+                    info->type = INTEGER_T; // Succesful conversion of i32 literal, result of binary +-* operation is integer type
+                }
+                else if (expression->right->type == FL && expression->left->type != INT) { // Convert rhs f64 literal to i32 if it has zero-decimal part and lhs is NOT i32 literal (its const, op result, variable, ...) 
+                   char **literal = &expression->right->data.nodeData.value.literal;
+
+                    if ((*literal = literal_convert_f64_to_i32(*literal)) == NULL) {  // NULL => float has non zero decimal part, so it cannot be converted
+                        printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
                     }
-                    /* left op const */
-                    if(expression->left->type == VAR_CONST) {
-                        TSymtable* local;
-                        TData var_data;
-                        char *variable_id = expression->left->data.nodeData.value.identifier;
 
-                        if (id_defined(scope, variable_id, &local) == false) {
-                            printf("error: var/const %s undefined in arithmetic expression\n", variable_id);
-                            error = ERR_UNDEFINED_IDENTIFIER;
-                            break;
-                        }
+                    expression->right->type = INT; // binary op result type = i32, changed in AST
+                    info->type = INTEGER_T; // Succesful conversion of i32 literal, result of binary +-* operation is integer type
+                }
+                else if (expression->left->type == VAR_CONST && left.type == FLOAT_T && expression->right->type != INT) { // Convert lhs f64 comp-time const to i32 if it has zero-decimal part and rhs is NOT i32 literal (its const, op result, variable, ...) 
+                    TData var_data;
+                    char *variable_id = expression->left->data.nodeData.value.identifier;
 
-                        if (symtable_get_data(local, variable_id, &var_data) == false) {
-                            error = ERR_COMPILER_INTERNAL;
-                            break;
-                        }
+                    var_data = get_const_var_data(scope, variable_id); // fetch var/const data
+                    check_error();
 
-                        if (var_data.variable.type == INTEGER_T) {
-                            char *const_value = var_data.variable.value_pointer->data.nodeData.value.literal;
 
-                            const_value = literal_convert_i32_to_f64(const_value);
-                            expression->left->type = FL;
-                            expression->left->data.nodeData.value.literal = const_value;
-                        }
+                    if (var_data.variable.is_constant == false) { // float operator is var, which cannot be implicitly converted
+                        printf("error: expression - cannot convert var in division\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
                     }
-                    /* right op const */
-                    if(expression->right->type == VAR_CONST) {
-                        TSymtable* local;
-                        TData var_data;
-                        char *variable_id = expression->right->data.nodeData.value.identifier;
 
-                        if (id_defined(scope, variable_id, &local) == false) {
-                            printf("error: var/const %s undefined in arithmetic expression\n", variable_id);
-                            error = ERR_UNDEFINED_IDENTIFIER;
-                            break;
-                        }
+                    if (var_data.variable.comp_runtime == false) { // const value is unknown at the time of compilation
+                        printf("error: expression - cannot convert const in division (constant value is unknown at compile time)\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
+                    }
 
-                        if (symtable_get_data(local, variable_id, &var_data) == false) {
-                            error = ERR_COMPILER_INTERNAL;
-                            break;
-                        }
+                    char *const_value = copy_literal(var_data.variable.value_pointer->data.nodeData.value.literal); // Extract the literal to be converted
 
-                        if (var_data.variable.type == INTEGER_T) {
-                            char *const_value = var_data.variable.value_pointer->data.nodeData.value.literal;
+                    if ((const_value = literal_convert_f64_to_i32(const_value)) == NULL) {
+                        printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
+                    }
 
-                            const_value = literal_convert_i32_to_f64(const_value);
-                            expression->right->type = FL;
-                            expression->right->data.nodeData.value.literal = const_value;
-                        }
-                    }                    
+                    expression->left->type = INT;
+                    expression->left->data.nodeData.value.literal = const_value;
+                    info->type = INTEGER_T; // Succesful conversion of f64 const, result of binary +-* operation is integer type
+                }
+                else if (expression->right->type == VAR_CONST && right.type == FLOAT_T && expression->left->type != INT) { // Convert rhs f64 comp-time const to i32 if it has zero-decimal part and lhs is NOT i32 literal (its const, op result, variable, ...) 
+                    TData var_data;
+                    char *variable_id = expression->right->data.nodeData.value.identifier;
 
-                    info->type = FLOAT_T;
-                } else { // var must be the same type
-                    printf(RED_BOLD("error")": var type mismatch\n");
+                    var_data = get_const_var_data(scope, variable_id); // fetch var/const data
+                    check_error();
+
+                    if (var_data.variable.is_constant == false) {
+                        printf("error: expression - cannot convert var in division\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
+                    }
+
+                    if (var_data.variable.comp_runtime == false) {
+                        printf("error: expression - cannot convert const in division (constant value is unknown at compile time)\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
+                    }
+
+                    char *const_value = copy_literal(var_data.variable.value_pointer->data.nodeData.value.literal);
+
+                    if ((const_value = literal_convert_f64_to_i32(const_value)) == NULL) {
+                        printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
+                    }
+
+                    expression->right->type = INT;
+                    expression->right->data.nodeData.value.literal = const_value;
+                    info->type = INTEGER_T; // Succesful conversion of f64 const, result of binary +-* operation is integer type
+                }
+                else { // No i32 literal / f64 const expression on either side to be converted, conversion error (i32/f64 is var, expression or operation result)
+                    printf(RED_BOLD("error")": arithmetic (+ - *) expression error, cannot convert non-i32 literal\n");
                     error = ERR_TYPE_COMPATABILITY;
                     return;
                 }
-            } else { // UNKNOWN_T, NULL_T 
-                printf(RED_BOLD("error")": expression type mismatch\n");
+            } else { // var must be the same type
+                printf(RED_BOLD("error")": var type mismatch\n");
                 error = ERR_TYPE_COMPATABILITY;
                 return;
             }
-            break;
+        } else { // invalid data types in arithmetics: UNKNOWN_T, NULL_T, STR_T
+            printf(RED_BOLD("error")": expression type mismatch\n");
+            error = ERR_TYPE_COMPATABILITY;
+            return;
+        }
 
-        case OP_DIV:
-            if (left.is_optional_null || right.is_optional_null) {
-                printf(RED_BOLD("error")": type mismatch, trying to use null type in arithmethics\n");
-                error = ERR_TYPE_COMPATABILITY;
-                return;
-            }
-            // Same type
-            if (left.type == right.type) {
-                    info->type = left.type;
-            } // type mismatch
-            else if ((left.type == INTEGER_T && right.type == FLOAT_T) || (left.type == FLOAT_T && right.type == INTEGER_T)) {
-                // Cant be var
-                if (left.is_constant_exp && right.is_constant_exp) {
-                    if (expression->left->type == FL) {
-                        char **literal = &expression->left->data.nodeData.value.literal;
+        if (!left.is_constant_exp || !right.is_constant_exp) { // Result contains var => not a constant expression, unknown at comp-time
+            info->is_constant_exp = false;
+        }
+    }
+    break;
 
-                        if ((*literal = literal_convert_f64_to_i32(*literal)) == NULL) { 
-                            error = ERR_TYPE_COMPATABILITY;
-                            return;
-                        }
+    /* / implicit conversion of: f64 const & literal with zero decimal part -> i32 literal */
+    case OP_DIV:
+    {
+        if (left.is_optional_null || right.is_optional_null) {
+            printf(RED_BOLD("error")": type mismatch, trying to use null type in arithmethics\n");
+            error = ERR_TYPE_COMPATABILITY;
+            return;
+        }
+        if ((left.type == INTEGER_T && right.type == INTEGER_T) || ((left.type == FLOAT_T && right.type == FLOAT_T))) { // i32 = i32, f64 = f64
+            info->type = left.type; // Types equal on both sides
+        }
+        else if ((left.type == INTEGER_T && right.type == FLOAT_T) || (left.type == FLOAT_T && right.type == INTEGER_T)) {
+            if (left.is_constant_exp || right.is_constant_exp) {  //TODO CHECK POTENTIAL ERROR One side has to be non var
 
-                        expression->left->type = INT;
-                    }
-                    if (expression->right->type == FL) {
-                        char **literal = &expression->right->data.nodeData.value.literal;
+                if (expression->left->type == FL) { // left operand = f64 literal
+                    char **literal = &expression->left->data.nodeData.value.literal;
 
-                        if ((*literal = literal_convert_f64_to_i32(*literal)) == NULL) { 
-                            error = ERR_TYPE_COMPATABILITY;
-                            return;
-                        }
-
-                        expression->right->type = INT;
-                    }
-                    if (expression->left->type == VAR_CONST) {
-                        TSymtable* local;
-                        TData var_data;
-                        char *variable_id = expression->left->data.nodeData.value.identifier;
-
-                        if (id_defined(scope, variable_id, &local) == false) {
-                            printf("error: var/const %s undefined in arithmetic expression\n", variable_id);
-                            error = ERR_UNDEFINED_IDENTIFIER;
-                            break;
-                        }
-
-                        if (symtable_get_data(local, variable_id, &var_data) == false) {
-                            error = ERR_COMPILER_INTERNAL;
-                            break;
-                        }
-
-                        if (var_data.variable.type == FLOAT_T) {
-                            char *const_value = var_data.variable.value_pointer->data.nodeData.value.literal;
-
-                            if((const_value = literal_convert_f64_to_i32(const_value)) == NULL) {
-                                error = ERR_TYPE_COMPATABILITY;
-                                return;
-                            }
-
-                            expression->left->type = INT;
-                            expression->left->data.nodeData.value.literal = const_value;
-                        }
-                    }
-                    if (expression->right->type == VAR_CONST) {
-                        TSymtable* local;
-                        TData var_data;
-                        char *variable_id = expression->right->data.nodeData.value.identifier;
-
-                        if (id_defined(scope, variable_id, &local) == false) {
-                            printf("error: var/const %s undefined in arithmetic expression\n", variable_id);
-                            error = ERR_UNDEFINED_IDENTIFIER;
-                            break;
-                        }
-
-                        if (symtable_get_data(local, variable_id, &var_data) == false) {
-                            error = ERR_COMPILER_INTERNAL;
-                            break;
-                        }
-
-                        if (var_data.variable.type == FLOAT_T) {
-                            char *const_value = var_data.variable.value_pointer->data.nodeData.value.literal;
-
-                            if((const_value = literal_convert_f64_to_i32(const_value)) == NULL) {
-                                error = ERR_TYPE_COMPATABILITY;
-                                return;
-                            }
-
-                            expression->right->type = INT;
-                            expression->right->data.nodeData.value.literal = const_value;
-                        }
+                    if ((*literal = literal_convert_f64_to_i32(*literal)) == NULL) { // NULL => float has non zero decimal part, so it cannot be converted
+                        printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
                     }
 
-                    info->type = INTEGER_T;
-                } else { // var must be the same type
-                    printf(RED_BOLD("error")": var type mismatch\n");
+                    expression->left->type = INT; // binary op result type = i32, changed in AST
+                }
+                else if (expression->right->type == FL) { // right operand = f64 literal
+                    char **literal = &expression->right->data.nodeData.value.literal;
+
+                    if ((*literal = literal_convert_f64_to_i32(*literal)) == NULL) {  // NULL => float has non zero decimal part, so it cannot be converted
+                        printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
+                    }
+
+                    expression->right->type = INT; // binary op result type = i32, changed in AST
+                }
+                else if (expression->left->type == VAR_CONST && left.type == FLOAT_T) {
+                    TData var_data;
+                    char *variable_id = expression->left->data.nodeData.value.identifier;
+
+                    var_data = get_const_var_data(scope, variable_id); // fetch var/const data
+                    check_error();
+
+
+                    if (var_data.variable.is_constant == false) { // float operator is var, which cannot be implicitly converted
+                        printf("error: expression - cannot convert var in division\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
+                    }
+
+                    if (var_data.variable.comp_runtime == false) { // const value is unknown at the time of compilation
+                        printf("error: expression - cannot convert const in division (constant value is unknown at compile time)\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
+                    }
+
+                    char *const_value = copy_literal(var_data.variable.value_pointer->data.nodeData.value.literal); // Extract the literal to be converted
+
+                    if ((const_value = literal_convert_f64_to_i32(const_value)) == NULL) {
+                        printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
+                    }
+
+                    expression->left->type = INT;
+                    expression->left->data.nodeData.value.literal = const_value;
+
+                }
+                else if (expression->right->type == VAR_CONST && right.type == FLOAT_T) {
+                    TData var_data;
+                    char *variable_id = expression->right->data.nodeData.value.identifier;
+
+                    var_data = get_const_var_data(scope, variable_id); // fetch var/const data
+                    check_error();
+
+
+                    if (var_data.variable.is_constant == false) {
+                        printf("error: expression - cannot convert var in division\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
+                    }
+
+                    if (var_data.variable.comp_runtime == false) {
+                        printf("error: expression - cannot convert const in division (constant value is unknown at compile time)\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
+                    }
+
+                    char *const_value = copy_literal(var_data.variable.value_pointer->data.nodeData.value.literal);
+
+                    if ((const_value = literal_convert_f64_to_i32(const_value)) == NULL) {
+                        printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                        error = ERR_TYPE_COMPATABILITY;
+                        return;
+                    }
+
+                    expression->right->type = INT;
+                    expression->right->data.nodeData.value.literal = const_value;
+
+                } else { // No f64 literal/const expression on either side to be converted, conversion error (f64 op is either var, expression or operation result)
+                    printf(RED_BOLD("error")": arithmetic (/) expression error, cannot convert non-f64 literal/ non-const expression \n");
                     error = ERR_TYPE_COMPATABILITY;
                     return;
                 }
 
-            } else { // UNKNOWN_T, NULL_T 
-                printf(RED_BOLD("error")": expression type mismatch\n");
+                info->type = INTEGER_T;
+            } else { // var must be the same type, this type mismatch is not acceptable
+                printf(RED_BOLD("error")": var type mismatch\n");
                 error = ERR_TYPE_COMPATABILITY;
                 return;
             }
-            break;
+        } else { // UNKNOWN_T, NULL_T, STR_T
+            printf(RED_BOLD("error")": expression type mismatch\n");
+            error = ERR_TYPE_COMPATABILITY;
+            return;
+        }
 
-        case OP_EQ:
-            info->type = BOOL_T;
-            break;
+        if (!left.is_constant_exp || !right.is_constant_exp) { // Result contains var => not a constant expression, unknown at comp-time
+            info->is_constant_exp = false;
+        }
+    }
+    break;
 
-        case OP_NEQ:
-        case OP_GT:
-        case OP_LS:
-        case OP_GTE:
-        case OP_LSE:
-            info->type = BOOL_T;
-            break;
+    /* ==,!= implicit conversion of: f64 const & literal with zero decimal part -> i32 literal, i32 const & literal -> f64 literal */
+    case OP_EQ:
+    case OP_NEQ:
+    {
+        if (left.type == STR_T || right.type  == STR_T) {
+            printf("error: string in relation operators expression (==, !=)\n");
+            error = ERR_TYPE_COMPATABILITY;
+            return;
+        }
+        if (left.type != right.type) {
+            if (!left.is_constant_exp && !right.is_constant_exp) { // two variables with different types => error
+                printf("error: var type mismatch in relation operators expression (==, !=)\n");
+                error = ERR_TYPE_COMPATABILITY;
+                return;
+            }
 
-        default:
-            break;
+            if (expression->left->type == INT) { // lhs i32 literal => convert to f64 literal
+                char **literal = &expression->left->data.nodeData.value.literal;
+
+                *literal = literal_convert_i32_to_f64(*literal);
+                expression->left->type = FL;
+            }
+            else if (expression->right->type == INT) { // rhs i32 literal => convert to f64 literal
+                char **literal = &expression->right->data.nodeData.value.literal;
+
+                *literal = literal_convert_i32_to_f64(*literal);
+                expression->right->type = FL;
+            }
+            else if (expression->left->type == VAR_CONST && left.type == INTEGER_T && left.is_constant_exp) { // lhs i32 const => convert to f64 literal
+                TData var_data;
+                char *variable_id = expression->left->data.nodeData.value.identifier;
+
+                var_data = get_const_var_data(scope, variable_id); // fetch var/const data
+                check_error();
+
+                if (var_data.variable.is_constant == false) { // i32 operator is var, which cannot be implicitly converted
+                    printf("error: expression - cannot convert var in (==, !=)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                if (var_data.variable.comp_runtime == false) { // const value is unknown at the time of compilation
+                    printf("error: expression - cannot convert const in (==, !=) (constant value is unknown at compile time)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                char *const_value = copy_literal(var_data.variable.value_pointer->data.nodeData.value.literal); // Extract the literal to be converted
+
+                const_value = literal_convert_i32_to_f64(const_value);
+
+                expression->left->type = FL;
+                expression->left->data.nodeData.value.literal = const_value;
+            }
+            else if (expression->right->type == VAR_CONST && right.type == INTEGER_T && right.is_constant_exp) { // rhs i32 const => convert to f64 literal
+                TData var_data;
+                char *variable_id = expression->right->data.nodeData.value.identifier;
+
+                var_data = get_const_var_data(scope, variable_id); // fetch var/const data
+                check_error();
+
+                if (var_data.variable.is_constant == false) { // i32 operator is var, which cannot be implicitly converted
+                    printf("error: expression - cannot convert var in (==, !=)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                if (var_data.variable.comp_runtime == false) { // const value is unknown at the time of compilation
+                    printf("error: expression - cannot convert const in (==, !=) (constant value is unknown at compile time)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                char *const_value = copy_literal(var_data.variable.value_pointer->data.nodeData.value.literal); // Extract the literal to be converted
+
+                const_value = literal_convert_i32_to_f64(const_value);
+
+                expression->right->type = FL;
+                expression->right->data.nodeData.value.literal = const_value;
+            }
+            else if (expression->left->type == FL && (!right.is_constant_exp || expression->right->type != INT || expression->right->type != VAR_CONST)) { // lhs f64 literal, rhs is not i32 literal or const (op result, variable)
+                char **literal = &expression->left->data.nodeData.value.literal;
+
+                if ((*literal = literal_convert_f64_to_i32(*literal)) == NULL) { // NULL => float has non zero decimal part, so it cannot be converted
+                    printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                expression->left->type = INT; // binary op result type = i32, changed in AST
+            }
+            else if (expression->right->type == FL && (!left.is_constant_exp || expression->left->type != INT || expression->left->type != VAR_CONST)) { // rhs f64 literal, lhs is not i32 literal or const (op result, variable)
+                char **literal = &expression->right->data.nodeData.value.literal;
+
+                if ((*literal = literal_convert_f64_to_i32(*literal)) == NULL) { // NULL => float has non zero decimal part, so it cannot be converted
+                    printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                expression->right->type = INT; // binary op result type = i32, changed in AST
+            }
+            else if ((expression->left->type == VAR_CONST && left.is_constant_exp) && (!right.is_constant_exp || expression->right->type != INT || expression->right->type != VAR_CONST)) { // lhs f64 literal, rhs is not i32 literal or const (op result, variable)
+                TData var_data;
+                char *variable_id = expression->left->data.nodeData.value.identifier;
+
+                var_data = get_const_var_data(scope, variable_id); // fetch var/const data
+                check_error();
+
+
+                if (var_data.variable.is_constant == false) { // float operator is var, which cannot be implicitly converted
+                    printf("error: expression - cannot convert var in  relation operators (==, !=)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                if (var_data.variable.comp_runtime == false) { // const value is unknown at the time of compilation
+                    printf("error: expression - cannot convert const in relation operators (==, !=) (constant value is unknown at compile time)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                /*ERROR!!!!!!!!!!!!!!! NUTNO ZKOPIROVAT NE UKRAST POZOR POZOR POZOR NUTNO OPRAVIT VSUDE*/
+                char *const_value = copy_literal(var_data.variable.value_pointer->data.nodeData.value.literal); // Extract the literal to be converted
+
+                if ((const_value = literal_convert_f64_to_i32(const_value)) == NULL) {
+                    printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                expression->left->type = INT;
+                expression->left->data.nodeData.value.literal = const_value;
+            }
+            else if ((expression->right->type == VAR_CONST && right.is_constant_exp) && (!left.is_constant_exp || expression->left->type != INT || expression->left->type != VAR_CONST)) { // rhs f64 literal, lhs is not i32 literal or const (op result, variable)
+                TData var_data;
+                char *variable_id = expression->right->data.nodeData.value.identifier;
+
+                var_data = get_const_var_data(scope, variable_id); // fetch var/const data
+                check_error();
+
+                if (var_data.variable.is_constant == false) { // float operator is var, which cannot be implicitly converted
+                    printf("error: expression - cannot convert var in  relation operators (==, !=)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                if (var_data.variable.comp_runtime == false) { // const value is unknown at the time of compilation
+                    printf("error: expression - cannot convert const in relation operators (==, !=) (constant value is unknown at compile time)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                char *const_value = copy_literal(var_data.variable.value_pointer->data.nodeData.value.literal); // Extract the literal to be converted
+
+                if ((const_value = literal_convert_f64_to_i32(const_value)) == NULL) {
+                    printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                expression->right->type = INT;
+                expression->right->data.nodeData.value.literal = const_value;
+            }
+            else {
+                if (left.type != NIL_T || right.type != NIL_T) { // Any type can be compared to 'null'
+                    printf("error: relation operators (==, !=) type mismatch\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+            }
+        }
+
+        if (!left.is_constant_exp || !right.is_constant_exp) { // Result contains var => not a constant expression, unknown at comp-time
+            info->is_constant_exp = false;
+        }
+
+        info->type = BOOL_T;
+    }
+    break;
+
+    /* >, <, >=, <= implicit conversion of: f64 const & literal with zero decimal part -> i32 literal, i32 const & literal -> f64 literal */
+    case OP_GT:
+    case OP_LS:
+    case OP_GTE:
+    case OP_LSE:
+    {
+        if (left.type == STR_T || right.type  == STR_T) {
+            printf("error: string type in relation operators expression\n");
+            error = ERR_TYPE_COMPATABILITY;
+            return;
+        }
+        if (left.type == NIL_T || right.type == NIL_T) {
+            printf("error: null in relation operators expression\n");
+            error = ERR_TYPE_COMPATABILITY;
+            return;
+        }
+        if (left.is_optional_null || right.is_optional_null) {
+            printf(RED_BOLD("error")": type mismatch, trying to use optional null type in relation operators expression\n");
+            error = ERR_TYPE_COMPATABILITY;
+            return;
+        }
+        if (left.type != right.type) {
+            if (!left.is_constant_exp && !right.is_constant_exp) { // two variables with different types => error
+                printf("error: var type mismatch in relation operators expression (==, !=)\n");
+                error = ERR_TYPE_COMPATABILITY;
+                return;
+            }
+
+            if (expression->left->type == INT) { // lhs i32 literal => convert to f64 literal
+                char **literal = &expression->left->data.nodeData.value.literal;
+
+                *literal = literal_convert_i32_to_f64(*literal);
+                expression->left->type = FL;
+            }
+            else if (expression->right->type == INT) { // rhs i32 literal => convert to f64 literal
+                char **literal = &expression->right->data.nodeData.value.literal;
+
+                *literal = literal_convert_i32_to_f64(*literal);
+                expression->right->type = FL;
+            }
+            else if (expression->left->type == VAR_CONST && left.type == INTEGER_T && left.is_constant_exp) { // lhs i32 const => convert to f64 literal
+                TData var_data;
+                char *variable_id = expression->left->data.nodeData.value.identifier;
+
+                var_data = get_const_var_data(scope, variable_id); // fetch var/const data
+                check_error();
+
+                if (var_data.variable.is_constant == false) { // i32 operator is var, which cannot be implicitly converted
+                    printf("error: expression - cannot convert var in (==, !=)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                if (var_data.variable.comp_runtime == false) { // const value is unknown at the time of compilation
+                    printf("error: expression - cannot convert const in (==, !=) (constant value is unknown at compile time)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                char *const_value = copy_literal(var_data.variable.value_pointer->data.nodeData.value.literal); // Extract the literal to be converted
+
+                const_value = literal_convert_i32_to_f64(const_value);
+
+                expression->left->type = FL;
+                expression->left->data.nodeData.value.literal = const_value;
+            }
+            else if (expression->right->type == VAR_CONST && right.type == INTEGER_T && right.is_constant_exp) { // rhs i32 const => convert to f64 literal
+                TData var_data;
+                char *variable_id = expression->right->data.nodeData.value.identifier;
+
+                var_data = get_const_var_data(scope, variable_id); // fetch var/const data
+                check_error();
+
+                if (var_data.variable.is_constant == false) { // i32 operator is var, which cannot be implicitly converted
+                    printf("error: expression - cannot convert var in (==, !=)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                if (var_data.variable.comp_runtime == false) { // const value is unknown at the time of compilation
+                    printf("error: expression - cannot convert const in (==, !=) (constant value is unknown at compile time)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                char *const_value = copy_literal(var_data.variable.value_pointer->data.nodeData.value.literal); // Extract the literal to be converted
+
+                const_value = literal_convert_i32_to_f64(const_value);
+
+                expression->right->type = FL;
+                expression->right->data.nodeData.value.literal = const_value;
+            }
+            else if (expression->left->type == FL && (!right.is_constant_exp || expression->right->type != INT || expression->right->type != VAR_CONST)) { // lhs f64 literal, rhs is not i32 literal or const (op result, variable)
+                char **literal = &expression->left->data.nodeData.value.literal;
+
+                if ((*literal = literal_convert_f64_to_i32(*literal)) == NULL) { // NULL => float has non zero decimal part, so it cannot be converted
+                    printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                expression->left->type = INT; // binary op result type = i32, changed in AST
+            }
+            else if (expression->right->type == FL && (!left.is_constant_exp || expression->left->type != INT || expression->left->type != VAR_CONST)) { // rhs f64 literal, lhs is not i32 literal or const (op result, variable)
+                char **literal = &expression->right->data.nodeData.value.literal;
+
+                if ((*literal = literal_convert_f64_to_i32(*literal)) == NULL) { // NULL => float has non zero decimal part, so it cannot be converted
+                    printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                expression->right->type = INT; // binary op result type = i32, changed in AST
+            }
+            else if ((expression->left->type == VAR_CONST && left.is_constant_exp) && (!right.is_constant_exp || expression->right->type != INT || expression->right->type != VAR_CONST)) { // lhs f64 literal, rhs is not i32 literal or const (op result, variable)
+                TData var_data;
+                char *variable_id = expression->left->data.nodeData.value.identifier;
+
+                var_data = get_const_var_data(scope, variable_id); // fetch var/const data
+                check_error();
+
+
+                if (var_data.variable.is_constant == false) { // float operator is var, which cannot be implicitly converted
+                    printf("error: expression - cannot convert var in  relation operators (==, !=)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                if (var_data.variable.comp_runtime == false) { // const value is unknown at the time of compilation
+                    printf("error: expression - cannot convert const in relation operators (==, !=) (constant value is unknown at compile time)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                /*ERROR!!!!!!!!!!!!!!! NUTNO ZKOPIROVAT NE UKRAST POZOR POZOR POZOR NUTNO OPRAVIT VSUDE*/
+                char *const_value = copy_literal(var_data.variable.value_pointer->data.nodeData.value.literal); // Extract the literal to be converted
+
+                if ((const_value = literal_convert_f64_to_i32(const_value)) == NULL) {
+                    printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                expression->left->type = INT;
+                expression->left->data.nodeData.value.literal = const_value;
+            }
+            else if ((expression->right->type == VAR_CONST && right.is_constant_exp) && (!left.is_constant_exp || expression->left->type != INT || expression->left->type != VAR_CONST)) { // rhs f64 literal, lhs is not i32 literal or const (op result, variable)
+                TData var_data;
+                char *variable_id = expression->right->data.nodeData.value.identifier;
+
+                var_data = get_const_var_data(scope, variable_id); // fetch var/const data
+                check_error();
+
+                if (var_data.variable.is_constant == false) { // float operator is var, which cannot be implicitly converted
+                    printf("error: expression - cannot convert var in  relation operators (==, !=)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                if (var_data.variable.comp_runtime == false) { // const value is unknown at the time of compilation
+                    printf("error: expression - cannot convert const in relation operators (==, !=) (constant value is unknown at compile time)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                char *const_value = copy_literal(var_data.variable.value_pointer->data.nodeData.value.literal); // Extract the literal to be converted
+
+                if ((const_value = literal_convert_f64_to_i32(const_value)) == NULL) {
+                    printf("error: expression - cannot do implicit conversion of f64 value (non-zero decimal part)\n");
+                    error = ERR_TYPE_COMPATABILITY;
+                    return;
+                }
+
+                expression->right->type = INT;
+                expression->right->data.nodeData.value.literal = const_value;
+            }
+            else {
+                printf("error: relation operators (==, !=) type mismatch\n");
+                error = ERR_TYPE_COMPATABILITY;
+                return;
+            }
+        }
+
+        if (!left.is_constant_exp || !right.is_constant_exp) { // Result contains var => not a constant expression, unknown at comp-time
+            info->is_constant_exp = false;
+        }
+
+        info->type = BOOL_T;
+    }
+    break;
+
+    default:
+        break;
     }
     //BT_print_tree(expression);
 }
@@ -825,11 +1261,7 @@ bool id_defined(struct TScope* scope, char* identifier, TSymtable** out_sym) {
     *out_sym = NULL;
 
     return false;
-}/**
- * @brief This function initializes the parser
- *
- * @param token, will be used to store the current token
- */
+}
 
 /**
 * Returns variables data type in char format 'i','u','f'
@@ -909,7 +1341,7 @@ void set_to_used(TSymtable* symtable, char* identifier) {
 char *literal_convert_i32_to_f64(char *literal) {
     size_t new_size = strlen(literal) + 3; // '.''0''\0'
 
-    char *converted = (char*) malloc(sizeof(char)*new_size);
+    char *converted = (char*) malloc(sizeof(char) * new_size);
     memset(converted, 0, new_size);
 
     strcpy(converted, literal);
@@ -922,16 +1354,24 @@ char *literal_convert_i32_to_f64(char *literal) {
 * Converts F64 literal/const to I32
 */
 char *literal_convert_f64_to_i32(char *literal) {
+    if (literal == NULL)
+        return NULL;
+
     int i = 0;
     bool zero_decimal = true;
 
-    while(literal[i] != '.') {
+    while (literal[i] != '.' && literal[i] != '\0') {
         ++i;
+    }
+
+    if (literal[i] != '.') { //1e2 format, no '.' part
+        printf("error: missing '.' decimal separator --> %s\n", literal);
+        return NULL;
     }
 
     int j = i + 1;
 
-    while(literal[j]) {
+    while (literal[j]) {
         if (literal[j] != '0') {
             zero_decimal = false;
             break;
@@ -939,24 +1379,25 @@ char *literal_convert_f64_to_i32(char *literal) {
         ++j;
     }
 
-    if(zero_decimal == false) {
+    if (zero_decimal == false) {
+        printf("error: f2i conversion, float number has non-zero decimal part --> %s\n", literal);
         return NULL;
     }
 
-    memset(literal+i, 0, strlen(literal));
+    literal[i] = '\0';
 
     return literal;
 }
 
 /**
-* Returns return type of given function in integer format 
+* Returns return type of given function in integer format
 */
 int get_func_type(TSymtable *globalSymTable, char *function_id) {
     TData function_data;
 
     /* Check if function is defined */
     if (symtable_search(globalSymTable, function_id) == false) {
-        printf("error: function %s undefined\n",function_id);
+        printf("error: function %s undefined\n", function_id);
         error = ERR_UNDEFINED_IDENTIFIER;
         return -1;
     }
@@ -993,4 +1434,21 @@ TData get_const_var_data(struct TScope* scope, char *variable_id) {
     }
 
     return variable_data;
+}
+
+char *copy_literal(char *literal) {
+    size_t size = strlen(literal) + 1;
+
+    char *copy = (char*) malloc(size);
+
+    if (copy == NULL) {
+        error = ERR_COMPILER_INTERNAL;
+        return NULL;
+    }
+
+    memset(copy, 0, size);
+
+    strcpy(copy, literal);
+
+    return copy;
 }

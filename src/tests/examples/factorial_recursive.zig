@@ -3,7 +3,7 @@ const ifj = @import("ifj24.zig");
 // Hlavni funkce
 pub fn main() void {
 ifj.write("Zadejte cislo pro vypocet faktorialu: ");
-const inp = null;
+const inp = ifj.readi32();
 if (inp) |INP| {
 if (INP < 0) {
 ifj.write("Faktorial nelze spocitat!\n");
@@ -31,4 +31,3 @@ result = n * temp_result;
 }
 return result;
 }
-// Program 2: Vypocet faktorialu (rekurzivne)

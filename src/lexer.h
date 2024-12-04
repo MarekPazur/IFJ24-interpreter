@@ -50,8 +50,6 @@ void init_scanner(void);
 /* Final state machine, fetches token for syntax analyser */
 token_t get_token(void);
 
-//int is_keyword(char *lexeme);
-
 /* Ignores every char until newline */
 void ignore_comment();
 

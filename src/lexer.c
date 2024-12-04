@@ -36,6 +36,7 @@ bool valid_hex(char a){
     return (a >= '0' && a <= '9') || (a >= 'A' && a <= 'F') || (a >= 'a' && a <= 'f');
 }
 
+/* Main function, performs lexical analysis, in succes returns result token, else exits with lexical error */
 token_t get_token(void) {
     token_t token; /* New token is created every function call */
     token.id = TOKEN_DEFAULT; /* Default placeholder */
@@ -205,7 +206,6 @@ token_t get_token(void) {
                 } else { // Standalone '!' is not any lexeme
                     token.id = TOKEN_ERROR;
                     //scanner.p_state = STATE_START;
-
                     error = ERR_LEXICAL;
                     ungetc(c, stdin);
                     return token;
@@ -425,6 +425,7 @@ token_t get_token(void) {
                                     hex_chars[hex_number] = c;
                                 } else {
                                     token.id = TOKEN_ERROR;
+                                    error = ERR_LEXICAL;
                                     return token;
                                 }
                             }
@@ -436,13 +437,13 @@ token_t get_token(void) {
                     }
                     if (initial_array_size == token.lexeme.length) {
                         token.id = TOKEN_ERROR;
+                        error = ERR_LEXICAL;
                         return token;
                     }
                 } else if (c >= 32 && c <= 126) {
                     d_array_append(&token.lexeme, c);
                 } else {
                     token.id = TOKEN_ERROR;
-                    printf("440");
                     error = ERR_LEXICAL;
                     return token;
                 }
@@ -465,6 +466,7 @@ token_t get_token(void) {
                                     d_array_append(&token.lexeme, c);
                                 } else {
                                     token.id = TOKEN_ERROR;
+                                    error = ERR_LEXICAL;
                                     return token;
                                 }
                             }
@@ -473,6 +475,7 @@ token_t get_token(void) {
                     }
                     if (initial_array_size == token.lexeme.length) {
                         token.id = TOKEN_ERROR;
+                        error = ERR_LEXICAL;
                         return token;
                     }
                 } else if (c >= 32 && c <= 126) {
@@ -484,6 +487,7 @@ token_t get_token(void) {
                     scanner.p_state = STATE_NEXT_MULTILINE;
                 } else {
                     token.id = TOKEN_ERROR;
+                    error = ERR_LEXICAL;
                     return token;
                 }
                 break;
@@ -504,12 +508,14 @@ token_t get_token(void) {
                     return token;
                 } else {
                     token.id = TOKEN_ERROR;
+                    error = ERR_LEXICAL;
                     return token;
                 }
                 break;
 
             default:
                 token.id = TOKEN_ERROR;
+                error = ERR_LEXICAL;
                 return token;
                 break;
         }

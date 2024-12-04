@@ -286,8 +286,9 @@ const char *node_t_string[] = {
     "I32",
     "F64",
     "U8[]",
-    "STR",
     "NULL",
+    "STR",
+
     "VAR/CONST",
 
     "EXPR",
@@ -307,11 +308,11 @@ const char *node_t_string[] = {
     "RETURN"
 };
 
-typedef enum side {
-    ROOT,
-    LEFT_SIDE,
-    RIGHT_SIDE
-} side_t;
+
+/* Constants to determine the side of a tree branch */
+#define ROOT 0
+#define LEFT_SIDE 1
+#define RIGHT_SIDE 2
 
 /*
 * Creates new line out of previous and string suffix to be added
@@ -349,24 +350,26 @@ int get_node_shape(TNode *tree) {
 }
 
 /*
-* Prints the subtrees using inverse in-order traversal (Right subtree first)
+* Prints the subtrees using inverse in-order traversal (Right subtree first) and ASCII chars
 */
-void BT_print_subtree(TNode *tree, char *line, side_t side) {
+void BT_print_subtree(TNode *tree, char *line, int side) {
     /* Empty node */
     if (tree == NULL)
         return;
 
     /* Append branch and space to current line (Creates two variants, selects one later) */
-    char *current_branch = new_line(line,  "|    ");
-    char *current_space = new_line(line, "     ");
+    char *current_branch = new_line(line,  "│    "); // branch = ascii 179
+    char *current_space = new_line(line, "     "); // space = ascii 32
+    char *selected = NULL;
 
-    /* Prints branch when entering left-side node */
+    /* Prints branch when entering left-side node, selects appropriate new line to be passed to recursive call of this function */
     if (side == LEFT_SIDE) {
         printf("%s\n", current_branch);
-    }
+        selected = current_branch;
+    } else selected = current_space;
 
-    /* Traverses through right subtree first, selects appropriate new line to be passed to recursive call of this function */
-    BT_print_subtree(tree->right, side == LEFT_SIDE ? current_branch : current_space, RIGHT_SIDE);
+    /* Traverses through right subtree first */
+    BT_print_subtree(tree->right, selected, RIGHT_SIDE);
 
     /* Shape of node according to its children */
     char* node_shape[] = {           /*   Node has:   */
@@ -402,7 +405,11 @@ void BT_print_subtree(TNode *tree, char *line, side_t side) {
     printf("\033[1;33m %s %s\033[0;37m\n", node_t_string[tree->type], (content ? content : ""));
 
     /* Traverse through left subtree */
-    BT_print_subtree(tree->left, side == RIGHT_SIDE ? current_branch : current_space, LEFT_SIDE);
+    if (side == RIGHT_SIDE) {
+        selected = current_branch;
+    } else selected = current_space;
+
+    BT_print_subtree(tree->left, selected, LEFT_SIDE);
 
     /* Prints branch after return from previous right-side node (backstep) */
     if (side == RIGHT_SIDE) {
