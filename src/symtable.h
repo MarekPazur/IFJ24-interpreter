@@ -26,8 +26,6 @@ typedef enum type {
     STR_T         // string literal
 } Type;
 
-struct node;
-
 union data {
     struct {
         bool is_null_type;            // Return type can be nullable '?type'
