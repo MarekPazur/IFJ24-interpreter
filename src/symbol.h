@@ -54,7 +54,7 @@ typedef struct symbol {
 	TNode *node;
 } symbol;
 
-/* prints information about symbol */
+/* Prints information about symbol and its content */
 void print_symbol_info(symbol symbol);
 
 #endif

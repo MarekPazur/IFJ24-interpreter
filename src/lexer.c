@@ -36,6 +36,7 @@ bool valid_hex(char a){
     return (a >= '0' && a <= '9') || (a >= 'A' && a <= 'F') || (a >= 'a' && a <= 'f');
 }
 
+/* Main function, performs lexical analysis, in succes returns result token, else exits with lexical error */
 token_t get_token(void) {
     token_t token; /* New token is created every function call */
     token.id = TOKEN_DEFAULT; /* Default placeholder */
