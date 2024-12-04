@@ -124,8 +124,20 @@ void cg_label(TLabel label_number);
 
 // Operands
 
+/**
+ * Prints two instruction operands
+ * \param o1
+ * \param o2
+ * \param o3
+ */
 void cg_two_operands(TTerm o1, TTerm o2);
 
+/**
+ * Prints three instruction operands
+ * \param o1
+ * \param o2
+ * \param o3
+ */
 void cg_three_operands(TTerm o1, TTerm o2, TTerm o3);
 
 // Comparisons
@@ -212,32 +224,71 @@ void cg_stack_pop(TTerm variable);
 
 void cg_stack_clear(void);
 
-// IFJ BUILT-IN
+// IFJ BUILT-IN FUNCTIONS
 
+/**
+ * Generates IFJ24 ifj.readstr function
+ */
 void cg_ifj_readstr(void);
 
+/**
+ * Generates IFJ24 ifj.readi32 function
+ */
 void cg_ifj_readi32(void);
 
+/**
+ * Generates IFJ24 ifj.readf64 function
+ */
 void cg_ifj_readf64(void);
 
+/**
+ * Generates IFJ24 ifj.write function
+ */
 void cg_ifj_write(void);
 
+/**
+ * Generates IFJ24 ifj.i2f function
+ */
 void cg_ifj_i2f(void);
 
+/**
+ * Generates IFJ24 ifj.f2i function
+ */
 void cg_ifj_f2i(void);
 
+/**
+ * Generates IFJ24 ifj.string function
+ */
 void cg_ifj_string(void);
 
+/**
+ * Generates IFJ24 ifj.lenght function
+ */
 void cg_ifj_length(void);
 
+/**
+ * Generates IFJ24 ifj.concat function
+ */
 void cg_ifj_concat(void);
 
+/**
+ * Generates IFJ24 ifj.substring function
+ */
 void cg_ifj_substring(void);
 
+/**
+ * Generates IFJ24 ifj.strcmp function
+ */
 void cg_ifj_strcmp(void);
 
+/**
+ * Generates IFJ24 ifj.ord function
+ */
 void cg_ifj_ord(void);
 
+/**
+ * Generates IFJ24 ifj.chr function
+ */
 void cg_ifj_chr(void);
 
 // Codegen
@@ -248,6 +299,10 @@ void generate_comment(char* string);
 // ---------------------------------------------- DEFINITIONS ----------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Prints identifier or literal in IFJcode24 standard
+ * \param term
+ */
 void cg_term(TTerm term){
     char* bool_str;
     switch(term.type){
@@ -288,7 +343,10 @@ void cg_term(TTerm term){
 }
 
 // CG variables and frames
-
+/**
+ * Declares variable
+ * \param var
+ */
 void cg_create_var(TTerm var){
     if(var.type != CG_VARIABLE_T || var.value.var_name == NULL){
         error = ERR_COMPILER_INTERNAL;
@@ -299,6 +357,9 @@ void cg_create_var(TTerm var){
     putchar('\n');
 }
 
+/**
+ * Initializes global variables, sets interpreted language to IFJcode24
+ */
 void cg_init(void){
     printf(".IFJcode24\n");
     cg_create_var(cg_var_retval);
@@ -328,6 +389,10 @@ void cg_exit(TTerm number){
 
 // Function calling
 
+/**
+ * Prints function name, replaces . with -
+ * \param function
+ */
 void cg_print_fun(char* function){
     for(int i = 0; function[i] != '\0'; i++){
         if(function[i] == '.'){
@@ -339,6 +404,10 @@ void cg_print_fun(char* function){
     }
 }
 
+/**
+ * Call function
+ * \param function label
+ */
 void cg_call(char* function){
     if(function == NULL){
         error = ERR_COMPILER_INTERNAL;
@@ -353,6 +422,10 @@ void cg_return(void){
     printf("return\n");
 }
 
+/**
+ * Create function label
+ * \param function
+ */
 void cg_create_fun(char* function){
     if(function == NULL){
         error = ERR_COMPILER_INTERNAL;
@@ -381,6 +454,10 @@ void cg_set_type_bool(TTerm var){
 
 // Labels
 
+/**
+ * Creates new label and returns it's id
+ * \return label id
+ */
 TLabel cg_get_new_label(void){
     static TLabel label = 0;
     return label++;
@@ -550,6 +627,9 @@ void cg_idiv_stack(void){
     printf("idivs\n");
 }
 
+/**
+ * Chooses and performs integer or float division based on value on stack's top
+ */
 void cg_div_stack(void){
     TTerm float_type = {.type = CG_STRING_T, .value.string = "float"};
     cg_stack_pop(cg_var_temp);
@@ -627,7 +707,7 @@ void cg_stack_clear(void){
     printf("clears\n");
 }
 
-// IFJ BUILT-IN
+// IFJ BUILT-IN FUNCTIONS
 
 void cg_ifj_readstr(void){
     cg_create_fun("ifj.readstr");
@@ -944,7 +1024,7 @@ void cg_ifj_chr(void){
     cg_return();
 }
 
-// Variable search tree
+// Variable binary search tree
 
 typedef struct element{
     char* var_name;
@@ -954,6 +1034,12 @@ typedef struct element{
 
 TElement* var_tree = NULL;
 
+/**
+ * Inserts element
+ * \param element
+ * \param name
+ * \return Insertiom failed
+ */
 bool insert_in(TElement** element, char* name){
     if(element == NULL){
         error = ERR_COMPILER_INTERNAL;
@@ -980,10 +1066,19 @@ bool insert_in(TElement** element, char* name){
     return false;
 }
 
+/**
+ * Inserts element
+ * \param element
+ * \param name
+ * \return Insertiom failed
+ */
 bool insert(char* name){
     return insert_in(&var_tree, name);
 }
 
+/**
+ * Disposes whole tree
+ */
 void dispose_in(TElement* element){
     if(element == NULL){
         return;
@@ -993,6 +1088,9 @@ void dispose_in(TElement* element){
     free(element);
 }
 
+/**
+ * Disposes whole tree
+ */
 void dispose(void){
     dispose_in(var_tree);
     var_tree = NULL;
@@ -1000,6 +1098,10 @@ void dispose(void){
 
 // Codegen
 
+/**
+ * Generates IFJcode24 comment
+ * \param string
+ */
 void generate_comment(char* string){
     if(string == NULL){
         return;
@@ -1010,10 +1112,18 @@ void generate_comment(char* string){
 // Function generation
 // Declarations
 
+/**
+ * Generates function body - commands between {}
+ * \param tree
+ */
 void generate_function_body(TBinaryTree* tree);
 
 // Definitions
 
+/**
+ * Declares function parameters and assigns them values from stack
+ * \param parameters
+ */
 void generate_function_parameters(linked_list_t parameters){
     set_last_llist(&parameters);
     char** param_name_ptr = malloc(sizeof(char*));
@@ -1029,6 +1139,10 @@ void generate_function_parameters(linked_list_t parameters){
     }
 }
 
+/**
+ * Generates expression calculation, calculated value is left on top of the stack
+ * \param tree abstract syntactic tree
+ */
 void calculate_expression(TBinaryTree* tree){
     if(BT_has_left(tree)){
         BT_go_left(tree);
@@ -1109,7 +1223,10 @@ void calculate_expression(TBinaryTree* tree){
             break;
     }
 }
-
+/**
+ * Generates function return statement
+ * \param tree abstract syntactic tree
+ */
 void generate_return(TBinaryTree* tree){
     if(BT_has_left(tree)){
         BT_go_left(tree);
@@ -1122,6 +1239,11 @@ void generate_return(TBinaryTree* tree){
     cg_return();
 }
 
+/**
+ * Transfers variable. constant or literal used as R-Value to TTerm
+ * \param tree
+ * \return
+ */
 TTerm node_to_term_rval(TBinaryTree* tree){
     node_type type;
     node_data data;
@@ -1157,7 +1279,10 @@ TTerm node_to_term_rval(TBinaryTree* tree){
     }
     return term;
 }
-
+/**
+ * Pushes arguments to the stack and calls function
+ * \param tree abstract syntactic tree
+ */
 void generate_call(TBinaryTree* tree){
     node_data fun_data;
     if(!BT_get_data(tree, &fun_data)){
@@ -1177,6 +1302,10 @@ void generate_call(TBinaryTree* tree){
     cg_call(fun_data.nodeData.identifier.identifier);
 }
 
+/**
+ * Generates while declaration, including initialization with literal or function return value
+ * \param tree abstract syntactic tree
+ */
 void generate_var_declaration(TBinaryTree* tree){
     node_data data;
     node_type type;
@@ -1207,6 +1336,10 @@ void generate_var_declaration(TBinaryTree* tree){
     }
 }
 
+/**
+ * Generates assignment to variable
+ * \param tree abstract syntactic tree
+ */
 void generate_assignment(TBinaryTree* tree){
     node_type type;
     node_data data;
@@ -1226,7 +1359,11 @@ void generate_assignment(TBinaryTree* tree){
     }
     BT_go_parent(tree);
 }
-
+/**
+ * Generates else statement
+ * \param tree abstract syntactic tree
+ * \param label Else label
+ */
 void generate_else(TBinaryTree* tree, TLabel label){
     cg_create_label(label);
     // Enter else node
@@ -1241,6 +1378,10 @@ void generate_else(TBinaryTree* tree, TLabel label){
     BT_go_left(tree);
 }
 
+/**
+ * Generates if statement
+ * \param tree abstract syntactic tree
+ */
 void generate_if(TBinaryTree* tree){
     // Node
     node_data data;
@@ -1271,6 +1412,10 @@ void generate_if(TBinaryTree* tree){
     cg_create_label(end_if_label);
 }
 
+/**
+ * Generates variable/constant declarations inside while cycle
+ * \param tree abstract syntactic tree
+ */
 void generate_while_declarations(TBinaryTree* tree){
     if(BT_has_left(tree)){
         BT_go_left(tree);
@@ -1312,7 +1457,12 @@ void generate_while_declarations(TBinaryTree* tree){
     }
 }
 
-bool generated = false;
+
+bool generated = false; // Tells generate_while function if it is generating nested while cycle
+/**
+ * Generates while cycle
+ * \param tree abstract syntactic tree
+ */
 void generate_while(TBinaryTree* tree){
     // Node
     node_data data;
@@ -1351,7 +1501,10 @@ void generate_while(TBinaryTree* tree){
         generated = false;
     }
 }
-
+/**
+ * Generates command in funciton body
+ * \param tree abstract syntactic tree with active node containing command
+ */
 void generate_command(TBinaryTree* tree){
     if(!BT_has_left(tree)){
         return;
@@ -1406,6 +1559,10 @@ void generate_function_body(TBinaryTree* tree){
     BT_go_parent(tree);
 }
 
+/**
+ * Generates function
+ * \param tree abstract syntactic tree with active node containing function
+ */
 void generate_function(TBinaryTree* tree){
     node_data data;
     BT_get_data(tree, &data);
@@ -1423,6 +1580,9 @@ void generate_function(TBinaryTree* tree){
     dispose();
 }
 
+/**
+ * Generates IFJ24 built-in functions
+ */
 void generate_builtin(void){
     generate_comment("____IFJ BUILT-IN____");
     cg_ifj_readstr();

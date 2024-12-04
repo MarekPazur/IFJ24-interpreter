@@ -32,34 +32,98 @@ struct symtable{
 
 // DATA OPERATION DECLARATIONS
 
+/**
+ * Returns if key1 and key2 are equal
+ * \param key_1
+ * \param key_2
+ * \return True, False
+ */
 static bool key_is_equal(TKey key_1, TKey key_2);
 
+/**
+ * Returns if key1 is less than key2
+ * \param key_1
+ * \param key_2
+ * \return True, False
+ */
 static bool key_is_less(TKey key_1, TKey key_2);
-
-//static bool key_is_greater(TKey key_1, TKey key_2);
 
 // BST OPERATION DECLARATIONS
 
+/**
+ * Creates new node
+ * \param key
+ * \param data
+ * \return New node or NULL in case of an error
+ */
 static SymNode* create_node_sym(TKey key, TData data);
 
+/**
+ * Inserts node into the BST, if node with the same key exists, it replaces its data
+ * \param root
+ * \param key
+ * \param data
+ * \return True: success, False: failure
+ */
 static bool bst_insert_node(SymNode** root, TKey key, TData data);
 
+/**
+ * Seeks for node with a specified key, if it exists its data are returned through data_out
+ * \param root
+ * \param key
+ * \param[out] data_out
+ * \return True: success, False: failure
+ */
 static bool bst_seek_node(SymNode* root, TKey key, TData* data_out);
 
+/**
+ * Frees all memory allocated by the nodes
+ * \param root
+ */
 static void bst_free_nodes(SymNode* root);
 
+/**
+ * Deletes node from BST
+ * \param root
+ */
 static void delete_node(SymNode** root);
 
+/**
+ * Deletes node from BST with specified key, if it exists
+ * \param root
+ * \param key
+ */
 static void bst_delete_node(SymNode** root, TKey key);
 
-//static int bst_get_height(SymNode* root);
-
+/**
+ * Returns if BST is height balanced
+ * \param root
+ * \param height
+ * \return True, False
+ */
 static bool bst_is_height_balanced(SymNode* root, int* height);
 
+/**
+ * Returns trees weight
+ * \param root
+ * \return weight
+ */
 static int bst_get_weight(SymNode* root);
 
+/**
+ * Creates array of nodes from BST, filled with inorder
+ * \param root
+ * \param len
+ * \return Array | NULL
+ */
 static SymNode** bst_to_array(SymNode* root, int* len);
 
+/**
+ * Creates height and wight balanced BST from an array
+ * \param node_arr
+ * \param len
+ * \return BST root | NULL
+ */
 static SymNode* array_to_balanced_bst(SymNode* node_arr[], unsigned int len);
 
 static bool bst_balance(SymNode** root);
@@ -128,13 +192,6 @@ static bool key_is_less(TKey key_1, TKey key_2){
     }
     return false;
 }
-
-//static bool key_is_greater(TKey key_1, TKey key_2){
-//    if(strcmp(key_1, key_2) > 0){
-//        return true;
-//    }
-//    return false;
-//}
 
 // BST OPERATION DEFINITIONS
 
@@ -257,20 +314,6 @@ static void bst_delete_node(SymNode** root, TKey key){
         bst_delete_node(&((*root)->right), key);
     }
 }
-
-//static int bst_get_height(SymNode* root){
-//    if(root == NULL){
-//        return 0;
-//    }
-//    int left_height = bst_get_height(root->left);
-//    int right_height = bst_get_height(root->right);
-//    if(left_height > right_height){
-//        return left_height + 1;
-//    }
-//    else{
-//        return right_height + 1;
-//    }
-//}
 
 static int bst_get_weight(SymNode* root){
     if(root == NULL){

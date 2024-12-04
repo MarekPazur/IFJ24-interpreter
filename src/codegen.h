@@ -9,6 +9,10 @@
 #ifndef CODEGEN_H
 #define CODEGEN_H
 
+/**
+ * Generates IFJcode24 from syntactically and semantically correct abstract syntactic tree to stdout
+ * \param tree abstract syntactic tree
+ */
 void codegen(TBinaryTree* tree);
 
 #endif

@@ -328,6 +328,10 @@ void BT_print_tree(TNode *tree);
 */
 void BT_print_node_type (TNode *node);
 
+/**
+ * Sets parent pointers for all nodes
+ * \param tree Binary tree
+ */
 void BT_assign_parents(TBinaryTree* tree);
 
 #endif
