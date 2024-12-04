@@ -22,6 +22,7 @@ void d_array_init(dynamic_array* array, int cap){
             fprintf(stderr, "Error: an error occured during the alocation of the dynamic array");
             error = ERR_COMPILER_INTERNAL;
         }else {
+            //setting default values
             array->capacity = cap;
             array->length = 0;
             error = SUCCESS;
@@ -42,6 +43,7 @@ void d_array_append(dynamic_array* array, char element){
             fprintf(stderr, "Error: an error occured during the realocation of the dynamic array");
             error = ERR_COMPILER_INTERNAL;
         }else {
+            //appending the new element
             array->array[array->length] = element;
             array->length++;
             array->array[array->length] = '\0';
@@ -57,6 +59,7 @@ void d_array_set(dynamic_array* array, char element, int index){
         fprintf(stderr, "Error: an empty pointer was given to d_array_set function");
     }else {
         if (0 <= index && index < array->length) {
+            //changing the value
             array->array[index] = element;
         } else {
             fprintf(stderr,
@@ -88,6 +91,7 @@ void d_array_remove(dynamic_array* array, int index){
         fprintf(stderr, "Error: an empty pointer was given to d_array_remove function");
     }else {
         if (0 <= index && index < array->length) {
+            //moving the elements to take the place of the removed element
             for (int i = index; i < array->length; i++) {
                 array->array[index] = array->array[index + 1];
             }
