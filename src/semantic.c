@@ -138,7 +138,7 @@ void CommandSemantics(TNode* Command, scope_t* current_scope, TNode* func) {
             FunctionCallSemantics(command_instance, current_scope, &info);
             check_error();
 
-            if (info.type != VOID_T) {
+            if (info.type != VOID_T) { // If the functions return type is NOT void, the return value cannot be ignored.
                 printf("error: function return value ignored, all non-void values must be used\n");
                 error = ERR_PARAM_TYPE_RETURN_VAL;
                 return;
@@ -345,7 +345,7 @@ void assig_check(TNode* command_instance, scope_t *scope) {
 
     check_error();
 
-    if (command_instance->left->type == FUNCTION_CALL) {
+    if (command_instance->left->type == FUNCTION_CALL) { // Variable is being assigned function call return value
         TNode* function = command_instance->left;
         char* function_id = function->data.nodeData.identifier.identifier;
 
@@ -359,19 +359,19 @@ void assig_check(TNode* command_instance, scope_t *scope) {
         FunctionCallSemantics(function, scope, &info);
         check_error();
 
-        if (throw_away) {
+        if (throw_away) { // function call is assigned to "_" special variable, so the type check can be skipped
             if ( function_data.function.return_type == VOID_T ) {
                 printf("error: trying to assign void type\n");
                 error = ERR_PARAM_TYPE_RETURN_VAL;
                 return;
             }
         } else {
-            if ((int) var_data.variable.type != info.type) {
+            if ((int) var_data.variable.type != info.type) { // types dont match
                 error = ERR_TYPE_COMPATABILITY;
                 printf("error: assignment type mismatch caused by function %s\n", function_id);
                 return;
             } else {
-                if ((var_data.variable.is_null_type == false) && info.is_optional_null) {
+                if ((var_data.variable.is_null_type == false) && info.is_optional_null) { // types can be the same but differ in null includement
                     error = ERR_TYPE_COMPATABILITY;
                     printf("error: trying to assign optional-null type into non-null variable, type mismatch caused by function %s\n", function_id);
                     return;
@@ -393,7 +393,7 @@ void assig_check(TNode* command_instance, scope_t *scope) {
                     return;
                 }
             } else {
-                if ((var_data.variable.is_null_type == false) && expr_data.is_optional_null) {
+                if ((var_data.variable.is_null_type == false) && expr_data.is_optional_null) { // types can be the same but differ in null includement
                     error = ERR_TYPE_COMPATABILITY;
                     printf("error: trying to assign optional-null type into non-null variable, type mismatch\n");
                     return;
@@ -1261,11 +1261,7 @@ bool id_defined(struct TScope* scope, char* identifier, TSymtable** out_sym) {
     *out_sym = NULL;
 
     return false;
-}/**
- * @brief This function initializes the parser
- *
- * @param token, will be used to store the current token
- */
+}
 
 /**
 * Returns variables data type in char format 'i','u','f'

@@ -106,18 +106,58 @@ struct token_buffer {
 
 /*
 * Prints information about current token (debug info)
+* \param token_t token
 */
 void print_token(token_t token);
 
-/*
-* Token Queue Buffer (FIFO) functions
-*/
+// Token-Queue Buffer (FIFO) functions
+/**
+ * Initialises token-queue (token buffer).
+ * \param t_buf buf (pointer to instance of t_buf)
+ */
 void init_t_buf (t_buf *buf);
+
+/**
+ * Checks if the token-queue is empty.
+ * \param t_buf buf (pointer to instance of t_buf)
+ * \return True: Queue is empty, False: Queue is NOT empty
+ */
 int is_empty_t_buf (t_buf *buf);
+
+/**
+ * Enqueues given token at the start of token-queue.
+ * \param t_buf buf (pointer to instance of t_buf)
+ * \param token_t token
+ */
 void enqueue_t_buf (t_buf *buf, token_t token);
+
+/**
+ * Returns and removes token from the beggining of the queue.
+ * \param t_buf buf (pointer to instance of t_buf)
+ * \return token_t token: enqueued token
+ */
 token_t get_t_buf (t_buf *buf);
+
+/**
+ * Removes every token from the token-queue and releases its memory.
+ * \param t_buf buf (pointer to instance of t_buf)
+ */
 void free_t_buf (t_buf *buf);
+
+/**
+ * Prints the content of the token-queue.
+ * \param t_buf buf (pointer to instance of t_buf)
+ */
 void print_t_buf (t_buf *buf);
+
+// Utility functions
+
+/**
+ * Concatenates two given strings together. 
+ * \param char* lex_prefix: first part of the string
+ * \param char* lex_suffix: second part of the string
+ * \return : Pointer to new string allocated on heap (dynamic alloc) 
+ */
 char *func_id_concat(char *lex_prefix, char *lex_suffix);
 
 #endif 

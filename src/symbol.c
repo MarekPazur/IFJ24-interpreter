@@ -9,6 +9,7 @@
 #include "symbol.h"
 #include "compiler_error.h"
 
+/* Prints information about symbol structure and its content */
 void print_symbol_info(symbol symbol) {
     char *symbol_to_string[] = {
         "DEFAULT - uninitialised symbol!",

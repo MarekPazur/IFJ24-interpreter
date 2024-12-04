@@ -21,14 +21,6 @@
 #include "binary_tree.h"
 #include "token.h"
 
-/**
- *@TODO
- *	semantic analyser
- *	code generator
-*/
-
-
-
 int main (void) {
 	/* Init. of scanner struct */
 	init_scanner();

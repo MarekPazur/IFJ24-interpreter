@@ -8,6 +8,7 @@
 #ifndef COMPILER_ERROR_H
 #define COMPILER_ERROR_H
 
+/* Error code definition */
 typedef enum error_code {
 	SUCCESS = 0, /* Preklad probehl uspesne */
 	ERR_LEXICAL = 1, /* Chyba v programu v rámci lexikální analýzy (chybná struktura aktuálního lexému) */
@@ -23,17 +24,17 @@ typedef enum error_code {
 	ERR_COMPILER_INTERNAL = 99 /* Interní chyba překladače tj. neovlivněná vstupním programem (např. chyba alokace paměti atd.) */
 } error_code;
 
+/* Macros for changing the color of output text */
 #define RED_BOLD(msg) "\033[1;31m" msg "\033[0;37m"
 #define RED(msg) "\033[0;31m" msg "\033[0;37m"
 #define GREEN(msg) "\033[0;32m" msg "\033[0;37m"
 #define YELLOW_BOLD(msg) "\033[1;33m" msg "\033[0;37m"
 #define WHITE_BOLD(msg) "\033[1;37m" msg "\033[0;37m"
 
+/* Shared global variable error */
 extern unsigned int error;
 
 /* prints information about error */
 void print_error(unsigned int err);
-
-void set_error(unsigned int error);
 
 #endif 
