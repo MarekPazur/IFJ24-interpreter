@@ -23,5 +23,5 @@ Interpretation of Translated Code (Expressions, Built-in Functions): **100%** (1
 
 Interpretation of Translated Code (Complex): **71%** (299/421 mb, incorrect return codes: 28%, mismatched outputs: 0%)
 
-Overall Without Extensions: **84%** (1554/1830 mb)
+**Overall Without Extensions: 84% (1554/1830 mb)**
 
